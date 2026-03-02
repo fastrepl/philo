@@ -659,7 +659,7 @@ pub fn run() {
                 .build(app)?;
 
             let global_search = MenuItemBuilder::with_id("global-search", "Global Search")
-                .accelerator("CmdOrCtrl+K")
+                .accelerator("CmdOrCtrl+F")
                 .build(app)?;
 
             let check_updates =

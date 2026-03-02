@@ -191,7 +191,7 @@ export default function AppLayout() {
 
   useEffect(() => {
     const handleHotkey = (event: KeyboardEvent,) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
         event.preventDefault();
         openGlobalSearch();
         return;
