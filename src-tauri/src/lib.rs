@@ -2,8 +2,11 @@
 #[macro_use]
 extern crate objc;
 
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::time::UNIX_EPOCH;
 use std::{env, fs};
+use rusqlite::{params, Connection};
 use serde::Serialize;
 use serde_json::{json, Value};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
@@ -250,11 +253,6 @@ fn truncate_chars(input: &str, max: usize) -> String {
     }
 }
 
-fn normalize_snippet_line(line: &str) -> String {
-    let compact = line.split_whitespace().collect::<Vec<_>>().join(" ");
-    truncate_chars(&compact, 220)
-}
-
 fn extract_markdown_title(path: &Path, content: &str) -> String {
     for line in content.lines() {
         let trimmed = line.trim();
@@ -272,45 +270,121 @@ fn extract_markdown_title(path: &Path, content: &str) -> String {
         .unwrap_or_else(|| "Untitled".to_string())
 }
 
-fn find_query_snippet(content: &str, query: &str) -> Option<String> {
-    let lowered_query = query.to_lowercase();
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        if trimmed.to_lowercase().contains(&lowered_query) {
-            return Some(normalize_snippet_line(trimmed));
-        }
-    }
-    None
-}
-
 fn should_skip_search_dir(name: &str) -> bool {
     should_skip_dir(name) || name == ".obsidian"
 }
 
-fn collect_markdown_search_results(
-    root: &Path,
-    query: &str,
-    limit: usize,
-) -> Result<Vec<MarkdownSearchResult>, String> {
-    let mut results: Vec<MarkdownSearchResult> = Vec::new();
+fn normalize_mtime(path: &Path) -> i64 {
+    fs::metadata(path)
+        .ok()
+        .and_then(|metadata| metadata.modified().ok())
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+fn ensure_search_schema(conn: &Connection) -> Result<(), String> {
+    conn.execute_batch(
+        r#"
+        PRAGMA journal_mode = WAL;
+        CREATE TABLE IF NOT EXISTS search_docs (
+            path TEXT PRIMARY KEY,
+            root_dir TEXT NOT NULL,
+            relative_path TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            mtime INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_search_docs_root_dir ON search_docs(root_dir);
+        CREATE VIRTUAL TABLE IF NOT EXISTS search_docs_fts USING fts5(
+            path UNINDEXED,
+            relative_path,
+            title,
+            content,
+            content='search_docs',
+            content_rowid='rowid',
+            tokenize='unicode61'
+        );
+        CREATE TRIGGER IF NOT EXISTS search_docs_ai AFTER INSERT ON search_docs BEGIN
+            INSERT INTO search_docs_fts(rowid, path, relative_path, title, content)
+            VALUES (new.rowid, new.path, new.relative_path, new.title, new.content);
+        END;
+        CREATE TRIGGER IF NOT EXISTS search_docs_ad AFTER DELETE ON search_docs BEGIN
+            INSERT INTO search_docs_fts(search_docs_fts, rowid, path, relative_path, title, content)
+            VALUES ('delete', old.rowid, old.path, old.relative_path, old.title, old.content);
+        END;
+        CREATE TRIGGER IF NOT EXISTS search_docs_au AFTER UPDATE ON search_docs BEGIN
+            INSERT INTO search_docs_fts(search_docs_fts, rowid, path, relative_path, title, content)
+            VALUES ('delete', old.rowid, old.path, old.relative_path, old.title, old.content);
+            INSERT INTO search_docs_fts(rowid, path, relative_path, title, content)
+            VALUES (new.rowid, new.path, new.relative_path, new.title, new.content);
+        END;
+        "#,
+    )
+    .map_err(|e| e.to_string())
+}
+
+fn build_fts_query(query: &str) -> Option<String> {
+    let parts: Vec<String> = query
+        .split_whitespace()
+        .map(|part| {
+            part.chars()
+                .filter(|c| c.is_alphanumeric())
+                .collect::<String>()
+        })
+        .filter(|part| !part.is_empty())
+        .map(|part| format!("{part}*"))
+        .collect();
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join(" AND "))
+    }
+}
+
+fn ensure_search_db_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+    Ok(app_data_dir.join("search-index.sqlite3"))
+}
+
+fn refresh_markdown_index(conn: &mut Connection, root: &Path) -> Result<(), String> {
+    let root_key = root.to_string_lossy().to_string();
+    let mut existing: HashMap<String, i64> = HashMap::new();
+
+    {
+        let mut stmt = conn
+            .prepare("SELECT path, mtime FROM search_docs WHERE root_dir = ?1")
+            .map_err(|e| e.to_string())?;
+        let mut rows = stmt.query(params![&root_key]).map_err(|e| e.to_string())?;
+        while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+            let path: String = row.get(0).map_err(|e| e.to_string())?;
+            let mtime: i64 = row.get(1).map_err(|e| e.to_string())?;
+            existing.insert(path, mtime);
+        }
+    }
+
+    let mut seen_paths: HashSet<String> = HashSet::new();
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
     let mut stack: Vec<PathBuf> = vec![root.to_path_buf()];
 
     while let Some(dir) = stack.pop() {
-        let entries = fs::read_dir(&dir).map_err(|e| e.to_string())?;
+        let entries = match fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+
         for entry in entries {
             let entry = match entry {
                 Ok(value) => value,
                 Err(_) => continue,
             };
+            let path = entry.path();
             let file_type = match entry.file_type() {
                 Ok(value) => value,
                 Err(_) => continue,
             };
             let name = entry.file_name().to_string_lossy().to_string();
-            let path = entry.path();
 
             if file_type.is_dir() {
                 if should_skip_search_dir(&name) {
@@ -332,38 +406,56 @@ fn collect_markdown_search_results(
                 continue;
             }
 
+            let absolute_path = path.to_string_lossy().to_string();
+            seen_paths.insert(absolute_path.clone());
+            let mtime = normalize_mtime(&path);
+
+            if existing.get(&absolute_path) == Some(&mtime) {
+                continue;
+            }
+
             let content = match fs::read_to_string(&path) {
                 Ok(value) => value,
                 Err(_) => continue,
             };
-            let Some(snippet) = find_query_snippet(&content, query) else {
-                continue;
-            };
-
             let relative_path = path
                 .strip_prefix(root)
                 .ok()
                 .map(|value| value.to_string_lossy().to_string())
-                .unwrap_or_else(|| path.to_string_lossy().to_string());
+                .unwrap_or_else(|| absolute_path.clone());
+            let title = extract_markdown_title(&path, &content);
 
-            results.push(MarkdownSearchResult {
-                path: path.to_string_lossy().to_string(),
-                relative_path,
-                title: extract_markdown_title(&path, &content),
-                snippet,
-            });
-
-            if results.len() >= limit {
-                return Ok(results);
-            }
+            tx.execute(
+                r#"
+                INSERT INTO search_docs(path, root_dir, relative_path, title, content, mtime)
+                VALUES(?1, ?2, ?3, ?4, ?5, ?6)
+                ON CONFLICT(path) DO UPDATE SET
+                    root_dir = excluded.root_dir,
+                    relative_path = excluded.relative_path,
+                    title = excluded.title,
+                    content = excluded.content,
+                    mtime = excluded.mtime
+                "#,
+                params![absolute_path, &root_key, relative_path, title, content, mtime],
+            )
+            .map_err(|e| e.to_string())?;
         }
     }
 
-    Ok(results)
+    for stale_path in existing.keys().filter(|path| !seen_paths.contains(*path)) {
+        tx.execute(
+            "DELETE FROM search_docs WHERE path = ?1 AND root_dir = ?2",
+            params![stale_path, &root_key],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    tx.commit().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn search_markdown_files(
+    app: AppHandle,
     root_dir: String,
     query: String,
     limit: Option<u16>,
@@ -377,14 +469,59 @@ fn search_markdown_files(
     if normalized_query.is_empty() {
         return Ok(Vec::new());
     }
+    let Some(fts_query) = build_fts_query(normalized_query) else {
+        return Ok(Vec::new());
+    };
 
-    let root = PathBuf::from(normalized_root);
-    if !root.exists() || !root.is_dir() {
+    let root_path = PathBuf::from(normalized_root);
+    if !root_path.exists() || !root_path.is_dir() {
         return Ok(Vec::new());
     }
+    let root = fs::canonicalize(&root_path).map_err(|e| e.to_string())?;
+    let root_key = root.to_string_lossy().to_string();
 
     let clamped_limit = limit.unwrap_or(80).clamp(1, 500) as usize;
-    collect_markdown_search_results(&root, normalized_query, clamped_limit)
+    let search_db = ensure_search_db_path(&app)?;
+    let mut conn = Connection::open(search_db).map_err(|e| e.to_string())?;
+    ensure_search_schema(&conn)?;
+    refresh_markdown_index(&mut conn, &root)?;
+
+    let mut stmt = conn
+        .prepare(
+            r#"
+            SELECT
+                search_docs.path,
+                search_docs.relative_path,
+                search_docs.title,
+                snippet(search_docs_fts, 3, '[', ']', ' ... ', 16)
+            FROM search_docs_fts
+            JOIN search_docs ON search_docs_fts.rowid = search_docs.rowid
+            WHERE search_docs.root_dir = ?1 AND search_docs_fts MATCH ?2
+            ORDER BY bm25(search_docs_fts, 0.2, 0.4, 3.0, 1.0)
+            LIMIT ?3
+            "#,
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(
+            params![root_key, fts_query, clamped_limit as i64],
+            |row| {
+                Ok(MarkdownSearchResult {
+                    path: row.get(0)?,
+                    relative_path: row.get(1)?,
+                    title: row.get(2)?,
+                    snippet: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
+                })
+            },
+        )
+        .map_err(|e| e.to_string())?;
+
+    let mut results = Vec::new();
+    for result in rows {
+        results.push(result.map_err(|e| e.to_string())?);
+    }
+    Ok(results)
 }
 
 #[tauri::command]
