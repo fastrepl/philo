@@ -1,13 +1,365 @@
+---
+const capabilities = [
+  {
+    title: "Journal in a timeline",
+    description: "Tomorrow, today, and past notes stay in one continuous scroll.",
+  },
+  {
+    title: "Tasks that carry forward",
+    description: "Unchecked tasks automatically roll into today until you finish them.",
+  },
+  {
+    title: "Recurring tags",
+    description: "Use #daily, #weekly, or custom intervals and tasks reappear on schedule.",
+  },
+  {
+    title: "Inline AI widgets",
+    description: "Press Cmd+Enter to generate mini-apps directly inside your notes.",
+  },
+];
+
+const examples = [
+  "Habit tracker",
+  "World clock",
+  "Calorie counter",
+  "Countdown board",
+  "Mood chart",
+  "Meeting prep checklist",
+];
+
+const writing = [
+  "Why we built a journal that can execute ideas",
+  "From recurring tasks to recurring systems",
+  "The case for disposable widgets",
+  "A calmer daily planning loop",
+];
+---
+
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>Philo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Philo | A daily journaling app that builds things for you</title>
+    <meta
+      name="description"
+      content="Write daily notes, carry tasks forward automatically, and generate custom mini-apps inline."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <main>
-      <h1>Philo</h1>
-      <p>Landing page coming soon.</p>
+    <div class="ambient"></div>
+    <main class="shell">
+      <header class="enter" style="--delay: 0ms;">
+        <div class="brand-row">
+          <p class="brand">Philo</p>
+          <p class="status">macOS beta</p>
+        </div>
+      </header>
+
+      <section class="hero enter" style="--delay: 70ms;">
+        <h1>A daily journal that builds things for you.</h1>
+        <p class="lede">
+          Capture notes. Track tasks that roll forward. Generate tiny tools in place when you need
+          them.
+        </p>
+        <form class="waitlist" action="#" method="post">
+          <label for="email">Get early access</label>
+          <div class="input-row">
+            <input id="email" type="email" name="email" placeholder="name@domain.com" />
+            <button type="submit">→</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel enter" style="--delay: 140ms;">
+        <h2>Core flow</h2>
+        <ul class="detail-list">
+          {
+            capabilities.map((item,) => (
+              <li>
+                <p class="item-title">{item.title} <span>→</span></p>
+                <p class="item-copy">{item.description}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="panel enter" style="--delay: 210ms;">
+        <h2>Things people build in Philo</h2>
+        <ul class="link-list">
+          {examples.map((item,) => <li>{item} <span>→</span></li>)}
+        </ul>
+      </section>
+
+      <section class="panel enter" style="--delay: 280ms;">
+        <h2>Notes from the team</h2>
+        <ul class="link-list">
+          {writing.map((item,) => <li>{item} <span>→</span></li>)}
+        </ul>
+      </section>
+
+      <section class="panel enter" style="--delay: 350ms;">
+        <h2>Philo runs local-first</h2>
+        <p class="item-copy">
+          Your journal lives on disk as markdown files. Keep your data close, move fast, and shape
+          the app around your own workflow.
+        </p>
+      </section>
+
+      <footer class="enter" style="--delay: 420ms;">
+        <nav>
+          <a href="#">X</a>
+          <a href="#">GitHub</a>
+          <a href="#">Docs</a>
+          <a href="mailto:team@philo.app">Email</a>
+        </nav>
+      </footer>
     </main>
   </body>
 </html>
+
+<style>
+  :root {
+    --bg: #f4f4f1;
+    --bg-soft: #f8f8f6;
+    --line: #e2e2db;
+    --text: #252525;
+    --muted: #646460;
+    --accent: #5f70d8;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+    background: linear-gradient(150deg, #f6f6f4 0%, #efefeb 100%);
+    color: var(--text);
+    position: relative;
+  }
+
+  .ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 5% 8%, #ffffff 0%, transparent 32%),
+      radial-gradient(circle at 92% 92%, #e8ebff 0%, transparent 38%);
+    opacity: 0.8;
+  }
+
+  .shell {
+    position: relative;
+    width: min(100%, 720px);
+    margin: 0 auto;
+    padding: 68px 24px 88px;
+  }
+
+  .brand-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+  }
+
+  .brand {
+    margin: 0;
+    font-size: 2rem;
+    font-family: "Instrument Serif", Georgia, serif;
+    letter-spacing: 0.01em;
+  }
+
+  .status {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, white);
+    padding: 6px 10px;
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, white);
+    text-transform: lowercase;
+  }
+
+  .hero h1 {
+    margin: 0;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: clamp(2rem, 6.8vw, 3.2rem);
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    max-width: 13ch;
+  }
+
+  .lede {
+    margin-top: 20px;
+    max-width: 56ch;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    color: #3f3f3d;
+  }
+
+  .waitlist {
+    margin-top: 36px;
+    max-width: 430px;
+  }
+
+  .waitlist label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 1rem;
+  }
+
+  .input-row {
+    display: flex;
+    border: 1px solid var(--line);
+    background: var(--bg-soft);
+  }
+
+  .input-row input {
+    flex: 1;
+    border: 0;
+    padding: 14px 14px;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+  }
+
+  .input-row input::placeholder {
+    color: #a8a8a3;
+  }
+
+  .input-row input:focus {
+    outline: none;
+  }
+
+  .input-row button {
+    width: 62px;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: #ecece8;
+    color: #9e9e98;
+    font: inherit;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+
+  .input-row button:hover {
+    color: var(--accent);
+  }
+
+  .panel {
+    margin-top: 46px;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.42rem;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-weight: 400;
+  }
+
+  .detail-list,
+  .link-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+  }
+
+  .detail-list li + li {
+    margin-top: 18px;
+  }
+
+  .item-title {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .item-title span,
+  .link-list span {
+    color: var(--accent);
+  }
+
+  .item-copy {
+    margin: 6px 0 0;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .link-list li {
+    padding: 9px 0;
+    border-bottom: 1px dashed #e9e9e2;
+    font-size: 1.03rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  footer {
+    margin-top: 42px;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+  }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+
+  nav a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 1.03rem;
+  }
+
+  nav a:hover {
+    text-decoration: underline;
+  }
+
+  .enter {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise 560ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation-delay: var(--delay);
+  }
+
+  @keyframes rise {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .shell {
+      padding: 42px 18px 62px;
+    }
+
+    .brand {
+      font-size: 1.8rem;
+    }
+
+    .status {
+      font-size: 0.78rem;
+      padding: 4px 8px;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.8rem, 11vw, 2.6rem);
+    }
+
+    .link-list li {
+      font-size: 0.97rem;
+    }
+  }
+</style>
