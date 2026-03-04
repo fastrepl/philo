@@ -3,18 +3,22 @@ const capabilities = [
   {
     title: "Journal in a timeline",
     description: "Tomorrow, today, and past notes stay in one continuous scroll.",
+    placeholder: "replace with timeline screenshot",
   },
   {
     title: "Tasks that carry forward",
     description: "Unchecked tasks automatically roll into today until you finish them.",
+    placeholder: "replace with task rollover screenshot",
   },
   {
     title: "Recurring tags",
     description: "Use #daily, #weekly, or custom intervals and tasks reappear on schedule.",
+    placeholder: "replace with recurring tags screenshot",
   },
   {
     title: "Inline AI widgets",
     description: "Press Cmd+Enter to generate mini-apps directly inside your notes.",
+    placeholder: "replace with widget generation screenshot",
   },
 ];
 
@@ -84,9 +88,14 @@ const writing = [
         <ul class="detail-list">
           {
             capabilities.map((item,) => (
-              <li>
-                <p class="item-title">{item.title} <span>→</span></p>
-                <p class="item-copy">{item.description}</p>
+              <li class="detail-item">
+                <div class="detail-copy">
+                  <p class="item-title">{item.title} <span>→</span></p>
+                  <p class="item-copy">{item.description}</p>
+                </div>
+                <div class="detail-placeholder" role="img" aria-label={`${item.title} image placeholder`}>
+                  <span>{item.placeholder}</span>
+                </div>
               </li>
             ))
           }
@@ -302,8 +311,36 @@ const writing = [
     margin: 16px 0 0;
   }
 
-  .detail-list li + li {
-    margin-top: 18px;
+  .detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .detail-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .detail-placeholder {
+    border: 1px dashed color-mix(in srgb, var(--line) 82%, #bfc2ce);
+    background: color-mix(in srgb, var(--bg-soft) 90%, #ffffff);
+    min-height: 92px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .detail-placeholder span {
+    color: #74746f;
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
 
   .item-title {
@@ -394,6 +431,10 @@ const writing = [
 
     .link-list li {
       font-size: var(--fs-md);
+    }
+
+    .detail-item {
+      grid-template-columns: 1fr;
     }
   }
 </style>
