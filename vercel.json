@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "astro",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @philo/landing build",
-  "outputDirectory": "apps/landing/dist",
+  "buildCommand": "pnpm --filter @philo/landing build && mkdir -p dist && cp -R apps/landing/dist/. dist",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/docs",
