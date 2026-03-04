@@ -11,7 +11,7 @@ on:
       - "apps/desktop/tsconfig*.json"
       - "apps/desktop/vite.config.*"
       - "package.json"
-      - "bun.lock"
+      - "pnpm-lock.yaml"
       - "dprint.json"
   pull_request:
     branches: [main]
@@ -23,7 +23,7 @@ on:
       - "apps/desktop/tsconfig*.json"
       - "apps/desktop/vite.config.*"
       - "package.json"
-      - "bun.lock"
+      - "pnpm-lock.yaml"
       - "dprint.json"
 
 concurrency:
@@ -38,14 +38,22 @@ jobs:
         with:
           submodules: true
 
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
 
       - name: Install frontend dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Typecheck and build frontend
-        run: bun run build
+        run: pnpm run build
 
       - name: Install dprint
         run: curl -fsSL https://dprint.dev/install.sh | sh && echo "$HOME/.dprint/bin" >> $GITHUB_PATH

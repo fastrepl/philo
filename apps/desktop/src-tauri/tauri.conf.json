@@ -4,9 +4,9 @@
   "version": "0.0.31",
   "identifier": "com.johnjeong.philo",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "pnpm run dev",
     "devUrl": "http://localhost:1421",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "pnpm run build",
     "frontendDist": "../dist"
   },
   "app": {

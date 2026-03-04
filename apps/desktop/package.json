@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "fmt": "dprint fmt",
     "fmt:check": "dprint check",
-    "check": "bun run typecheck && dprint fmt",
+    "check": "pnpm run typecheck && pnpm run fmt",
     "tauri": "node scripts/tauri.mjs"
   },
   "dependencies": {

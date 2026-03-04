@@ -3,17 +3,18 @@
   "private": true,
   "version": "0.0.10",
   "type": "module",
+  "packageManager": "pnpm@10.30.3",
   "workspaces": [
     "apps/*"
   ],
   "scripts": {
-    "dev": "bun run --cwd apps/desktop dev",
-    "build": "bun run --cwd apps/desktop build",
-    "preview": "bun run --cwd apps/desktop preview",
-    "typecheck": "bun run --cwd apps/desktop typecheck",
+    "dev": "pnpm --filter @philo/desktop dev",
+    "build": "pnpm --filter @philo/desktop build",
+    "preview": "pnpm --filter @philo/desktop preview",
+    "typecheck": "pnpm --filter @philo/desktop typecheck && pnpm --filter @philo/landing typecheck",
     "fmt": "dprint fmt",
     "fmt:check": "dprint check",
-    "check": "bun run typecheck && bun run fmt",
-    "tauri": "node apps/desktop/scripts/tauri.mjs"
+    "check": "pnpm run typecheck && pnpm run fmt",
+    "tauri": "pnpm --filter @philo/desktop tauri"
   }
 }

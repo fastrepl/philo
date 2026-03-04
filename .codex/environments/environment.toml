@@ -9,6 +9,6 @@ script = ""
 name = "Run"
 icon = "run"
 command = '''
-bun install
-bun tauri dev
+pnpm install
+pnpm tauri dev
 '''
