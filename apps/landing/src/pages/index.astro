@@ -124,7 +124,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
               capabilities.map((item,) => (
                 <li class="detail-item">
                   <div class="detail-copy">
-                    <p class="item-title">{item.title} <span>→</span></p>
+                    <p class="item-title">{item.title}</p>
                     <p class="item-copy">{item.description}</p>
                   </div>
                   <div class="detail-placeholder" role="img" aria-label={`${item.title} image placeholder`}>
@@ -203,7 +203,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
           <nav>
             <a href="#">X</a>
             <a href="https://github.com/ComputelessComputer/philo">GitHub</a>
-            <a href="#">Docs</a>
+            <a href="/docs">Docs</a>
             <a href="mailto:team@philo.app">Email</a>
           </nav>
         </footer>
@@ -486,7 +486,6 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     font-weight: 500;
   }
 
-  .item-title span,
   .link-list span {
     color: var(--accent);
   }
