@@ -350,6 +350,14 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     overflow-y: auto;
     padding: 68px 0 88px;
     scrollbar-gutter: stable;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .shell::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
   }
 
   .brand-row {
