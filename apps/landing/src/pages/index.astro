@@ -79,123 +79,159 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
   </head>
   <body>
     <div class="ambient"></div>
-    <main class="shell">
-      <header class="enter" style="--delay: 0ms;">
-        <div class="brand-row">
-          <p class="brand">Philo</p>
-          <p class="status">macOS beta</p>
-        </div>
-      </header>
-
-      <section class="hero enter" style="--delay: 70ms;">
-        <h1>A daily journal that builds things for you.</h1>
-        <p class="lede">
-          Capture notes. Track tasks that roll forward. Generate tiny tools in place when you need
-          them.
-        </p>
-        <p class="release-note">
-          Download Philo from <a href="https://github.com/ComputelessComputer/philo/releases/latest">GitHub Releases</a>.
-        </p>
-        <form class="waitlist" action="#" method="post">
-          <label for="email">Get early access</label>
-          <div class="input-row">
-            <input id="email" type="email" name="email" placeholder="name@domain.com" />
-            <button type="submit">→</button>
+    <div class="page-layout">
+      <main class="shell">
+        <header class="enter" style="--delay: 0ms;">
+          <div class="brand-row">
+            <p class="brand">Philo</p>
+            <p class="status">macOS beta</p>
           </div>
-        </form>
-      </section>
+        </header>
 
-      <section class="panel enter" style="--delay: 140ms;">
-        <h2>Core flow</h2>
-        <ul class="detail-list">
-          {
-            capabilities.map((item,) => (
-              <li class="detail-item">
-                <div class="detail-copy">
-                  <p class="item-title">{item.title} <span>→</span></p>
-                  <p class="item-copy">{item.description}</p>
-                </div>
-                <div class="detail-placeholder" role="img" aria-label={`${item.title} image placeholder`}>
-                  <span>{item.placeholder}</span>
-                </div>
-              </li>
-            ))
-          }
-        </ul>
-      </section>
-
-      <section class="panel enter" style="--delay: 210ms;">
-        <h2>Things people build in Philo</h2>
-        <div class="carousel" data-carousel>
-          <div class="carousel-controls">
-            <button type="button" class="carousel-button" data-carousel-prev aria-label="Previous example">←</button>
-            <button type="button" class="carousel-button" data-carousel-next aria-label="Next example">→</button>
+        <section class="hero enter" style="--delay: 70ms;">
+          <h1>A daily journal that builds things for you.</h1>
+          <p class="lede">
+            Capture notes. Track tasks that roll forward. Generate tiny tools in place when you
+            need them.
+          </p>
+          <p class="release-note">
+            Download Philo from <a href="https://github.com/ComputelessComputer/philo/releases/latest">GitHub Releases</a>.
+          </p>
+          <div class="video-mobile">
+            <p class="video-label">Product walkthrough</p>
+            <div class="video-frame">
+              <video
+                class="product-video"
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                poster="/philo-video-poster.svg"
+              >
+                <source src="/philo-demo.mp4" type="video/mp4" />
+              </video>
+            </div>
           </div>
-          <div class="carousel-track" data-carousel-track>
+          <form class="waitlist" action="#" method="post">
+            <label for="email">Get early access</label>
+            <div class="input-row">
+              <input id="email" type="email" name="email" placeholder="name@domain.com" />
+              <button type="submit">→</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel enter" style="--delay: 140ms;">
+          <h2>Core flow</h2>
+          <ul class="detail-list">
             {
-              examples.map((item,) => (
-                <article class="example-card">
-                  <p class="example-title">{item.title}</p>
-                  <p class="example-summary">{item.summary}</p>
-                  <div class="example-preview" role="img" aria-label={`${item.title} preview`}>
-                    <ul>
-                      {item.lines.map((line,) => <li>{line}</li>)}
-                    </ul>
+              capabilities.map((item,) => (
+                <li class="detail-item">
+                  <div class="detail-copy">
+                    <p class="item-title">{item.title} <span>→</span></p>
+                    <p class="item-copy">{item.description}</p>
                   </div>
-                </article>
+                  <div class="detail-placeholder" role="img" aria-label={`${item.title} image placeholder`}>
+                    <span>{item.placeholder}</span>
+                  </div>
+                </li>
               ))
             }
+          </ul>
+        </section>
+
+        <section class="panel enter" style="--delay: 210ms;">
+          <h2>Things people build in Philo</h2>
+          <div class="carousel" data-carousel>
+            <div class="carousel-controls">
+              <button type="button" class="carousel-button" data-carousel-prev aria-label="Previous example">←</button>
+              <button type="button" class="carousel-button" data-carousel-next aria-label="Next example">→</button>
+            </div>
+            <div class="carousel-track" data-carousel-track>
+              {
+                examples.map((item,) => (
+                  <article class="example-card">
+                    <p class="example-title">{item.title}</p>
+                    <p class="example-summary">{item.summary}</p>
+                    <div class="example-preview" role="img" aria-label={`${item.title} preview`}>
+                      <ul>
+                        {item.lines.map((line,) => <li>{line}</li>)}
+                      </ul>
+                    </div>
+                  </article>
+                ))
+              }
+            </div>
+            <div class="carousel-dots">
+              {
+                examples.map((item, index,) => (
+                  <button
+                    type="button"
+                    class={`carousel-dot ${index === 0 ? "is-active" : ""}`}
+                    data-carousel-dot
+                    data-index={index}
+                    aria-label={`Go to ${item.title}`}
+                    aria-current={index === 0 ? "true" : "false"}
+                  ></button>
+                ))
+              }
+            </div>
           </div>
-          <div class="carousel-dots">
+        </section>
+
+        <section class="panel enter" style="--delay: 280ms;">
+          <h2>Notes from the team</h2>
+          <ul class="link-list">
             {
-              examples.map((item, index,) => (
-                <button
-                  type="button"
-                  class={`carousel-dot ${index === 0 ? "is-active" : ""}`}
-                  data-carousel-dot
-                  data-index={index}
-                  aria-label={`Go to ${item.title}`}
-                  aria-current={index === 0 ? "true" : "false"}
-                ></button>
+              posts.map((post,) => (
+                <li>
+                  <a href={`/blog/${post.slug}`}>
+                    {post.data.title}
+                    <span>→</span>
+                  </a>
+                </li>
               ))
             }
-          </div>
+          </ul>
+        </section>
+
+        <section class="panel enter" style="--delay: 350ms;">
+          <h2>Philo runs local-first</h2>
+          <p class="item-copy">
+            Your journal lives on disk as markdown files. Keep your data close, move fast, and
+            shape the app around your own workflow.
+          </p>
+        </section>
+
+        <footer class="enter" style="--delay: 420ms;">
+          <nav>
+            <a href="#">X</a>
+            <a href="https://github.com/ComputelessComputer/philo">GitHub</a>
+            <a href="#">Docs</a>
+            <a href="mailto:team@philo.app">Email</a>
+          </nav>
+        </footer>
+      </main>
+
+      <aside class="video-column enter" style="--delay: 120ms;">
+        <p class="video-label">Product walkthrough</p>
+        <div class="video-frame">
+          <video
+            class="product-video"
+            controls
+            muted
+            loop
+            playsinline
+            preload="metadata"
+            poster="/philo-video-poster.svg"
+          >
+            <source src="/philo-demo.mp4" type="video/mp4" />
+          </video>
         </div>
-      </section>
-
-      <section class="panel enter" style="--delay: 280ms;">
-        <h2>Notes from the team</h2>
-        <ul class="link-list">
-          {
-            posts.map((post,) => (
-              <li>
-                <a href={`/blog/${post.slug}`}>
-                  {post.data.title}
-                  <span>→</span>
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-      </section>
-
-      <section class="panel enter" style="--delay: 350ms;">
-        <h2>Philo runs local-first</h2>
-        <p class="item-copy">
-          Your journal lives on disk as markdown files. Keep your data close, move fast, and shape
-          the app around your own workflow.
-        </p>
-      </section>
-
-      <footer class="enter" style="--delay: 420ms;">
-        <nav>
-          <a href="#">X</a>
-          <a href="https://github.com/ComputelessComputer/philo">GitHub</a>
-          <a href="#">Docs</a>
-          <a href="mailto:team@philo.app">Email</a>
-        </nav>
-      </footer>
-    </main>
+        <p class="video-note">Place `philo-demo.mp4` in `apps/landing/public/` to use your own demo.</p>
+      </aside>
+    </div>
   </body>
 </html>
 
@@ -302,11 +338,20 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     opacity: 0.8;
   }
 
-  .shell {
+  .page-layout {
     position: relative;
-    width: min(100%, 720px);
+    width: min(100%, 1160px);
     margin: 0 auto;
     padding: 68px 24px 88px;
+    display: grid;
+    grid-template-columns: minmax(0, 720px) minmax(0, 320px);
+    gap: 34px;
+    align-items: start;
+  }
+
+  .shell {
+    position: relative;
+    width: 100%;
   }
 
   .brand-row {
@@ -360,6 +405,11 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
   .release-note a {
     color: var(--accent);
     text-underline-offset: 2px;
+  }
+
+  .video-mobile {
+    display: none;
+    margin-top: 18px;
   }
 
   .waitlist {
@@ -615,6 +665,42 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     background: var(--accent);
   }
 
+  .video-column {
+    position: sticky;
+    top: 20px;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+  }
+
+  .video-label {
+    margin: 0 0 10px;
+    color: #3f3f3d;
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .video-frame {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg-soft) 90%, #ffffff);
+    padding: 8px;
+  }
+
+  .product-video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px dashed color-mix(in srgb, var(--line) 82%, #bfc2ce);
+    background: #efefe9;
+  }
+
+  .video-note {
+    margin: 10px 0 0;
+    color: #676762;
+    font-size: var(--fs-xs);
+  }
+
   footer {
     margin-top: 42px;
     border-top: 1px solid var(--line);
@@ -654,9 +740,28 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     }
   }
 
+  @media (max-width: 980px) {
+    .page-layout {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .video-column {
+      display: none;
+    }
+
+    .video-mobile {
+      display: block;
+    }
+  }
+
   @media (max-width: 720px) {
-    .shell {
+    .page-layout {
       padding: 42px 18px 62px;
+    }
+
+    .shell {
+      width: 100%;
     }
 
     .brand {
