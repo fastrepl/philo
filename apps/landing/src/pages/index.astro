@@ -28,32 +28,32 @@ const examples = [
   {
     title: "Habit tracker",
     summary: "Track streaks and daily completion without leaving your note.",
-    lines: ["Meditate #daily", "Lift #3days", "Read 20m #daily", "No sugar #daily"],
+    imagePath: "/examples/habit-tracker.png",
   },
   {
     title: "World clock",
     summary: "See your team time zones while planning tomorrow.",
-    lines: ["Seoul 09:30", "Tokyo 09:30", "London 00:30", "New York 19:30"],
+    imagePath: "/examples/world-clock.png",
   },
   {
     title: "Calorie counter",
     summary: "Quick meal log with totals inline in the journal.",
-    lines: ["Breakfast 420", "Lunch 610", "Snack 180", "Dinner 700"],
+    imagePath: "/examples/calorie-counter.png",
   },
   {
     title: "Countdown board",
     summary: "Keep launches and deadlines visible at a glance.",
-    lines: ["Beta launch 12d", "iOS polish 8d", "Docs cleanup 5d", "Public post 2d"],
+    imagePath: "/examples/countdown-board.png",
   },
   {
     title: "Mood chart",
     summary: "Simple emotional trendline over the week.",
-    lines: ["Mon calm", "Tue focused", "Wed drained", "Thu steady"],
+    imagePath: "/examples/mood-chart.png",
   },
   {
     title: "Meeting prep checklist",
     summary: "Turn rough notes into ready talking points.",
-    lines: ["Agenda", "Risks", "Asks", "Follow-ups"],
+    imagePath: "/examples/meeting-prep-checklist.png",
   },
 ];
 
@@ -149,10 +149,9 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
                   <article class="example-card">
                     <p class="example-title">{item.title}</p>
                     <p class="example-summary">{item.summary}</p>
-                    <div class="example-preview" role="img" aria-label={`${item.title} preview`}>
-                      <ul>
-                        {item.lines.map((line,) => <li>{line}</li>)}
-                      </ul>
+                    <div class="example-preview" role="img" aria-label={`${item.title} image placeholder`}>
+                      <p class="example-image-placeholder">Add image later</p>
+                      <p class="example-image-path">{item.imagePath}</p>
                     </div>
                   </article>
                 ))
@@ -583,27 +582,26 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     border: 1px dashed color-mix(in srgb, var(--line) 82%, #c2c4ce);
     background: color-mix(in srgb, #ffffff 60%, var(--bg-soft));
     padding: 10px;
+    min-height: 138px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 8px;
   }
 
-  .example-preview ul {
-    list-style: none;
-    padding: 0;
+  .example-image-placeholder {
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-  }
-
-  .example-preview li {
-    border-bottom: 1px dashed #e6e6df;
-    padding-bottom: 6px;
+    color: #5d5d58;
     font-size: var(--fs-sm);
-    color: #5a5a56;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
-  .example-preview li:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
+  .example-image-path {
+    margin: 0;
+    color: #6c6c67;
+    font-size: var(--fs-xs);
   }
 
   .carousel-dots {
