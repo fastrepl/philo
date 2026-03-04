@@ -1,4 +1,6 @@
 ---
+import { getCollection, } from "astro:content";
+
 const capabilities = [
   {
     title: "Journal in a timeline",
@@ -55,12 +57,8 @@ const examples = [
   },
 ];
 
-const writing = [
-  "Why we built a journal that can execute ideas",
-  "From recurring tasks to recurring systems",
-  "The case for disposable widgets",
-  "A calmer daily planning loop",
-];
+const posts = await getCollection("blog");
+posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime());
 ---
 
 <html lang="en">
@@ -168,7 +166,16 @@ const writing = [
       <section class="panel enter" style="--delay: 280ms;">
         <h2>Notes from the team</h2>
         <ul class="link-list">
-          {writing.map((item,) => <li>{item} <span>→</span></li>)}
+          {
+            posts.map((post,) => (
+              <li>
+                <a href={`/blog/${post.slug}`}>
+                  {post.data.title}
+                  <span>→</span>
+                </a>
+              </li>
+            ))
+          }
         </ul>
       </section>
 
@@ -486,9 +493,18 @@ const writing = [
     border-bottom: 1px dashed #e9e9e2;
     font-size: var(--fs-md);
     font-weight: 400;
+  }
+
+  .link-list a {
+    color: var(--text);
+    text-decoration: none;
     display: flex;
     justify-content: space-between;
     gap: 16px;
+  }
+
+  .link-list a:hover {
+    color: color-mix(in srgb, var(--text) 82%, var(--accent));
   }
 
   .carousel {
