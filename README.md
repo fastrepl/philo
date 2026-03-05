@@ -15,7 +15,7 @@ Write your notes in a timeline, manage tasks that carry forward automatically, a
 
 1. **Journal** — write daily notes in a scrollable timeline (tomorrow → today → past)
 2. **Track tasks** — checkbox tasks roll over automatically; unchecked items carry forward to today on each app launch
-3. **Recurring tasks** — add `#daily`, `#weekly`, `#monthly`, `#2days`, `#3weeks`, etc. to a task and it reappears on schedule after you check it off
+3. **Recurring tasks** — add `@daily`, `@weekly`, `@monthly`, `@2days`, `@3weeks`, etc. to a task and it reappears on schedule after you check it off
 4. **Generate widgets** — describe what you need and press ⌘↵ to create an interactive widget inline
 5. **Save to library** — widgets are disposable by default. Save the ones you like (⌘J to browse) and reuse them anywhere.
 
@@ -23,7 +23,7 @@ Write your notes in a timeline, manage tasks that carry forward automatically, a
 
 - **Daily timeline** — tomorrow, today, and past notes in a single scrollable view with a floating "Go to Today" button
 - **Task rollover** — unchecked tasks from past days automatically move to today
-- **Recurring tasks** — tag tasks with recurrence intervals (`#daily`, `#weekly`, `#2weeks`, etc.) to have them repeat
+- **Recurring tasks** — tag tasks with recurrence intervals (`@daily`, `@weekly`, `@2weeks`, etc.) to have them repeat
 - **AI widgets** — generate interactive React mini-apps inline via Claude
 - **Widget library** — save and reuse generated widgets across notes (⌘J)
 - **Image support** — paste or drag-and-drop images directly into notes
@@ -33,7 +33,7 @@ Write your notes in a timeline, manage tasks that carry forward automatically, a
 ## Use cases
 
 - **Daily journaling** — capture thoughts, plan tomorrow, review the past
-- **Habit tracking** — recurring tasks like `- [ ] Meditate #daily` reappear each day
+- **Habit tracking** — recurring tasks like `- [ ] Meditate @daily` reappear each day
 - **Personal dashboards** — embed a calorie tracker, mood logger, or workout log directly in your journal
 - **Quick tools** — need a unit converter or tip calculator? Generate it on the spot
 - **Project planning** — spin up a kanban board, countdown timer, or progress tracker inside your notes

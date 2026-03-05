@@ -2,7 +2,7 @@ import { Extension, } from "@tiptap/core";
 import { Plugin, PluginKey, } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, } from "@tiptap/pm/view";
 
-const HASHTAG_RE = /#[a-zA-Z]\w*/g;
+const HASHTAG_RE = /(?:#|@)[a-zA-Z]\w*/g;
 
 export const HashtagExtension = Extension.create({
   name: "hashtag",

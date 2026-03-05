@@ -3,6 +3,7 @@ import { EMPTY_DOC, json2md, md2json, parseJsonContent, } from "../lib/markdown"
 import { DailyNote, getDaysAgo, } from "../types/note";
 import { resolveExcalidrawEmbeds, } from "./excalidraw";
 import { resolveMarkdownImages, unresolveMarkdownImages, } from "./images";
+import { convertAtMentionsToWikiLinks, } from "./mentions";
 import { getNotePath, } from "./paths";
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n?/;
@@ -26,6 +27,7 @@ export async function saveDailyNote(note: DailyNote,): Promise<void> {
   const filepath = await getNotePath(note.date,);
   const json = parseJsonContent(note.content,);
   let body = unresolveMarkdownImages(json2md(json,),);
+  body = convertAtMentionsToWikiLinks(body, note.date,);
   if (!body.endsWith("\n",)) body += "\n";
   await invoke("write_markdown_file", {
     path: filepath,

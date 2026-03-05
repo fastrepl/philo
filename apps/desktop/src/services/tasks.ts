@@ -17,9 +17,10 @@ interface TaskLine {
 
 /**
  * Recurrence tag pattern.
- * Matches: #daily, #weekly, #monthly, #2days, #3weeks, #2months, etc.
+ * Matches: #daily, @daily, [[recurring_daily]], [[recurring_2weeks]], etc.
  */
-const RECURRENCE_TAG = /#(daily|weekly|monthly|(\d+)(days?|weeks?|months?))\b/i;
+const RECURRENCE_TAG = /(?:#|@)(daily|weekly|monthly|(\d+)(days?|weeks?|months?))\b/i;
+const RECURRENCE_WIKILINK = /\[\[(?:recurring_)?(daily|weekly|monthly|(\d+)(days?|weeks?|months?))(?:\|[^\]]+)?\]\]/i;
 
 interface Recurrence {
   intervalDays: number;
@@ -28,7 +29,7 @@ interface Recurrence {
 
 /** Parse a recurrence tag from task text. Returns null if none found. */
 export function parseRecurrence(text: string,): Recurrence | null {
-  const match = text.match(RECURRENCE_TAG,);
+  const match = text.match(RECURRENCE_TAG,) ?? text.match(RECURRENCE_WIKILINK,);
   if (!match) return null;
 
   const tag = match[0];
@@ -134,7 +135,7 @@ function prependTasks(content: string, tasks: TaskLine[],): string {
 
 /**
  * Roll over unchecked tasks from past notes to today.
- * Also re-creates recurring tasks (those with tags like #daily, #weekly, etc.)
+ * Also re-creates recurring tasks (e.g. @daily, #weekly, [[recurring_2weeks]])
  * when they were checked off and enough time has passed.
  *
  * Returns true if any tasks were rolled over.
