@@ -145,6 +145,20 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           class: "max-w-none focus:outline-hidden px-6 text-gray-900 dark:text-gray-100",
         },
         handleKeyDown: (_view, event,) => {
+          if (
+            event.key === "Enter"
+            && !event.shiftKey
+            && !event.altKey
+            && !event.metaKey
+            && !event.ctrlKey
+          ) {
+            const { $from, } = _view.state.selection;
+            if ($from.depth === 1 && $from.parent.type.name === "paragraph") {
+              event.preventDefault();
+              _view.dispatch(_view.state.tr.insertText("\n",),);
+              return true;
+            }
+          }
           if ((event.metaKey || event.ctrlKey) && event.key === "a") {
             const { doc, } = _view.state;
             const from = Selection.atStart(doc,).from;
