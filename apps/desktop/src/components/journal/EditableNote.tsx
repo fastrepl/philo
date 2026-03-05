@@ -8,7 +8,8 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { Table, TableCell, TableHeader, TableRow, } from "@tiptap/extension-table";
 import TaskList from "@tiptap/extension-task-list";
 import Underline from "@tiptap/extension-underline";
-import { Plugin, PluginKey, Selection, TextSelection, } from "@tiptap/pm/state";
+import { Fragment, } from "@tiptap/pm/model";
+import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, } from "@tiptap/pm/state";
 import { EditorContent, useEditor, } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { forwardRef, useEffect, useImperativeHandle, useRef, } from "react";
@@ -36,6 +37,45 @@ interface EditableNoteProps {
   note: DailyNote;
   placeholder?: string;
   onSave?: (note: DailyNote,) => void;
+}
+
+function moveSelectedNode(view: import("@tiptap/pm/view").EditorView, direction: "up" | "down",): boolean {
+  const { state, } = view;
+  const { selection, } = state;
+
+  if (!(selection instanceof NodeSelection)) return false;
+  if (!selection.node.isBlock) return false;
+
+  const nodePos = selection.from;
+  const $nodePos = state.doc.resolve(nodePos,);
+  const depth = $nodePos.depth;
+  const parent = $nodePos.node(depth,);
+  const index = $nodePos.index(depth,);
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+
+  if (targetIndex < 0 || targetIndex >= parent.childCount) {
+    return true;
+  }
+
+  const children = Array.from({ length: parent.childCount, }, (_, i,) => parent.child(i,),);
+  const [movingNode,] = children.splice(index, 1,);
+  children.splice(targetIndex, 0, movingNode,);
+
+  const tr = state.tr;
+  const parentStart = depth === 0 ? 0 : $nodePos.start(depth,);
+  const parentEnd = depth === 0 ? state.doc.content.size : $nodePos.end(depth,);
+  tr.replaceWith(parentStart, parentEnd, Fragment.fromArray(children,),);
+
+  const adjacentNodeSize = direction === "up"
+    ? parent.child(index - 1,).nodeSize
+    : parent.child(index + 1,).nodeSize;
+  const newNodePos = direction === "up"
+    ? nodePos - adjacentNodeSize
+    : nodePos + adjacentNodeSize;
+  tr.setSelection(NodeSelection.create(tr.doc, newNodePos,),);
+
+  view.dispatch(tr.scrollIntoView(),);
+  return true;
 }
 
 const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
@@ -145,6 +185,19 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           class: "max-w-none focus:outline-hidden px-6 text-gray-900 dark:text-gray-100",
         },
         handleKeyDown: (_view, event,) => {
+          if (
+            event.altKey
+            && !event.shiftKey
+            && !event.metaKey
+            && !event.ctrlKey
+            && (event.key === "ArrowUp" || event.key === "ArrowDown")
+          ) {
+            const moved = moveSelectedNode(_view, event.key === "ArrowUp" ? "up" : "down",);
+            if (moved) {
+              event.preventDefault();
+              return true;
+            }
+          }
           if (
             event.key === "Enter"
             && !event.shiftKey
