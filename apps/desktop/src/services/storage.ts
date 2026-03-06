@@ -3,7 +3,7 @@ import { EMPTY_DOC, json2md, md2json, parseJsonContent, } from "../lib/markdown"
 import { DailyNote, getDaysAgo, } from "../types/note";
 import { resolveExcalidrawEmbeds, } from "./excalidraw";
 import { resolveMarkdownImages, unresolveMarkdownImages, } from "./images";
-import { convertAtMentionsToWikiLinks, } from "./mentions";
+import { convertAtMentionsToWikiLinks, replaceMentionWikiLinksWithChips, } from "./mentions";
 import { getNotePath, } from "./paths";
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n?/;
@@ -43,7 +43,8 @@ export async function loadDailyNote(date: string,): Promise<DailyNote | null> {
   }
   const { city, body, } = parseFrontmatter(raw,);
   const withEmbeds = await resolveExcalidrawEmbeds(body,);
-  const resolved = await resolveMarkdownImages(withEmbeds,);
+  const withMentionChips = replaceMentionWikiLinksWithChips(withEmbeds,);
+  const resolved = await resolveMarkdownImages(withMentionChips,);
   const content = JSON.stringify(md2json(resolved,),);
   return { date, content, city, };
 }

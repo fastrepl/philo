@@ -10,6 +10,7 @@ import StarterKit from "@tiptap/starter-kit";
 
 import { ExcalidrawExtension, } from "../components/editor/extensions/excalidraw/ExcalidrawExtension";
 import { HashtagExtension, } from "../components/editor/extensions/hashtag/HashtagExtension";
+import { MentionChipExtension, } from "../components/editor/extensions/mention/MentionChipExtension";
 import { CustomParagraph, } from "../components/editor/extensions/paragraph/ParagraphExtension";
 import { CustomTaskItem, } from "../components/editor/extensions/task-item/TaskItemNode";
 import { WidgetExtension, } from "../components/editor/extensions/widget/WidgetExtension";
@@ -43,6 +44,7 @@ function getExtensions() {
     TableHeader,
     TableCell,
     Highlight,
+    MentionChipExtension,
     HashtagExtension,
     ExcalidrawExtension,
     WidgetExtension,

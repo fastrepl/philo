@@ -24,6 +24,7 @@ import { ClipboardTextSerializer, } from "../editor/extensions/clipboard";
 import { ExcalidrawExtension, } from "../editor/extensions/excalidraw/ExcalidrawExtension";
 import { HashtagExtension, } from "../editor/extensions/hashtag/HashtagExtension";
 import { CustomListKeymap, } from "../editor/extensions/list-keymap";
+import { buildMentionChipSuggestion, MentionChipExtension, } from "../editor/extensions/mention/MentionChipExtension";
 import { CustomParagraph, } from "../editor/extensions/paragraph/ParagraphExtension";
 import { CustomTaskItem, } from "../editor/extensions/task-item/TaskItemNode";
 import { WidgetExtension, } from "../editor/extensions/widget/WidgetExtension";
@@ -142,6 +143,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         TableHeader,
         TableCell,
         Highlight,
+        MentionChipExtension.configure({ suggestion: buildMentionChipSuggestion(note.date,), },),
         HashtagExtension,
         ExcalidrawExtension,
         WidgetExtension,
