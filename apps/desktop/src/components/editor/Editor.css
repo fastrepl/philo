@@ -4,6 +4,23 @@
   margin: 0;
 }
 
+.tiptap {
+  --editor-line-height: 20px;
+  line-height: var(--editor-line-height);
+}
+
+.tiptap p,
+.tiptap li,
+.tiptap li > div,
+.tiptap li p {
+  line-height: inherit;
+}
+
+.tiptap p,
+.tiptap li > div {
+  min-height: var(--editor-line-height);
+}
+
 .tiptap a:hover {
   cursor: pointer;
 }
