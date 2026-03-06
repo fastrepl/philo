@@ -94,6 +94,69 @@
   font-weight: 500;
 }
 
+.mention-date-picker {
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.mention-date-picker-row {
+  display: flex;
+  align-items: center;
+}
+
+.mention-date-input,
+.mention-date-select {
+  width: 100%;
+  height: 2rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.65rem;
+  background: #fff;
+  color: #111827;
+  padding: 0 0.7rem;
+  font-size: 0.85rem;
+}
+
+.mention-date-picker-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.mention-date-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.mention-date-picker-btn {
+  height: 1.9rem;
+  padding: 0 0.8rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mention-date-picker-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mention-date-picker-btn-muted {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+}
+
 /* ---- Bubble Menu ---- */
 
 .bubble-menu {

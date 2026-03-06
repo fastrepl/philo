@@ -31,6 +31,7 @@ const WEEKDAYS = [
 ];
 
 export type MentionKind = "date" | "recurring" | "tag";
+export type MentionGroup = "action" | "date" | "recurring";
 
 export interface MentionChipData {
   id: string;
@@ -39,7 +40,8 @@ export interface MentionChipData {
 }
 
 export interface MentionSuggestion extends MentionChipData {
-  group: "date" | "recurring";
+  group: MentionGroup;
+  action?: "open_date_picker";
 }
 
 function escapeAttr(value: string,): string {
@@ -112,6 +114,16 @@ function buildRecurringSuggestion(token: string, label: string = token,): Mentio
     label,
     kind: "recurring",
     group: "recurring",
+  };
+}
+
+function buildDatePickerSuggestion(): MentionSuggestion {
+  return {
+    id: "action_open_date_picker",
+    label: "Select date",
+    kind: "date",
+    group: "action",
+    action: "open_date_picker",
   };
 }
 
@@ -269,6 +281,7 @@ export function getMentionSuggestions(query: string, referenceDate?: string,): M
 
   if (!normalized) {
     return [
+      buildDatePickerSuggestion(),
       ...buildDefaultDateSuggestions(reference,),
       ...buildRecurringSuggestions("",),
     ];
@@ -285,7 +298,15 @@ export function getMentionSuggestions(query: string, referenceDate?: string,): M
   }
 
   items.push(...buildRecurringSuggestions(normalized,),);
-  return dedupeSuggestions(items,).slice(0, 6,);
+  return [buildDatePickerSuggestion(), ...dedupeSuggestions(items,).slice(0, 6,),];
+}
+
+export function createDateMention(date: string, label?: string,): MentionSuggestion {
+  return buildDateSuggestion(date, label ?? formatDisplayDate(date,),);
+}
+
+export function createRecurringMention(token: string, label?: string,): MentionSuggestion {
+  return buildRecurringSuggestion(token, label ?? token,);
 }
 
 export function convertAtMentionsToWikiLinks(markdown: string, referenceDate?: string,): string {

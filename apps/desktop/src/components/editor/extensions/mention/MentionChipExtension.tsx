@@ -4,21 +4,63 @@ import { PluginKey, } from "@tiptap/pm/state";
 import { ReactRenderer, } from "@tiptap/react";
 import type { SuggestionOptions, } from "@tiptap/suggestion";
 import { CalendarDays, Repeat2, } from "lucide-react";
-import { forwardRef, useEffect, useImperativeHandle, useState, } from "react";
-import { getMentionSuggestions, type MentionSuggestion, } from "../../../../services/mentions";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, } from "react";
+import {
+  createDateMention,
+  createRecurringMention,
+  getMentionSuggestions,
+  type MentionSuggestion,
+} from "../../../../services/mentions";
 
 const MentionMenu = forwardRef<
   { onKeyDown: (props: { event: KeyboardEvent; },) => boolean; },
-  { items: MentionSuggestion[]; command: (item: MentionSuggestion,) => void; }
->(function MentionMenu({ items, command, }, ref,) {
+  { items: MentionSuggestion[]; command: (items: MentionSuggestion[],) => void; referenceDate?: string; }
+>(function MentionMenu({ items, command, referenceDate, }, ref,) {
   const [selectedIndex, setSelectedIndex,] = useState(0,);
+  const [showDatePicker, setShowDatePicker,] = useState(false,);
+  const [selectedDate, setSelectedDate,] = useState(referenceDate ?? "",);
+  const [isRecurring, setIsRecurring,] = useState(false,);
+  const [recurrence, setRecurrence,] = useState("daily",);
+  const dateInputRef = useRef<HTMLInputElement>(null,);
 
   useEffect(() => {
     setSelectedIndex(0,);
   }, [items,],);
 
+  useEffect(() => {
+    if (!showDatePicker) return;
+    dateInputRef.current?.focus();
+  }, [showDatePicker,],);
+
+  useEffect(() => {
+    setSelectedDate(referenceDate ?? "",);
+  }, [referenceDate,],);
+
+  const applyCustomDate = () => {
+    if (!selectedDate) return;
+    const nextItems = [createDateMention(selectedDate,),];
+    if (isRecurring) {
+      nextItems.push(createRecurringMention(recurrence,),);
+    }
+    command(nextItems,);
+  };
+
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event, },) => {
+      if (showDatePicker) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setShowDatePicker(false,);
+          return true;
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          applyCustomDate();
+          return true;
+        }
+        return false;
+      }
+
       if (items.length === 0) return false;
 
       if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Enter") {
@@ -37,31 +79,38 @@ const MentionMenu = forwardRef<
 
       if (event.key === "Enter") {
         const item = items[selectedIndex];
-        if (item) command(item,);
+        if (item?.action === "open_date_picker") {
+          setShowDatePicker(true,);
+          return true;
+        }
+        if (item) command([item,],);
         return true;
       }
 
       return false;
     },
-  }), [items, selectedIndex, command,],);
-
-  if (items.length === 0) return null;
-
-  let sawRecurring = false;
+  }), [showDatePicker, items, selectedIndex, command, selectedDate, isRecurring, recurrence,],);
 
   return (
     <div className="mention-menu">
       {items.map((item, index,) => {
-        const showRecurringDivider = item.group === "recurring" && !sawRecurring;
-        if (item.group === "recurring") sawRecurring = true;
+        const showActionDivider = item.group !== "action" && index > 0 && items[index - 1]?.group === "action";
+        const showRecurringDivider = item.group === "recurring" && items[index - 1]?.group !== "recurring";
         const Icon = item.kind === "recurring" ? Repeat2 : CalendarDays;
 
         return (
           <div key={item.id}>
+            {showActionDivider && <div className="mention-menu-divider" />}
             {showRecurringDivider && <div className="mention-menu-divider" />}
             <button
-              className={`mention-menu-item ${index === selectedIndex ? "is-selected" : ""}`}
-              onClick={() => command(item,)}
+              className={`mention-menu-item ${index === selectedIndex && !showDatePicker ? "is-selected" : ""}`}
+              onClick={() => {
+                if (item.action === "open_date_picker") {
+                  setShowDatePicker(true,);
+                  return;
+                }
+                command([item,],);
+              }}
               type="button"
             >
               <Icon className="mention-menu-icon" size={14} />
@@ -70,11 +119,86 @@ const MentionMenu = forwardRef<
           </div>
         );
       },)}
+      {showDatePicker && (
+        <div className="mention-date-picker">
+          <div className="mention-date-picker-row">
+            <input
+              ref={dateInputRef}
+              className="mention-date-input"
+              type="date"
+              value={selectedDate}
+              onChange={(event,) => setSelectedDate(event.target.value,)}
+            />
+          </div>
+          <label className="mention-date-picker-toggle">
+            <input
+              checked={isRecurring}
+              type="checkbox"
+              onChange={(event,) => setIsRecurring(event.target.checked,)}
+            />
+            <span>Make recurring</span>
+          </label>
+          {isRecurring && (
+            <div className="mention-date-picker-row">
+              <select
+                className="mention-date-select"
+                value={recurrence}
+                onChange={(event,) => setRecurrence(event.target.value,)}
+              >
+                <option value="daily">daily</option>
+                <option value="weekly">weekly</option>
+                <option value="monthly">monthly</option>
+              </select>
+            </div>
+          )}
+          <div className="mention-date-picker-actions">
+            <button
+              className="mention-date-picker-btn mention-date-picker-btn-muted"
+              onClick={() => setShowDatePicker(false,)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="mention-date-picker-btn"
+              disabled={!selectedDate}
+              onClick={applyCustomDate}
+              type="button"
+            >
+              Insert
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 },);
 
 export function buildMentionChipSuggestion(referenceDate?: string,): Omit<SuggestionOptions, "editor"> {
+  const insertMentionItems = (
+    editor: Parameters<NonNullable<SuggestionOptions["command"]>>[0]["editor"],
+    range: Parameters<NonNullable<SuggestionOptions["command"]>>[0]["range"],
+    items: MentionSuggestion[],
+  ) => {
+    const content = items.flatMap((item,) => [
+      {
+        type: "mentionChip",
+        attrs: {
+          id: item.id,
+          label: item.label,
+          kind: item.kind,
+        },
+      },
+      { type: "text", text: " ", },
+    ]);
+
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(range, content,)
+      .run();
+  };
+
   return {
     char: "@",
     allowSpaces: true,
@@ -82,21 +206,7 @@ export function buildMentionChipSuggestion(referenceDate?: string,): Omit<Sugges
     items: ({ query, },) => getMentionSuggestions(query, referenceDate,),
     command: ({ editor, range, props, },) => {
       const item = props as MentionSuggestion;
-      editor
-        .chain()
-        .focus()
-        .insertContentAt(range, [
-          {
-            type: "mentionChip",
-            attrs: {
-              id: item.id,
-              label: item.label,
-              kind: item.kind,
-            },
-          },
-          { type: "text", text: " ", },
-        ],)
-        .run();
+      insertMentionItems(editor, range, [item,],);
     },
     render: () => {
       let renderer: ReactRenderer;
@@ -122,7 +232,10 @@ export function buildMentionChipSuggestion(referenceDate?: string,): Omit<Sugges
           renderer = new ReactRenderer(MentionMenu, {
             props: {
               items: props.items as MentionSuggestion[],
-              command: (item: MentionSuggestion,) => props.command(item,),
+              command: (items: MentionSuggestion[],) => {
+                insertMentionItems(props.editor, props.range, items,);
+              },
+              referenceDate,
             },
             editor: props.editor,
           },);
@@ -148,7 +261,10 @@ export function buildMentionChipSuggestion(referenceDate?: string,): Omit<Sugges
         onUpdate: (props,) => {
           renderer.updateProps({
             items: props.items as MentionSuggestion[],
-            command: (item: MentionSuggestion,) => props.command(item,),
+            command: (items: MentionSuggestion[],) => {
+              insertMentionItems(props.editor, props.range, items,);
+            },
+            referenceDate,
           },);
 
           if (props.clientRect && referenceEl) {
