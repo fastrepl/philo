@@ -37,7 +37,9 @@
 }
 
 .tiptap .mention-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   max-width: 16rem;
   height: 20px;
   margin: 0 0.125rem;
@@ -48,10 +50,10 @@
   color: #1d4ed8;
   font-size: 0.75rem;
   font-weight: 600;
-  line-height: 18px;
+  line-height: 1;
   text-align: center;
   white-space: nowrap;
-  vertical-align: text-bottom;
+  vertical-align: middle;
   box-sizing: border-box;
   overflow: hidden;
 }
