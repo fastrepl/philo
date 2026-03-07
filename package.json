@@ -11,10 +11,13 @@
     "dev": "pnpm --filter @philo/desktop dev",
     "build": "pnpm --filter @philo/desktop build",
     "preview": "pnpm --filter @philo/desktop preview",
-    "typecheck": "pnpm --filter @philo/desktop typecheck && pnpm --filter @philo/landing typecheck",
+    "typecheck": "turbo typecheck --force",
     "fmt": "dprint fmt",
     "fmt:check": "dprint check",
-    "check": "pnpm run typecheck && pnpm run fmt",
+    "check": "turbo typecheck --force && dprint fmt",
     "tauri": "pnpm --filter @philo/desktop tauri"
+  },
+  "devDependencies": {
+    "turbo": "^2.8.14"
   }
 }
