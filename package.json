@@ -11,10 +11,11 @@
     "dev": "pnpm --filter @philo/desktop dev",
     "build": "pnpm --filter @philo/desktop build",
     "preview": "pnpm --filter @philo/desktop preview",
-    "typecheck": "turbo typecheck --force",
+    "typecheck": "turbo run typecheck --force --filter=@philo/desktop --filter=@philo/landing",
     "fmt": "dprint fmt",
     "fmt:check": "dprint check",
-    "check": "turbo typecheck --force && dprint fmt",
+    "check": "pnpm run typecheck && dprint fmt",
+    "release:check": "node scripts/release-check.mjs",
     "tauri": "pnpm --filter @philo/desktop tauri"
   },
   "devDependencies": {
