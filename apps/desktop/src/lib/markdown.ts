@@ -1,3 +1,4 @@
+import { Extension, } from "@tiptap/core";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -20,8 +21,23 @@ export const EMPTY_DOC: JSONContent = {
   content: [{ type: "paragraph", },],
 };
 
-const FENCED_CODE_BLOCK_RE = /(```[\s\S]*?```)/g;
-const EMPTY_PARAGRAPH_MARKDOWN = "&nbsp;";
+const BlankLineExtension = Extension.create({
+  name: "blankLine",
+
+  markdownTokenName: "space",
+
+  parseMarkdown: (token, helpers,) => {
+    const newlineCount = (token.raw?.match(/\n/g,) || []).length;
+    if (newlineCount <= 2) {
+      return [];
+    }
+
+    return Array.from(
+      { length: newlineCount - 2, },
+      () => helpers.createNode("paragraph", undefined, [],),
+    );
+  },
+},);
 
 export function isValidContent(content: unknown,): content is JSONContent {
   if (!content || typeof content !== "object") return false;
@@ -37,6 +53,7 @@ function getExtensions() {
       paragraph: false,
     },),
     CustomParagraph,
+    BlankLineExtension,
     Image.configure({ inline: true, allowBase64: false, },),
     Underline,
     Link.configure({ openOnClick: false, },),
@@ -65,25 +82,9 @@ function getMarkdownManager(): MarkdownManager {
   return _manager;
 }
 
-function normalizeBlankLines(markdown: string,): string {
-  return markdown
-    .split(FENCED_CODE_BLOCK_RE,)
-    .map((part, index,) => {
-      if (index % 2 === 1) return part;
-
-      return part.replace(/(?:\n[ \t]*){2,}/g, (run,) => {
-        const newlineCount = (run.match(/\n/g,) || []).length;
-        if (newlineCount <= 2) return "\n\n";
-
-        return `\n\n${Array.from({ length: newlineCount - 2, }, () => `${EMPTY_PARAGRAPH_MARKDOWN}\n\n`,).join("",)}`;
-      },);
-    },)
-    .join("",);
-}
-
 export function md2json(markdown: string,): JSONContent {
   try {
-    const source = normalizeBlankLines(markdown.replace(/\r\n?/g, "\n",),);
+    const source = markdown.replace(/\r\n?/g, "\n",);
     const result = getMarkdownManager().parse(source,);
     return isValidContent(result,) ? result : EMPTY_DOC;
   } catch {
