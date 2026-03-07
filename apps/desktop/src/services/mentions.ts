@@ -1,9 +1,24 @@
+import { getToday, } from "../types/note";
+
 const RECURRENCE_TOKEN_RE = /^(daily|weekly|monthly|(\d+)(days?|weeks?|months?))$/i;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const AT_MENTION_RE = /(^|[\s([{])@([a-zA-Z0-9][\w-]*)\b/g;
 const MONTH_DAY_RE =
   /^(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec)\s+(\d{1,2})(?:,\s*(\d{4}))?$/i;
 const SLASH_DATE_RE = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/;
+const LEGACY_DATE_TARGET_RE = /^date_(\d{4}-\d{2}-\d{2})$/;
+const LEGACY_RECURRING_TARGET_RE = /^recurring_(daily|weekly|monthly|(\d+)(days?|weeks?|months?))$/i;
+const CANONICAL_DUE_TARGET_RE = /^(\d{4}-\d{2}-\d{2})\(due date\)$/i;
+const CANONICAL_RECURRING_TARGET_RE = /^(\d{4}-\d{2}-\d{2})\(start date\),\s*(\d+)\((day|days)\)$/i;
+const RECURRING_ID_RE = /^recurring_(\d{4}-\d{2}-\d{2})_(\d+)$/;
+const DATE_ID_RE = /^date_(\d{4}-\d{2}-\d{2})$/;
+const LEGACY_DATE_LINK_RE = /\[\[(date_\d{4}-\d{2}-\d{2})(?:\|[^[\]]+)?\]\]/i;
+const LEGACY_RECURRING_LINK_RE =
+  /\[\[(recurring_(?:daily|weekly|monthly|(?:\d+)(?:days?|weeks?|months?)))(?:\|[^[\]]+)?\]\]/i;
+const LEGACY_RECURRING_PAIR_RE = new RegExp(
+  `${LEGACY_DATE_LINK_RE.source}\\s+${LEGACY_RECURRING_LINK_RE.source}`,
+  "gi",
+);
 
 const MONTHS = [
   "january",
@@ -72,6 +87,14 @@ function addDays(date: Date, days: number,): Date {
   return next;
 }
 
+function addDaysToIsoDate(date: string, days: number,): string {
+  return toIsoDate(addDays(fromIsoDate(date,), days,),);
+}
+
+function diffDays(start: string, end: string,): number {
+  return Math.round((fromIsoDate(end,).getTime() - fromIsoDate(start,).getTime()) / 86_400_000,);
+}
+
 function parseReferenceDate(referenceDate: string | undefined,): Date {
   if (referenceDate && ISO_DATE_RE.test(referenceDate,)) {
     return fromIsoDate(referenceDate,);
@@ -84,14 +107,6 @@ function formatDisplayDate(date: string,): string {
     month: "short",
     day: "numeric",
   },);
-}
-
-function normalizeDateLabel(label: string,): string {
-  const normalized = label.trim().toLowerCase();
-  if (normalized === "today") return "Today";
-  if (normalized === "tomorrow") return "Tomorrow";
-  if (normalized === "yesterday") return "Yesterday";
-  return label.trim();
 }
 
 function normalizeToken(token: string,): string {
@@ -111,18 +126,80 @@ function monthIndex(input: string,): number {
   return MONTHS.findIndex((month,) => month.startsWith(normalized,));
 }
 
+function recurrenceTokenToIntervalDays(token: string,): number | null {
+  const normalized = token.trim().toLowerCase();
+  if (normalized === "daily") return 1;
+  if (normalized === "weekly") return 7;
+  if (normalized === "monthly") return 30;
+
+  const match = normalized.match(/^(\d+)(days?|weeks?|months?)$/i,);
+  if (!match) return null;
+
+  const count = Number(match[1],);
+  if (match[2].startsWith("day",)) return count;
+  if (match[2].startsWith("week",)) return count * 7;
+  if (match[2].startsWith("month",)) return count * 30;
+  return null;
+}
+
+function buildDateId(date: string,): string {
+  return `date_${date}`;
+}
+
+function buildRecurringId(startDate: string, intervalDays: number,): string {
+  return `recurring_${startDate}_${intervalDays}`;
+}
+
+function formatRecurringInterval(intervalDays: number,): string {
+  return `${intervalDays}(${intervalDays === 1 ? "day" : "days"})`;
+}
+
+function formatDueTarget(date: string,): string {
+  return `${date}(due date)`;
+}
+
+function formatRecurringTarget(startDate: string, intervalDays: number,): string {
+  return `${startDate}(start date),${formatRecurringInterval(intervalDays,)}`;
+}
+
+function getRecurringDisplayDate(startDate: string, intervalDays: number, referenceDate: string,): string {
+  if (startDate >= referenceDate) return startDate;
+
+  const elapsedDays = diffDays(startDate, referenceDate,);
+  const cycles = Math.ceil(elapsedDays / intervalDays,);
+  return addDaysToIsoDate(startDate, cycles * intervalDays,);
+}
+
+function parseMentionId(
+  id: string,
+): { kind: "date"; date: string; } | { kind: "recurring"; startDate: string; intervalDays: number; } | null {
+  const dateMatch = DATE_ID_RE.exec(id,);
+  if (dateMatch) {
+    return { kind: "date", date: dateMatch[1], };
+  }
+
+  const recurringMatch = RECURRING_ID_RE.exec(id,);
+  if (!recurringMatch) return null;
+
+  return {
+    kind: "recurring",
+    startDate: recurringMatch[1],
+    intervalDays: Number(recurringMatch[2],),
+  };
+}
+
 function buildDateSuggestion(date: string, label: string,): MentionSuggestion {
   return {
-    id: `date_${date}`,
+    id: buildDateId(date,),
     label,
     kind: "date",
     group: "date",
   };
 }
 
-function buildRecurringSuggestion(token: string, label: string = token,): MentionSuggestion {
+function buildRecurringSuggestion(startDate: string, intervalDays: number, label: string,): MentionSuggestion {
   return {
-    id: `recurring_${token.toLowerCase()}`,
+    id: buildRecurringId(startDate, intervalDays,),
     label,
     kind: "recurring",
     group: "recurring",
@@ -230,12 +307,17 @@ function buildDefaultDateSuggestions(reference: Date,): MentionSuggestion[] {
   ].filter((item,): item is MentionSuggestion => item !== null);
 }
 
-function buildRecurringSuggestions(query: string,): MentionSuggestion[] {
-  const tokens = ["daily", "weekly", "monthly",];
+function buildRecurringSuggestions(query: string, referenceDate: string,): MentionSuggestion[] {
+  const tokens = [
+    { token: "daily", label: "Daily", },
+    { token: "weekly", label: "Weekly", },
+    { token: "monthly", label: "Monthly", },
+  ];
   const normalized = normalizeToken(query,);
+
   return tokens
-    .filter((token,) => !normalized || token.startsWith(normalized,))
-    .map((token,) => buildRecurringSuggestion(token, toTitleCase(token,),));
+    .filter((item,) => !normalized || item.token.startsWith(normalized,))
+    .map((item,) => buildRecurringSuggestion(referenceDate, recurrenceTokenToIntervalDays(item.token,)!, item.label,));
 }
 
 function dedupeSuggestions(items: MentionSuggestion[],): MentionSuggestion[] {
@@ -247,24 +329,54 @@ function dedupeSuggestions(items: MentionSuggestion[],): MentionSuggestion[] {
   },);
 }
 
-function parseMentionTarget(target: string, label?: string | null,): MentionChipData | null {
-  if (target.startsWith("date_",)) {
-    const date = target.slice("date_".length,);
-    if (!ISO_DATE_RE.test(date,)) return null;
+function parseMentionTarget(
+  target: string,
+  label?: string | null,
+  fallbackRecurringStartDate?: string,
+): MentionChipData | null {
+  const canonicalDueMatch = CANONICAL_DUE_TARGET_RE.exec(target,);
+  if (canonicalDueMatch) {
     return {
-      id: target,
+      id: buildDateId(canonicalDueMatch[1],),
       kind: "date",
-      label: label ? normalizeDateLabel(label,) : formatDisplayDate(date,),
+      label: label?.trim() || "",
     };
   }
 
-  if (target.startsWith("recurring_",)) {
-    const token = target.slice("recurring_".length,);
-    if (!RECURRENCE_TOKEN_RE.test(token,)) return null;
+  const canonicalRecurringMatch = CANONICAL_RECURRING_TARGET_RE.exec(target,);
+  if (canonicalRecurringMatch) {
+    return {
+      id: buildRecurringId(canonicalRecurringMatch[1], Number(canonicalRecurringMatch[2],),),
+      kind: "recurring",
+      label: label?.trim() || "",
+    };
+  }
+
+  const legacyDateMatch = LEGACY_DATE_TARGET_RE.exec(target,);
+  if (legacyDateMatch) {
+    return {
+      id: buildDateId(legacyDateMatch[1],),
+      kind: "date",
+      label: label?.trim() || "",
+    };
+  }
+
+  const legacyRecurringMatch = LEGACY_RECURRING_TARGET_RE.exec(target,);
+  if (legacyRecurringMatch) {
+    const intervalDays = recurrenceTokenToIntervalDays(legacyRecurringMatch[1],);
+    if (!intervalDays) return null;
+    if (fallbackRecurringStartDate) {
+      return {
+        id: buildRecurringId(fallbackRecurringStartDate, intervalDays,),
+        kind: "recurring",
+        label: label?.trim() || "",
+      };
+    }
+
     return {
       id: target,
       kind: "recurring",
-      label: label?.trim() || token.replace(/_/g, " ",),
+      label: label?.trim() || target.slice("recurring_".length,).replace(/_/g, " ",),
     };
   }
 
@@ -281,21 +393,97 @@ function parseMentionTarget(target: string, label?: string | null,): MentionChip
   return null;
 }
 
-function toMentionChipHtml(data: MentionChipData,): string {
+function toMentionChipHtml(data: MentionChipData, referenceDate?: string,): string {
+  const label = getMentionChipLabel(data, referenceDate,);
   return `<span data-mention-chip="" data-id="${escapeAttr(data.id,)}" data-kind="${
     escapeAttr(data.kind,)
-  }" data-label="${escapeAttr(data.label,)}">${escapeHtml(data.label,)}</span>`;
+  }" data-label="${escapeAttr(label,)}">${escapeHtml(label,)}</span>`;
+}
+
+function replaceLegacyRecurringPairs(markdown: string, referenceDate?: string,): string {
+  return markdown.replace(
+    LEGACY_RECURRING_PAIR_RE,
+    (full, dateTarget: string, recurringTarget: string,) => {
+      const dateMatch = LEGACY_DATE_TARGET_RE.exec(dateTarget,);
+      const recurringMatch = LEGACY_RECURRING_TARGET_RE.exec(recurringTarget,);
+      if (!dateMatch || !recurringMatch) return full;
+
+      const intervalDays = recurrenceTokenToIntervalDays(recurringMatch[1],);
+      if (!intervalDays) return full;
+
+      return toMentionChipHtml({
+        id: buildRecurringId(dateMatch[1], intervalDays,),
+        kind: "recurring",
+        label: "",
+      }, referenceDate,);
+    },
+  );
+}
+
+export function getMentionChipLabel(
+  data: Pick<MentionChipData, "id" | "kind" | "label">,
+  referenceDate: string = getToday(),
+): string {
+  const parsed = parseMentionId(data.id,);
+  if (!parsed) {
+    return data.label || String(data.id ?? "",);
+  }
+
+  if (parsed.kind === "date") {
+    return parsed.date === referenceDate ? "Today" : formatDisplayDate(parsed.date,);
+  }
+
+  const displayDate = getRecurringDisplayDate(parsed.startDate, parsed.intervalDays, referenceDate,);
+  return displayDate === referenceDate ? "Today" : formatDisplayDate(displayDate,);
+}
+
+export function getMentionChipState(
+  data: Pick<MentionChipData, "id" | "kind">,
+  referenceDate: string = getToday(),
+): "today" | "overdue" | null {
+  const parsed = parseMentionId(data.id,);
+  if (!parsed) return null;
+
+  if (parsed.kind === "date") {
+    if (parsed.date === referenceDate) return "today";
+    if (parsed.date < referenceDate) return "overdue";
+    return null;
+  }
+
+  const displayDate = getRecurringDisplayDate(parsed.startDate, parsed.intervalDays, referenceDate,);
+  return displayDate === referenceDate ? "today" : null;
+}
+
+export function renderMentionMarkdown(
+  data: Pick<MentionChipData, "id" | "kind" | "label">,
+): string {
+  const parsed = parseMentionId(data.id,);
+
+  if (parsed?.kind === "date") {
+    return `[[${formatDueTarget(parsed.date,)}]]`;
+  }
+
+  if (parsed?.kind === "recurring") {
+    return `[[${formatRecurringTarget(parsed.startDate, parsed.intervalDays,)}]]`;
+  }
+
+  const id = String(data.id ?? "",);
+  const label = String(data.label ?? "",);
+  if (!id) return "";
+  if (!label || label === id) return `[[${id}]]`;
+  return `[[${id}|${label}]]`;
 }
 
 export function getMentionSuggestions(query: string, referenceDate?: string,): MentionSuggestion[] {
   const reference = parseReferenceDate(referenceDate,);
+  const today = toIsoDate(reference,);
   const normalized = normalizeToken(query,);
 
   if (!normalized) {
     return [
       buildDatePickerSuggestion(),
       ...buildDefaultDateSuggestions(reference,),
-      ...buildRecurringSuggestions("",),
+      ...buildRecurringSuggestions("", today,),
     ];
   }
 
@@ -304,12 +492,12 @@ export function getMentionSuggestions(query: string, referenceDate?: string,): M
   if (resolvedDate) items.push(resolvedDate,);
 
   for (const preset of buildDefaultDateSuggestions(reference,)) {
-    if (preset.label.startsWith(normalized,)) {
+    if (preset.label.toLowerCase().startsWith(normalized,)) {
       items.push(preset,);
     }
   }
 
-  items.push(...buildRecurringSuggestions(normalized,),);
+  items.push(...buildRecurringSuggestions(normalized, today,),);
   return [buildDatePickerSuggestion(), ...dedupeSuggestions(items,).slice(0, 6,),];
 }
 
@@ -317,12 +505,22 @@ export function createDateMention(date: string, label?: string,): MentionSuggest
   return buildDateSuggestion(date, label ?? formatDisplayDate(date,),);
 }
 
-export function createRecurringMention(token: string, label?: string,): MentionSuggestion {
-  return buildRecurringSuggestion(token, label ?? token,);
+export function createRecurringMention(
+  startDate: string,
+  recurrence: string | number,
+  label?: string,
+): MentionSuggestion {
+  const intervalDays = typeof recurrence === "number" ? recurrence : recurrenceTokenToIntervalDays(recurrence,);
+  if (!intervalDays) {
+    throw new Error(`Invalid recurrence: ${String(recurrence,)}`,);
+  }
+
+  return buildRecurringSuggestion(startDate, intervalDays, label ?? formatDisplayDate(startDate,),);
 }
 
 export function convertAtMentionsToWikiLinks(markdown: string, referenceDate?: string,): string {
   const reference = parseReferenceDate(referenceDate,);
+  const referenceIso = toIsoDate(reference,);
   const parts = markdown.split(/(```[\s\S]*?```|`[^`\n]+`)/g,);
 
   return parts
@@ -331,10 +529,12 @@ export function convertAtMentionsToWikiLinks(markdown: string, referenceDate?: s
       return part.replace(AT_MENTION_RE, (full, prefix: string, token: string,) => {
         const normalized = normalizeToken(token,);
         const date = resolveDateQuery(normalized, reference,);
-        if (date) return `${prefix}[[${date.id}|${date.label}]]`;
+        if (date) return `${prefix}[[${formatDueTarget(date.id.slice("date_".length,),)}]]`;
 
         if (RECURRENCE_TOKEN_RE.test(normalized,)) {
-          return `${prefix}[[recurring_${normalized}|${normalized}]]`;
+          const intervalDays = recurrenceTokenToIntervalDays(normalized,);
+          if (!intervalDays) return full;
+          return `${prefix}[[${formatRecurringTarget(referenceIso, intervalDays,)}]]`;
         }
 
         const cleaned = sanitizeToken(token,);
@@ -345,18 +545,18 @@ export function convertAtMentionsToWikiLinks(markdown: string, referenceDate?: s
     .join("",);
 }
 
-export function replaceMentionWikiLinksWithChips(markdown: string,): string {
+export function replaceMentionWikiLinksWithChips(markdown: string, referenceDate?: string,): string {
   const parts = markdown.split(/(```[\s\S]*?```|`[^`\n]+`)/g,);
 
   return parts
     .map((part, index,) => {
       if (index % 2 === 1) return part;
-      return part.replace(
+      return replaceLegacyRecurringPairs(part, referenceDate,).replace(
         /\[\[([^[\]|]+)(?:\|([^[\]]+))?\]\]/g,
         (full, target: string, label: string | undefined, offset: number, source: string,) => {
           if (offset > 0 && source[offset - 1] === "!") return full;
-          const data = parseMentionTarget(target.trim(), label,);
-          return data ? toMentionChipHtml(data,) : full;
+          const data = parseMentionTarget(target.trim(), label, referenceDate,);
+          return data ? toMentionChipHtml(data, referenceDate,) : full;
         },
       );
     },)

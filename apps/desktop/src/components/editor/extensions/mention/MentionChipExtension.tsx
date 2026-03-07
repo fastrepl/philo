@@ -8,23 +8,12 @@ import { forwardRef, useEffect, useImperativeHandle, useState, } from "react";
 import {
   createDateMention,
   createRecurringMention,
+  getMentionChipLabel,
+  getMentionChipState,
   getMentionSuggestions,
   type MentionSuggestion,
+  renderMentionMarkdown,
 } from "../../../../services/mentions";
-import { getToday, } from "../../../../types/note";
-
-const DATE_MENTION_ID_RE = /^date_(\d{4}-\d{2}-\d{2})$/;
-
-function getDateMentionState(id: unknown,): "today" | "overdue" | null {
-  const match = DATE_MENTION_ID_RE.exec(String(id ?? "",),);
-  if (!match) return null;
-
-  const date = match[1];
-  const today = getToday();
-  if (date === today) return "today";
-  if (date < today) return "overdue";
-  return null;
-}
 
 function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (date: string,) => void; },) {
   const todayStr = (() => {
@@ -114,11 +103,8 @@ const MentionMenu = forwardRef<
 
   const applyCustomDate = () => {
     if (!selectedDate) return;
-    const nextItems = [createDateMention(selectedDate,),];
-    if (recurrence) {
-      nextItems.push(createRecurringMention(recurrence,),);
-    }
-    command(nextItems,);
+    const nextItem = recurrence ? createRecurringMention(selectedDate, recurrence,) : createDateMention(selectedDate,);
+    command([nextItem,],);
   };
 
   useImperativeHandle(ref, () => ({
@@ -369,10 +355,21 @@ export const MentionChipExtension = Mention.extend({
   addOptions() {
     return {
       HTMLAttributes: {},
-      renderText: ({ node, },) => String(node.attrs.label ?? "",),
+      renderText: ({ node, },) =>
+        getMentionChipLabel({
+          id: String(node.attrs.id ?? "",),
+          kind: String(node.attrs.kind ?? "tag",) as "date" | "recurring" | "tag",
+          label: String(node.attrs.label ?? "",),
+        },),
       deleteTriggerWithBackspace: true,
       renderHTML: ({ node, },) => {
-        const dateState = getDateMentionState(node.attrs.id,);
+        const chip = {
+          id: String(node.attrs.id ?? "",),
+          kind: String(node.attrs.kind ?? "tag",) as "date" | "recurring" | "tag",
+          label: String(node.attrs.label ?? "",),
+        };
+        const dateState = getMentionChipState(chip,);
+        const label = getMentionChipLabel(chip,);
 
         return [
           "span",
@@ -387,7 +384,7 @@ export const MentionChipExtension = Mention.extend({
               .filter(Boolean,)
               .join(" ",),
           },
-          String(node.attrs.label ?? "",),
+          label,
         ];
       },
       suggestions: [],
@@ -420,10 +417,10 @@ export const MentionChipExtension = Mention.extend({
   },
 
   renderMarkdown(node,) {
-    const id = String(node.attrs?.id ?? "",);
-    const label = String(node.attrs?.label ?? "",);
-    if (!id) return "";
-    if (!label || label === id) return `[[${id}]]`;
-    return `[[${id}|${label}]]`;
+    return renderMentionMarkdown({
+      id: String(node.attrs?.id ?? "",),
+      kind: String(node.attrs?.kind ?? "tag",) as "date" | "recurring" | "tag",
+      label: String(node.attrs?.label ?? "",),
+    },);
   },
 },);
