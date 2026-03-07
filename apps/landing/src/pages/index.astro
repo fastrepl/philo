@@ -96,7 +96,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
           <div class="download-split" data-download>
             <a class="download-button" data-download-primary href="https://github.com/ComputelessComputer/philo/releases/latest">
               Download for macOS
-            </a><button type="button" class="download-chevron" data-download-toggle aria-label="Other platforms">▾</button>
+            </a><button type="button" class="download-chevron" data-download-toggle aria-label="Other platforms"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
             <div class="download-menu" data-download-menu>
               <a data-download-macos href="https://github.com/ComputelessComputer/philo/releases/latest">macOS</a>
               <a data-download-windows href="https://github.com/ComputelessComputer/philo/releases/latest">Windows</a>
@@ -276,7 +276,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
       const labels = { macos: "Download for macOS", windows: "Download for Windows", linux: "Download for Linux" };
       if (primary) {
         primary.href = urls[os];
-        primary.firstChild.textContent = labels[os] + " ";
+primary.firstChild.textContent = labels[os];
       }
 
       const currentLink = { macos: macLink, windows: winLink, linux: linuxLink }[os];
@@ -452,6 +452,10 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     font-weight: 500;
     letter-spacing: 0.01em;
   }
+  .hero {
+    position: relative;
+    z-index: 1;
+  }
 
   .hero h1 {
     margin: 0;
@@ -546,8 +550,9 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     flex-direction: column;
   }
 
-  .download-menu a {
-    padding: 7px 10px;
+  .download-menu a,
+  .download-menu a:visited {
+    padding: 8px 10px;
     color: var(--text);
     font-size: var(--fs-sm);
     font-weight: 500;
