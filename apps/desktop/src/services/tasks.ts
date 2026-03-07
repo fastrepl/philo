@@ -17,18 +17,29 @@ interface TaskLine {
 
 /**
  * Recurrence tag pattern.
- * Matches: #daily, @daily, [[recurring_daily]], [[recurring_2weeks]], etc.
+ * Matches: #daily, @daily, [[recurring_daily]], [[2026-03-08(start date),7(days)]], etc.
  */
 const RECURRENCE_TAG = /(?:#|@)(daily|weekly|monthly|(\d+)(days?|weeks?|months?))\b/i;
 const RECURRENCE_WIKILINK = /\[\[(?:recurring_)?(daily|weekly|monthly|(\d+)(days?|weeks?|months?))(?:\|[^\]]+)?\]\]/i;
+const CANONICAL_RECURRING_WIKILINK = /\[\[(\d{4}-\d{2}-\d{2})\(start date\),\s*(\d+)\((day|days)\)\]\]/i;
 
 interface Recurrence {
   intervalDays: number;
   tag: string;
+  startDate?: string;
 }
 
 /** Parse a recurrence tag from task text. Returns null if none found. */
 export function parseRecurrence(text: string,): Recurrence | null {
+  const canonicalMatch = text.match(CANONICAL_RECURRING_WIKILINK,);
+  if (canonicalMatch) {
+    return {
+      intervalDays: Number(canonicalMatch[2],),
+      tag: canonicalMatch[0],
+      startDate: canonicalMatch[1],
+    };
+  }
+
   const match = text.match(RECURRENCE_TAG,) ?? text.match(RECURRENCE_WIKILINK,);
   if (!match) return null;
 
@@ -59,6 +70,16 @@ function addDaysToDate(dateStr: string, days: number,): string {
   const d = new Date(dateStr + "T00:00:00",);
   d.setDate(d.getDate() + days,);
   return dateToString(d,);
+}
+
+function nextOccurrenceAfter(startDate: string, intervalDays: number, afterDate: string,): string {
+  if (startDate > afterDate) return startDate;
+
+  const start = new Date(startDate + "T00:00:00",).getTime();
+  const after = new Date(afterDate + "T00:00:00",).getTime();
+  const elapsedDays = Math.floor((after - start) / 86_400_000,);
+  const cycles = Math.floor(elapsedDays / intervalDays,) + 1;
+  return addDaysToDate(startDate, cycles * intervalDays,);
 }
 
 /**
@@ -135,7 +156,7 @@ function prependTasks(content: string, tasks: TaskLine[],): string {
 
 /**
  * Roll over unchecked tasks from past notes to today.
- * Also re-creates recurring tasks (e.g. @daily, #weekly, [[recurring_2weeks]])
+ * Also re-creates recurring tasks (e.g. @daily, #weekly, [[2026-03-08(start date),7(days)]])
  * when they were checked off and enough time has passed.
  *
  * Returns true if any tasks were rolled over.
@@ -165,7 +186,9 @@ export async function rolloverTasks(days: number = 30,): Promise<boolean> {
     const checkedRecurring = extractCheckedRecurringTasks(markdown,);
     for (const taskText of checkedRecurring) {
       const recurrence = parseRecurrence(taskText,)!;
-      const nextDue = addDaysToDate(date, recurrence.intervalDays,);
+      const nextDue = recurrence.startDate
+        ? nextOccurrenceAfter(recurrence.startDate, recurrence.intervalDays, date,)
+        : addDaysToDate(date, recurrence.intervalDays,);
       if (nextDue <= today && !taskMap.has(taskText,)) {
         taskMap.set(taskText, { indent: "", text: taskText, },);
       }
