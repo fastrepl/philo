@@ -359,6 +359,14 @@ export default function AppLayout() {
     invoke("set_window_opacity", { opacity: targetOpacity, },).catch(console.error,);
   }, [isPinned, isWindowFocused,],);
 
+  // Re-read today's note from disk when the window regains focus (handles external edits)
+  useEffect(() => {
+    if (!isConfigured) return;
+    const handleFocus = () => syncTodayNoteFromDisk();
+    window.addEventListener("focus", handleFocus,);
+    return () => window.removeEventListener("focus", handleFocus,);
+  }, [isConfigured, syncTodayNoteFromDisk,],);
+
   // Roll over unchecked tasks from past days, then load today's note
   useEffect(() => {
     if (!isConfigured) return;

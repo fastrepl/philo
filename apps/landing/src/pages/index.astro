@@ -165,7 +165,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
                     data-index={index}
                     aria-label={`Go to ${item.title}`}
                     aria-current={index === 0 ? "true" : "false"}
-                  ></button>
+                  ><span class="carousel-dot-fill"></span></button>
                 ))
               }
             </div>
@@ -234,7 +234,9 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     const next = carousel.querySelector("[data-carousel-next]",);
     const dots = Array.from(carousel.querySelectorAll("[data-carousel-dot]",),);
     const total = track?.children.length ?? 0;
+    const DURATION = 5000;
     let ticking = false;
+    let timer = null;
 
     const getIndex = () => {
       if (!track) {
@@ -254,22 +256,42 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
       },);
     };
 
+    const restartTimer = () => {
+      clearTimeout(timer,);
+      for (const dot of dots) {
+        const fill = dot.querySelector(".carousel-dot-fill",);
+        if (!fill) continue;
+        fill.style.animation = "none";
+        void fill.offsetWidth;
+        fill.style.animation = "";
+      }
+      setActiveDot();
+      timer = setTimeout(() => {
+        goTo(getIndex() + 1,);
+      }, DURATION,);
+    };
+
     const setActiveDot = () => {
       const index = getIndex();
       for (const [dotIndex, dot] of dots.entries()) {
         const active = dotIndex === index;
         dot.classList.toggle("is-active", active,);
         dot.setAttribute("aria-current", active ? "true" : "false",);
+        const fill = dot.querySelector(".carousel-dot-fill",);
+        if (fill) {
+          fill.style.animationDuration = `${DURATION}ms`;
+        }
       }
     };
 
-    prev?.addEventListener("click", () => goTo(getIndex() - 1,),);
-    next?.addEventListener("click", () => goTo(getIndex() + 1,),);
+    prev?.addEventListener("click", () => { goTo(getIndex() - 1,); restartTimer(); },);
+    next?.addEventListener("click", () => { goTo(getIndex() + 1,); restartTimer(); },);
 
     for (const dot of dots) {
       dot.addEventListener("click", () => {
         const index = Number(dot.getAttribute("data-index",) ?? "0",);
         goTo(index,);
+        restartTimer();
       },);
     }
 
@@ -285,6 +307,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     },);
 
     setActiveDot();
+    restartTimer();
     window.addEventListener("resize", setActiveDot,);
   }
 </script>
@@ -612,12 +635,29 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     width: 16px;
     height: 5px;
     border: 0;
+    padding: 0;
     background: #d5d5ce;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
   }
 
-  .carousel-dot.is-active {
+  .carousel-dot-fill {
+    position: absolute;
+    inset: 0;
     background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .carousel-dot.is-active .carousel-dot-fill {
+    animation: dot-fill 5000ms linear forwards;
+  }
+
+  @keyframes dot-fill {
+    to {
+      transform: scaleX(1);
+    }
   }
 
   .video-column {

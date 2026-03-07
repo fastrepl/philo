@@ -4,13 +4,82 @@ import { PluginKey, } from "@tiptap/pm/state";
 import { ReactRenderer, } from "@tiptap/react";
 import type { SuggestionOptions, } from "@tiptap/suggestion";
 import { CalendarDays, Repeat2, } from "lucide-react";
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState, } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useState, } from "react";
 import {
   createDateMention,
   createRecurringMention,
   getMentionSuggestions,
   type MentionSuggestion,
 } from "../../../../services/mentions";
+
+function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (date: string,) => void; },) {
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1,).padStart(2, "0",)}-${
+      String(d.getDate(),).padStart(2, "0",)
+    }`;
+  })();
+  const init = selected ? new Date(`${selected}T00:00:00`,) : new Date();
+  const [viewYear, setViewYear,] = useState(init.getFullYear(),);
+  const [viewMonth, setViewMonth,] = useState(init.getMonth(),);
+
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0,).getDate();
+  const firstDay = (new Date(viewYear, viewMonth, 1,).getDay() + 6) % 7;
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null,);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d,);
+
+  const pad = (n: number,) => String(n,).padStart(2, "0",);
+  const toIso = (day: number,) => `${viewYear}-${pad(viewMonth + 1,)}-${pad(day,)}`;
+
+  const prevMonth = () => {
+    if (viewMonth === 0) {
+      setViewYear((y,) => y - 1);
+      setViewMonth(11,);
+    } else setViewMonth((m,) => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) {
+      setViewYear((y,) => y + 1);
+      setViewMonth(0,);
+    } else setViewMonth((m,) => m + 1);
+  };
+
+  const title = new Date(viewYear, viewMonth, 1,).toLocaleDateString("en-US", { month: "long", year: "numeric", },);
+
+  return (
+    <div className="mention-calendar">
+      <div className="mention-calendar-header">
+        <button className="mention-calendar-nav" onClick={prevMonth} type="button">‹</button>
+        <span className="mention-calendar-title">{title}</span>
+        <button className="mention-calendar-nav" onClick={nextMonth} type="button">›</button>
+      </div>
+      <div className="mention-calendar-weekdays">
+        {["M", "T", "W", "T", "F", "S", "S",].map((d, i,) => (
+          <span key={i} className="mention-calendar-weekday">{d}</span>
+        ))}
+      </div>
+      <div className="mention-calendar-grid">
+        {cells.map((day, i,) => {
+          if (day === null) return <span key={i} className="mention-calendar-cell mention-calendar-empty" />;
+          const iso = toIso(day,);
+          return (
+            <button
+              key={i}
+              className={`mention-calendar-cell${iso === todayStr ? " is-today" : ""}${
+                iso === selected ? " is-selected" : ""
+              }`}
+              onClick={() => onSelect(iso,)}
+              type="button"
+            >
+              {day}
+            </button>
+          );
+        },)}
+      </div>
+    </div>
+  );
+}
 
 const MentionMenu = forwardRef<
   { onKeyDown: (props: { event: KeyboardEvent; },) => boolean; },
@@ -19,18 +88,11 @@ const MentionMenu = forwardRef<
   const [selectedIndex, setSelectedIndex,] = useState(0,);
   const [showDatePicker, setShowDatePicker,] = useState(false,);
   const [selectedDate, setSelectedDate,] = useState(referenceDate ?? "",);
-  const [isRecurring, setIsRecurring,] = useState(false,);
-  const [recurrence, setRecurrence,] = useState("daily",);
-  const dateInputRef = useRef<HTMLInputElement>(null,);
+  const [recurrence, setRecurrence,] = useState("",);
 
   useEffect(() => {
     setSelectedIndex(0,);
   }, [items,],);
-
-  useEffect(() => {
-    if (!showDatePicker) return;
-    dateInputRef.current?.focus();
-  }, [showDatePicker,],);
 
   useEffect(() => {
     setSelectedDate(referenceDate ?? "",);
@@ -39,7 +101,7 @@ const MentionMenu = forwardRef<
   const applyCustomDate = () => {
     if (!selectedDate) return;
     const nextItems = [createDateMention(selectedDate,),];
-    if (isRecurring) {
+    if (recurrence) {
       nextItems.push(createRecurringMention(recurrence,),);
     }
     command(nextItems,);
@@ -89,68 +151,63 @@ const MentionMenu = forwardRef<
 
       return false;
     },
-  }), [showDatePicker, items, selectedIndex, command, selectedDate, isRecurring, recurrence,],);
+  }), [showDatePicker, items, selectedIndex, command, selectedDate, recurrence,],);
 
   return (
     <div className="mention-menu">
-      {items.map((item, index,) => {
-        const showActionDivider = item.group !== "action" && index > 0 && items[index - 1]?.group === "action";
-        const showRecurringDivider = item.group === "recurring" && items[index - 1]?.group !== "recurring";
-        const Icon = item.kind === "recurring" ? Repeat2 : CalendarDays;
+      {!showDatePicker && (
+        <div className="mention-menu-items">
+          {items.map((item, index,) => {
+            const showActionDivider = item.group !== "action" && index > 0 && items[index - 1]?.group === "action";
+            const showRecurringDivider = item.group === "recurring" && items[index - 1]?.group !== "recurring";
+            const Icon = item.kind === "recurring" ? Repeat2 : CalendarDays;
 
-        return (
-          <div key={item.id}>
-            {showActionDivider && <div className="mention-menu-divider" />}
-            {showRecurringDivider && <div className="mention-menu-divider" />}
-            <button
-              className={`mention-menu-item ${index === selectedIndex && !showDatePicker ? "is-selected" : ""}`}
-              onClick={() => {
-                if (item.action === "open_date_picker") {
-                  setShowDatePicker(true,);
-                  return;
-                }
-                command([item,],);
-              }}
-              type="button"
-            >
-              <Icon className="mention-menu-icon" size={14} />
-              <span className="mention-menu-label">{item.label}</span>
-            </button>
-          </div>
-        );
-      },)}
+            return (
+              <div key={item.id}>
+                {showActionDivider && <div className="mention-menu-divider" />}
+                {showRecurringDivider && <div className="mention-menu-divider" />}
+                <button
+                  className={`mention-menu-item ${index === selectedIndex ? "is-selected" : ""}`}
+                  onClick={() => {
+                    if (item.action === "open_date_picker") {
+                      setShowDatePicker(true,);
+                      return;
+                    }
+                    command([item,],);
+                  }}
+                  type="button"
+                >
+                  <Icon className="mention-menu-icon" size={14} />
+                  <span className="mention-menu-label">{item.label}</span>
+                </button>
+              </div>
+            );
+          },)}
+        </div>
+      )}
       {showDatePicker && (
         <div className="mention-date-picker">
-          <div className="mention-date-picker-row">
-            <input
-              ref={dateInputRef}
-              className="mention-date-input"
-              type="date"
-              value={selectedDate}
-              onChange={(event,) => setSelectedDate(event.target.value,)}
-            />
-          </div>
-          <label className="mention-date-picker-toggle">
-            <input
-              checked={isRecurring}
-              type="checkbox"
-              onChange={(event,) => setIsRecurring(event.target.checked,)}
-            />
-            <span>Make recurring</span>
-          </label>
-          {isRecurring && (
-            <div className="mention-date-picker-row">
-              <select
-                className="mention-date-select"
-                value={recurrence}
-                onChange={(event,) => setRecurrence(event.target.value,)}
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
+          <MiniCalendar selected={selectedDate} onSelect={setSelectedDate} />
+          <div className="mention-recurrence">
+            <div className="mention-recurrence-label">Repeat</div>
+            <div className="mention-recurrence-options">
+              {[
+                { value: "", label: "None", },
+                { value: "daily", label: "Daily", },
+                { value: "weekly", label: "Weekly", },
+                { value: "monthly", label: "Monthly", },
+              ].map((opt,) => (
+                <button
+                  key={opt.value || "none"}
+                  className={`mention-recurrence-option${recurrence === opt.value ? " is-active" : ""}`}
+                  onClick={() => setRecurrence(opt.value,)}
+                  type="button"
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
           <div className="mention-date-picker-actions">
             <button
               className="mention-date-picker-btn mention-date-picker-btn-muted"

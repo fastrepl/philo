@@ -170,6 +170,20 @@ const publishedLabel = post.data.publishedAt.toLocaleDateString("en-US", {
     padding-left: 18px;
   }
 
+  .post-content :global(ol) {
+    list-style: none;
+    counter-reset: ol-counter;
+    padding-left: 0;
+  }
+
+  .post-content :global(ol) > :global(li) {
+    counter-increment: ol-counter;
+  }
+
+  .post-content :global(ol) > :global(li)::before {
+    content: counter(ol-counter) ".\00a0";
+  }
+
   .post-content :global(li) {
     margin: 6px 0;
     font-size: var(--fs-md);
