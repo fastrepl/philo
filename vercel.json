@@ -3,15 +3,5 @@
   "framework": "astro",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @philo/landing build && if [ -d apps/landing/dist ]; then mkdir -p dist && cp -R apps/landing/dist/. dist; fi",
-  "outputDirectory": "dist",
-  "rewrites": [
-    {
-      "source": "/docs",
-      "destination": "https://computelesscomputer-philo-48.mintlify.dev/docs"
-    },
-    {
-      "source": "/docs/:match*",
-      "destination": "https://computelesscomputer-philo-48.mintlify.dev/docs/:match*"
-    }
-  ]
+  "outputDirectory": "dist"
 }

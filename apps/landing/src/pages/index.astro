@@ -83,7 +83,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
       <main class="shell">
         <header class="enter" style="--delay: 0ms;">
           <div class="brand-row">
-            <p class="brand">Philo</p>
+            <p class="brand">Philo <span class="brand-beta">beta</span></p>
           </div>
         </header>
 
@@ -96,7 +96,6 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
           <div class="download-split" data-download>
             <a class="download-button" data-download-primary href="https://github.com/ComputelessComputer/philo/releases/latest">
               Download for macOS
-              <span class="download-beta">beta</span>
             </a><button type="button" class="download-chevron" data-download-toggle aria-label="Other platforms">▾</button>
             <div class="download-menu" data-download-menu>
               <a data-download-macos href="https://github.com/ComputelessComputer/philo/releases/latest">macOS</a>
@@ -206,7 +205,6 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
           <nav>
             <a href="https://github.com/ComputelessComputer/philo">GitHub</a>
             <a href="/blog">Blog</a>
-            <a href="/docs">Docs</a>
             <a href="mailto:john@hyprnote.com">Email</a>
           </nav>
         </footer>
@@ -493,13 +491,19 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     gap: 8px;
   }
 
-  .download-beta {
+  .brand-beta {
     border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
     background: color-mix(in srgb, var(--accent) 12%, #ffffff);
+    color: var(--accent);
     padding: 2px 5px;
     font-size: var(--fs-xs);
+    font-weight: 500;
     letter-spacing: 0.05em;
+    text-transform: uppercase;
     line-height: 1;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
   }
 
   .download-button:hover {

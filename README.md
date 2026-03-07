@@ -9,7 +9,6 @@ Write your notes in a timeline, manage tasks that carry forward automatically, a
 ## Links
 
 - Website: https://philo.johnjeong.com
-- Docs: https://philo.johnjeong.com/docs
 
 ## How it works
 
