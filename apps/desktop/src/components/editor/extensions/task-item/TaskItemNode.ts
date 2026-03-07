@@ -69,6 +69,37 @@ export const CustomTaskItem = TaskItem.extend({
     ];
   },
 
+  parseMarkdown: (token, helpers,) => {
+    const content = [];
+
+    if (token.tokens && token.tokens.length > 0) {
+      content.push(helpers.createNode("paragraph", undefined, helpers.parseInline(token.tokens,),),);
+    } else if (token.text) {
+      content.push(helpers.createNode("paragraph", undefined, [helpers.createTextNode(token.text,),],),);
+    } else {
+      content.push(helpers.createNode("paragraph", undefined, [],),);
+    }
+
+    const nestedTokens = token.nestedTokens || [];
+    if (nestedTokens.length > 0) {
+      let nestedStart = 0;
+
+      if (nestedTokens[0]?.type === "space") {
+        const leadingNewlines = (nestedTokens[0].raw?.match(/\n/g,) || []).length;
+        for (let i = 1; i < leadingNewlines; i += 1) {
+          content.push(helpers.createNode("paragraph", undefined, [],),);
+        }
+        nestedStart = 1;
+      }
+
+      if (nestedStart < nestedTokens.length) {
+        content.push(...helpers.parseChildren(nestedTokens.slice(nestedStart,),),);
+      }
+    }
+
+    return helpers.createNode("taskItem", { checked: token.checked || false, }, content,);
+  },
+
   addNodeView() {
     return ({ node, HTMLAttributes, getPos, editor, },) => {
       const listItem = document.createElement("li",);
