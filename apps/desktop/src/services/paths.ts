@@ -226,9 +226,7 @@ export function parseDateFromNoteLinkTarget(
 
 export async function getNoteLinkTarget(date: string,): Promise<string> {
   const pattern = await getFilenamePattern();
-  const dailyLogsFolder = await getDailyLogsFolderSetting();
-  const vaultDir = await getVaultDirSetting();
-  return buildNoteLinkTarget(date, pattern, dailyLogsFolder, Boolean(vaultDir,),);
+  return buildNoteLinkTarget(date, pattern, "", false,);
 }
 
 /**
