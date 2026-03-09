@@ -57,6 +57,7 @@ Run `pnpm run release:check` after bumping the desktop version and before creati
 
 ## Internal docs
 
+- [Data storage and configuration](docs/data-storage-and-configuration.md)
 - [Markdown sync and editor rendering](docs/markdown-sync.md)
 - [File and folder organization](docs/repo-structure.md)
 
