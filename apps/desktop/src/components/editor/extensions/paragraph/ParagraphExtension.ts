@@ -1,7 +1,6 @@
 import { Paragraph, } from "@tiptap/extension-paragraph";
 
 const EMPTY_MARKER = "\u200B";
-const EMPTY_PARAGRAPH_MARKDOWN = "&nbsp;";
 
 export const CustomParagraph = Paragraph.extend({
   parseMarkdown: (token, helpers,) => {
@@ -21,10 +20,6 @@ export const CustomParagraph = Paragraph.extend({
   },
 
   renderMarkdown: (node, helpers,) => {
-    const content = Array.isArray(node.content,) ? node.content : [];
-    if (content.length === 0) {
-      return EMPTY_PARAGRAPH_MARKDOWN;
-    }
-    return helpers.renderChildren(content,);
+    return helpers.renderChildren(node.content || [],);
   },
 },);

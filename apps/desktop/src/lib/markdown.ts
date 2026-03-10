@@ -1,4 +1,3 @@
-import { Extension, mergeAttributes, Node, } from "@tiptap/core";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -21,99 +20,6 @@ export const EMPTY_DOC: JSONContent = {
   content: [{ type: "paragraph", },],
 };
 
-const BlankLineExtension = Extension.create({
-  name: "blankLine",
-
-  markdownTokenName: "space",
-
-  parseMarkdown: (token, helpers,) => {
-    const newlineCount = (token.raw?.match(/\n/g,) || []).length;
-    if (newlineCount <= 2) {
-      return [];
-    }
-
-    return Array.from(
-      { length: newlineCount - 2, },
-      () => helpers.createNode("paragraph", undefined, [],),
-    );
-  },
-},);
-
-const MarkdownOrderedList = Node.create({
-  name: "orderedList",
-
-  group: "block list",
-
-  content: "listItem+",
-
-  addAttributes() {
-    return {
-      start: {
-        default: 1,
-        parseHTML: element => {
-          return element.hasAttribute("start",) ? parseInt(element.getAttribute("start",) || "", 10,) : 1;
-        },
-      },
-      type: {
-        default: null,
-        parseHTML: element => element.getAttribute("type",),
-      },
-    };
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: "ol",
-      },
-    ];
-  },
-
-  renderHTML({ HTMLAttributes, },) {
-    const { start, ...attributesWithoutStart } = HTMLAttributes;
-
-    return start === 1
-      ? ["ol", mergeAttributes(attributesWithoutStart,), 0,]
-      : ["ol", mergeAttributes(HTMLAttributes,), 0,];
-  },
-
-  markdownTokenName: "list",
-
-  parseMarkdown: (token, helpers,) => {
-    if (token.type !== "list" || !token.ordered) {
-      return [];
-    }
-
-    const startValue = token.start || 1;
-    const content = token.items ? helpers.parseChildren(token.items,) : [];
-
-    if (startValue !== 1) {
-      return {
-        type: "orderedList",
-        attrs: { start: startValue, },
-        content,
-      };
-    }
-
-    return {
-      type: "orderedList",
-      content,
-    };
-  },
-
-  renderMarkdown: (node, helpers,) => {
-    if (!node.content) {
-      return "";
-    }
-
-    return helpers.renderChildren(node.content, "\n",);
-  },
-
-  markdownOptions: {
-    indentsContent: true,
-  },
-},);
-
 export function isValidContent(content: unknown,): content is JSONContent {
   if (!content || typeof content !== "object") return false;
   const obj = content as Record<string, unknown>;
@@ -125,12 +31,9 @@ function getExtensions() {
     StarterKit.configure({
       heading: { levels: [1, 2, 3, 4, 5, 6,], },
       listKeymap: false,
-      orderedList: false,
       paragraph: false,
     },),
-    MarkdownOrderedList,
     CustomParagraph,
-    BlankLineExtension,
     Image.configure({ inline: true, allowBase64: false, },),
     Underline,
     Link.configure({ openOnClick: false, },),
@@ -162,8 +65,44 @@ function getMarkdownManager(): MarkdownManager {
 export function md2json(markdown: string,): JSONContent {
   try {
     const source = markdown.replace(/\r\n?/g, "\n",);
-    const result = getMarkdownManager().parse(source,);
-    return isValidContent(result,) ? result : EMPTY_DOC;
+    const runs = Array.from(source.matchAll(/(?:\n[ \t]*){2,}/g,),);
+    if (runs.length === 0) {
+      const result = getMarkdownManager().parse(source,);
+      return isValidContent(result,) ? result : EMPTY_DOC;
+    }
+
+    const allNodes: JSONContent[] = [];
+    let cursor = 0;
+
+    for (const run of runs) {
+      const index = run.index ?? 0;
+      const part = source.slice(cursor, index,);
+
+      if (part.trim()) {
+        const parsed = getMarkdownManager().parse(part,);
+        if (isValidContent(parsed,) && parsed.content) {
+          allNodes.push(...parsed.content,);
+        }
+      }
+
+      const newlineCount = (run[0].match(/\n/g,) || []).length;
+      const emptyParagraphCount = Math.max(1, newlineCount - 1,);
+      for (let i = 0; i < emptyParagraphCount; i++) {
+        allNodes.push({ type: "paragraph", },);
+      }
+
+      cursor = index + run[0].length;
+    }
+
+    const tail = source.slice(cursor,);
+    if (tail.trim()) {
+      const parsed = getMarkdownManager().parse(tail,);
+      if (isValidContent(parsed,) && parsed.content) {
+        allNodes.push(...parsed.content,);
+      }
+    }
+
+    return allNodes.length > 0 ? { type: "doc", content: allNodes, } : EMPTY_DOC;
   } catch {
     return EMPTY_DOC;
   }
@@ -171,7 +110,8 @@ export function md2json(markdown: string,): JSONContent {
 
 export function json2md(json: JSONContent,): string {
   try {
-    return getMarkdownManager().serialize(json,);
+    const serialized = getMarkdownManager().serialize(json,);
+    return serialized.replace(/\n{4,}/g, (run,) => "\n".repeat(Math.floor(run.length / 2,),),);
   } catch {
     return "";
   }
