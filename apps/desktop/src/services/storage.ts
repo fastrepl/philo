@@ -86,7 +86,6 @@ export async function saveDailyNote(note: DailyNote,): Promise<void> {
   let body = unresolveMarkdownImages(json2md(json, { indentation, },),);
   body = convertAtMentionsToWikiLinks(body, note.date,);
   body = await rewriteDateMentionLinksToNoteLinks(body,);
-  if (!body.endsWith("\n",)) body += "\n";
   await invoke("write_markdown_file", {
     path: filepath,
     content: buildFrontmatter(note.city, body,),
