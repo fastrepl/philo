@@ -197,27 +197,8 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           <label className="block text-sm text-gray-600" style={mono}>
             AI Provider
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {AI_PROVIDERS.map((provider,) => {
-              const selected = settings.aiProvider === provider;
-              return (
-                <button
-                  key={provider}
-                  onClick={() => update({ aiProvider: provider, },)}
-                  className={`px-2.5 py-1.5 text-xs rounded-md border transition-colors cursor-pointer ${
-                    selected
-                      ? "border-violet-400 bg-violet-50 text-violet-700"
-                      : "border-gray-200 text-gray-500 hover:border-gray-300"
-                  }`}
-                  style={mono}
-                >
-                  {getAiProviderLabel(provider,)}
-                </button>
-              );
-            },)}
-          </div>
           <p className="text-xs text-gray-400" style={mono}>
-            Philo uses the selected provider for Sophia and Build. Keys stay on this device.
+            Click a card to select the active provider. Keys stay on this device.
           </p>
           <div className="space-y-3">
             {AI_PROVIDERS.map((provider,) => {
@@ -225,19 +206,28 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               return (
                 <div
                   key={provider}
-                  className={`rounded-lg border p-3 transition-colors ${
-                    selected ? "border-violet-200 bg-violet-50/50" : "border-gray-200"
+                  onClick={() => update({ aiProvider: provider, },)}
+                  className={`rounded-lg border p-3 transition-colors cursor-pointer ${
+                    selected
+                      ? "border-violet-300 bg-violet-50/50 ring-1 ring-violet-300"
+                      : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  <label className="mb-2 block text-sm text-gray-600" style={mono}>
-                    {getAiProviderLabel(provider,)} API Key
-                    {selected ? " (selected)" : ""}
+                  <label className="mb-2 flex items-center gap-2 text-sm cursor-pointer" style={mono}>
+                    <span
+                      className={`inline-block h-2 w-2 rounded-full ${selected ? "bg-violet-500" : "bg-gray-300"}`}
+                    />
+                    <span className={selected ? "text-violet-700" : "text-gray-600"}>
+                      {getAiProviderLabel(provider,)}
+                    </span>
                   </label>
                   <input
                     ref={selected ? inputRef : undefined}
                     type="password"
                     value={getAiKey(provider,)}
                     onChange={(e,) => updateAiKey(provider, e.target.value,)}
+                    onClick={(e,) => e.stopPropagation()}
+                    onFocus={() => update({ aiProvider: provider, },)}
                     placeholder={AI_PROVIDER_PLACEHOLDERS[provider]}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all bg-white"
                     style={mono}
@@ -246,9 +236,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               );
             },)}
           </div>
-          <p className="text-xs text-gray-400" style={mono}>
-            Save multiple keys if you want to switch providers without re-entering them.
-          </p>
         </div>
 
         {/* Divider */}
