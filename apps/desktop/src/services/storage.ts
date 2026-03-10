@@ -4,7 +4,6 @@ import { DailyNote, getDaysAgo, } from "../types/note";
 import { resolveExcalidrawEmbeds, } from "./excalidraw";
 import { resolveMarkdownImages, unresolveMarkdownImages, } from "./images";
 import { convertAtMentionsToWikiLinks, replaceMentionWikiLinksWithChips, } from "./mentions";
-import { loadObsidianMarkdownIndentation, } from "./obsidian";
 import { getNoteLinkTarget, getNotePath, parseDateFromNoteLinkTarget, } from "./paths";
 import {
   DEFAULT_FILENAME_PATTERN,
@@ -76,7 +75,7 @@ function buildFrontmatter(city: string | null | undefined, body: string,): strin
 async function getMarkdownIndentation() {
   const vaultDir = (await getVaultDirSetting()).trim();
   if (!vaultDir) return undefined;
-  return (await loadObsidianMarkdownIndentation(vaultDir,)) ?? undefined;
+  return { style: "tab", size: 1, } as const;
 }
 
 export async function saveDailyNote(note: DailyNote,): Promise<void> {
