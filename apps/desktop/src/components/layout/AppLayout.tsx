@@ -6,7 +6,13 @@ import { openPath, } from "@tauri-apps/plugin-opener";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, } from "react";
 import { useCurrentDate, } from "../../hooks/useCurrentDate";
 import { useTimezoneCity, } from "../../hooks/useTimezoneCity";
-import { AI_NOT_CONFIGURED, type AssistantScope, runAssistant, } from "../../services/assistant";
+import {
+  AI_NOT_CONFIGURED,
+  applyAssistantPendingChanges,
+  type AssistantResult,
+  type AssistantScope,
+  runAssistant,
+} from "../../services/assistant";
 import type { LibraryItem, } from "../../services/library";
 import { getJournalDir, initJournalScope, } from "../../services/paths";
 import { loadSettings, } from "../../services/settings";
@@ -152,7 +158,8 @@ export default function AppLayout() {
   const [hasAiConfigured, setHasAiConfigured,] = useState(false,);
   const [aiRunning, setAiRunning,] = useState(false,);
   const [aiError, setAiError,] = useState<string | null>(null,);
-  const [aiSummary, setAiSummary,] = useState<string | null>(null,);
+  const [aiResult, setAiResult,] = useState<AssistantResult | null>(null,);
+  const [aiApplyingDates, setAiApplyingDates,] = useState<string[]>([],);
   const cityRef = useRef(currentCity,);
   const prevCityRef = useRef(currentCity,);
   const todayNoteRef = useRef<DailyNote | null>(null,);
@@ -202,7 +209,6 @@ export default function AppLayout() {
     setAiScope("recent",);
     setAiComposerOpen(true,);
     setAiError(null,);
-    setAiSummary(null,);
     refreshAiAvailability();
   }, [refreshAiAvailability,],);
 
@@ -519,7 +525,7 @@ export default function AppLayout() {
 
     setAiRunning(true,);
     setAiError(null,);
-    setAiSummary(null,);
+    setAiResult(null,);
 
     try {
       const recentNotes = aiScope === "recent" ? await loadPastNotes(14,) : [];
@@ -532,14 +538,8 @@ export default function AppLayout() {
         },
       },);
 
-      const reloadedToday = await loadDailyNote(todayNoteValue.date,);
-      if (reloadedToday) {
-        setTodayNote(reloadedToday,);
-      }
-
-      setAiSummary(result.summary,);
+      setAiResult(result,);
       setAiPrompt("",);
-      setStorageRevision((value,) => value + 1);
     } catch (error) {
       if (error instanceof Error && error.message === AI_NOT_CONFIGURED) {
         setHasAiConfigured(false,);
@@ -551,6 +551,48 @@ export default function AppLayout() {
       setAiRunning(false,);
     }
   }, [aiPrompt, aiRunning, aiScope,],);
+
+  const handleApplyAiChange = useCallback(async (date: string,) => {
+    const change = aiResult?.pendingChanges.find((item,) => item.date === date);
+    if (!change) return;
+
+    setAiApplyingDates((current,) => current.includes(date,) ? current : [...current, date,]);
+    setAiError(null,);
+
+    try {
+      const appliedDates = await applyAssistantPendingChanges([change,],);
+      if (appliedDates.includes(today,)) {
+        const reloadedToday = await loadDailyNote(today,);
+        if (reloadedToday) {
+          setTodayNote(reloadedToday,);
+        }
+      }
+
+      setAiResult((current,) => {
+        if (!current) return current;
+        return {
+          ...current,
+          pendingChanges: current.pendingChanges.filter((item,) => item.date !== date),
+        };
+      },);
+      setStorageRevision((value,) => value + 1);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "Could not apply note changes.",);
+    } finally {
+      setAiApplyingDates((current,) => current.filter((value,) => value !== date));
+    }
+  }, [aiResult, today,],);
+
+  const handleDiscardAiChange = useCallback((date: string,) => {
+    setAiResult((current,) => {
+      if (!current) return current;
+      const pendingChanges = current.pendingChanges.filter((item,) => item.date !== date);
+      if (!current.answer && current.citations.length === 0 && pendingChanges.length === 0) {
+        return null;
+      }
+      return { ...current, pendingChanges, };
+    },);
+  }, [],);
 
   const todayEditorRef = useRef<EditableNoteHandle>(null,);
   const todayRef = useRef<HTMLDivElement>(null,);
@@ -785,13 +827,19 @@ export default function AppLayout() {
       <AiComposer
         open={aiComposerOpen}
         prompt={aiPrompt}
+        answer={aiResult?.answer ?? null}
+        citations={aiResult?.citations ?? []}
+        pendingChanges={aiResult?.pendingChanges ?? []}
+        applyingDates={aiApplyingDates}
         hasAiConfigured={hasAiConfigured}
         isSubmitting={aiRunning}
         error={aiError}
-        summary={aiSummary}
         onPromptChange={setAiPrompt}
         onClose={closeAiComposer}
         onSubmit={handleAiSubmit}
+        onOpenDate={scrollToDate}
+        onApplyChange={handleApplyAiChange}
+        onDiscardChange={handleDiscardAiChange}
         onOpenSettings={() => {
           setSettingsOpen(true,);
           refreshAiAvailability();

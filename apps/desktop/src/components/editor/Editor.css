@@ -93,6 +93,36 @@
   color: #b91c1c;
 }
 
+.ai-diff-preview .tiptap {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ai-diff-preview .tiptap p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.ai-diff-preview .tiptap [data-diff-kind="meta"] {
+  color: #64748b;
+}
+
+.ai-diff-preview .tiptap [data-diff-kind="hunk"] {
+  color: #1d4ed8;
+  background: rgba(191, 219, 254, 0.45);
+}
+
+.ai-diff-preview .tiptap [data-diff-kind="insert"] {
+  color: #166534;
+  background: rgba(220, 252, 231, 0.85);
+}
+
+.ai-diff-preview .tiptap [data-diff-kind="delete"] {
+  color: #b91c1c;
+  background: rgba(254, 226, 226, 0.85);
+}
+
 .mention-menu {
   min-width: 14rem;
   border: 1px solid #e5e7eb;
