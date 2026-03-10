@@ -90,6 +90,16 @@ html, body {
   height: 0;
 }
 
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 @keyframes vault-path-marquee {
   from {
     transform: translateX(0);

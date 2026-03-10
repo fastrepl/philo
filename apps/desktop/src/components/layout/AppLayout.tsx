@@ -280,7 +280,11 @@ export default function AppLayout() {
     const handleHotkey = (event: KeyboardEvent,) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        openAiComposer();
+        if (aiComposerOpen) {
+          closeAiComposer();
+        } else {
+          openAiComposer();
+        }
         return;
       }
 
@@ -641,7 +645,7 @@ export default function AppLayout() {
   return (
     <div
       ref={scrollRef}
-      className="h-screen bg-white dark:bg-gray-900 overflow-y-scroll overflow-x-hidden relative"
+      className="hide-scrollbar h-screen bg-white dark:bg-gray-900 overflow-y-auto overflow-x-hidden relative"
     >
       {/* Titlebar: drag region + pin button */}
       <div
