@@ -171,28 +171,53 @@ function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONC
   const tokens = manager.instance.lexer(markdown,) as MarkdownToken[];
   const content: JSONContent[] = [];
   let sawContent = false;
+  let trailingNewlines = 0;
+
+  const pushEmptyParagraphs = (count: number,) => {
+    for (let i = 0; i < count; i += 1) {
+      content.push({ type: "paragraph", },);
+    }
+  };
 
   for (const token of tokens) {
+    const raw = token.raw ?? "";
+
     if (token.type === "space") {
-      const newlineCount = (token.raw?.match(/\n/g,) || []).length;
-      const emptyParagraphCount = sawContent ? Math.max(0, newlineCount - 1,) : newlineCount;
-      for (let i = 0; i < emptyParagraphCount; i += 1) {
-        content.push({ type: "paragraph", },);
-      }
+      const newlineCount: number = (raw.match(/\n/g,) || []).length;
+      const separatorNewlines: number = trailingNewlines + newlineCount;
+      const emptyParagraphCount: number = sawContent ? Math.max(0, separatorNewlines - 1,) : separatorNewlines;
+      pushEmptyParagraphs(emptyParagraphCount,);
+      trailingNewlines = 0;
       continue;
     }
 
-    const raw = token.raw ?? "";
     if (!raw.trim()) {
       continue;
     }
 
-    const parsed = manager.parse(raw,);
+    const leadingNewlines: number = (raw.match(/^\n+/,)?.[0].length) ?? 0;
+    const separatorNewlines: number = trailingNewlines + leadingNewlines;
+    const emptyParagraphCount: number = sawContent ? Math.max(0, separatorNewlines - 1,) : separatorNewlines;
+    pushEmptyParagraphs(emptyParagraphCount,);
+
+    const normalizedRaw = raw.replace(/^\n+/, "",).replace(/\n+$/, "",);
+    if (!normalizedRaw.trim()) {
+      trailingNewlines = (raw.match(/\n+$/,)?.[0].length) ?? 0;
+      sawContent = sawContent || emptyParagraphCount > 0;
+      continue;
+    }
+
+    const parsed = manager.parse(normalizedRaw,);
     if (isValidContent(parsed,) && parsed.content) {
       content.push(...parsed.content,);
       sawContent = true;
     }
+
+    trailingNewlines = (raw.match(/\n+$/,)?.[0].length) ?? 0;
   }
+
+  const trailingEmptyParagraphCount: number = sawContent ? Math.max(0, trailingNewlines - 1,) : trailingNewlines;
+  pushEmptyParagraphs(trailingEmptyParagraphCount,);
 
   return content;
 }
