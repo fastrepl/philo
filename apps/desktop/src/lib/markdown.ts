@@ -36,6 +36,16 @@ interface MarkdownToken {
   raw?: string;
 }
 
+interface MarkdownListItemToken extends MarkdownToken {
+  raw?: string;
+  task?: boolean;
+}
+
+interface MarkdownListToken extends MarkdownToken {
+  type: "list";
+  items?: MarkdownListItemToken[];
+}
+
 function getExtensions() {
   return [
     StarterKit.configure({
@@ -167,6 +177,70 @@ function normalizeMarkdownForParsing(markdown: string,): string {
   },).join("\n",);
 }
 
+function countTrailingNewlines(raw: string,): number {
+  return (raw.match(/\n+$/,)?.[0].length) ?? 0;
+}
+
+function parseMarkdownContent(raw: string, manager: MarkdownManager,): JSONContent[] {
+  const parsed = manager.parse(raw,);
+  return isValidContent(parsed,) && parsed.content ? parsed.content : [];
+}
+
+function isMixedListToken(token: MarkdownToken,): token is MarkdownListToken {
+  if (token.type !== "list") return false;
+  if (!Array.isArray((token as MarkdownListToken).items,)) return false;
+
+  const items = (token as MarkdownListToken).items ?? [];
+  const hasTask = items.some(item => item.task === true);
+  const hasNonTask = items.some(item => item.task !== true);
+  return hasTask && hasNonTask;
+}
+
+function parseMixedListToken(token: MarkdownListToken, manager: MarkdownManager,): JSONContent[] {
+  const groups: string[] = [];
+  let currentTaskState: boolean | null = null;
+  let currentRaw = "";
+
+  for (const item of token.items ?? []) {
+    const itemTaskState = item.task === true;
+    const itemRaw = item.raw ?? "";
+
+    if (currentTaskState === null || currentTaskState === itemTaskState) {
+      currentTaskState = itemTaskState;
+      currentRaw += itemRaw;
+      continue;
+    }
+
+    if (currentRaw) {
+      groups.push(currentRaw,);
+    }
+
+    currentTaskState = itemTaskState;
+    currentRaw = itemRaw;
+  }
+
+  if (currentRaw) {
+    groups.push(currentRaw,);
+  }
+
+  const content: JSONContent[] = [];
+
+  groups.forEach((groupRaw, index,) => {
+    content.push(...parseMarkdownContent(groupRaw, manager,),);
+
+    if (index >= groups.length - 1) {
+      return;
+    }
+
+    const emptyParagraphCount = Math.max(0, countTrailingNewlines(groupRaw,) - 1,);
+    for (let i = 0; i < emptyParagraphCount; i += 1) {
+      content.push({ type: "paragraph", },);
+    }
+  },);
+
+  return content;
+}
+
 function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONContent[] {
   const tokens = manager.instance.lexer(markdown,) as MarkdownToken[];
   const content: JSONContent[] = [];
@@ -207,13 +281,16 @@ function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONC
       continue;
     }
 
-    const parsed = manager.parse(normalizedRaw,);
-    if (isValidContent(parsed,) && parsed.content) {
-      content.push(...parsed.content,);
+    const parsedContent = isMixedListToken(token,)
+      ? parseMixedListToken(token, manager,)
+      : parseMarkdownContent(normalizedRaw, manager,);
+
+    if (parsedContent.length > 0) {
+      content.push(...parsedContent,);
       sawContent = true;
     }
 
-    trailingNewlines = (raw.match(/\n+$/,)?.[0].length) ?? 0;
+    trailingNewlines = countTrailingNewlines(raw,);
   }
 
   const trailingEmptyParagraphCount: number = sawContent ? Math.max(0, trailingNewlines - 1,) : trailingNewlines;
