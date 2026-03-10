@@ -26,6 +26,8 @@ import { OnboardingModal, } from "../onboarding/OnboardingModal";
 import { SettingsModal, } from "../settings/SettingsModal";
 import { UpdateBanner, } from "../UpdateBanner";
 
+const LOCAL_SAVE_WATCH_SUPPRESSION_MS = 1000;
+
 function applyCity(savedCity: string | null | undefined, newCity: string,): string {
   if (!savedCity || savedCity === newCity) return newCity;
   const from = savedCity.includes(" → ",) ? savedCity.split(" → ",)[0] : savedCity;
@@ -154,6 +156,7 @@ export default function AppLayout() {
   const cityRef = useRef(currentCity,);
   const prevCityRef = useRef(currentCity,);
   const todayNoteRef = useRef<DailyNote | null>(null,);
+  const suppressWatcherUntilRef = useRef(0,);
   const searchInputRef = useRef<HTMLInputElement>(null,);
   const searchResultRefs = useRef<(HTMLButtonElement | null)[]>([],);
   const searchNavigationModeRef = useRef<"mouse" | "keyboard">("mouse",);
@@ -488,6 +491,7 @@ export default function AppLayout() {
         dir,
         (event,) => {
           if (!event.paths.some((path,) => path.endsWith(".md",))) return;
+          if (Date.now() < suppressWatcherUntilRef.current) return;
           syncTodayNoteFromDisk();
         },
         { recursive: true, },
@@ -501,12 +505,11 @@ export default function AppLayout() {
 
   const handleTodaySave = useCallback(
     (note: DailyNote,) => {
+      suppressWatcherUntilRef.current = Date.now() + LOCAL_SAVE_WATCH_SUPPRESSION_MS;
       setTodayNote(note,);
-      saveDailyNote(note,)
-        .then(() => syncTodayNoteFromDisk())
-        .catch(console.error,);
+      saveDailyNote(note,).catch(console.error,);
     },
-    [syncTodayNoteFromDisk,],
+    [],
   );
 
   const handleAiSubmit = useCallback(async () => {
