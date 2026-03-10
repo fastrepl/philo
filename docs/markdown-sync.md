@@ -1,12 +1,13 @@
 # Markdown Sync And Editor Rendering
 
-Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON. The desktop app converts between those two representations at the storage boundary so the editor can stay structured while the filesystem stays plain markdown.
+Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON. The storage boundary is intentionally opinionated: the app normalizes markdown on the way in, normalizes it again on the way out, and treats the markdown file as the long-term source of truth.
 
 ## The Core Model
 
 - In memory: `DailyNote.content` is a JSON string containing a TipTap document.
 - On disk: each note is a `.md` file, optionally prefixed with frontmatter.
-- The boundary lives in `apps/desktop/src/services/storage.ts`.
+- `apps/desktop/src/services/storage.ts` owns file I/O.
+- `apps/desktop/src/lib/markdown.ts` owns markdown parsing and serialization.
 
 That contract is already called out in `apps/desktop/src/types/note.ts`:
 
@@ -40,8 +41,9 @@ The important steps in `apps/desktop/src/services/storage.ts` are:
 2. Convert TipTap JSON to markdown with `json2md()`.
 3. Rewrite asset URLs back to relative markdown paths with `unresolveMarkdownImages()`.
 4. Rewrite `@mentions` into Obsidian-style wiki links with `convertAtMentionsToWikiLinks()`.
-5. Re-attach frontmatter with `buildFrontmatter()`.
-6. Call the Tauri command `write_markdown_file`.
+5. Rewrite canonical date-mention links back into note links with `rewriteDateMentionLinksToNoteLinks()`.
+6. Re-attach frontmatter with `buildFrontmatter()`.
+7. Call the Tauri command `write_markdown_file`.
 
 The Rust side in `apps/desktop/src-tauri/src/lib.rs` is intentionally thin:
 
@@ -49,6 +51,18 @@ The Rust side in `apps/desktop/src-tauri/src/lib.rs` is intentionally thin:
 - Then it writes the raw string to disk.
 
 There is no separate database for note bodies. The markdown file is the source of truth.
+
+## What `json2md()` Actually Does
+
+`apps/desktop/src/lib/markdown.ts` is not a straight `MarkdownManager.serialize()` wrapper. The current write-side logic does a few important normalizations so the saved markdown stays stable and reparses correctly:
+
+1. `mergeTopLevelParagraphRuns()` collapses adjacent top-level paragraphs into one markdown paragraph with embedded newline text.
+   This is how Philo preserves editor blank lines without writing placeholder text like `&nbsp;`.
+2. Long newline runs are compacted so repeated saves do not grow extra blank lines accidentally.
+3. Empty bullet items are normalized from `-` to `-`, because TipTap's default serializer emits `-` but its parser reparses that as plain paragraph text instead of an empty bullet item.
+4. When Philo is pointed at a vault, serialization uses tab indentation (`{ style: "tab", size: 1 }`) so the file on disk matches Obsidian's layout more closely.
+
+The practical consequence is that the file on disk is not just "whatever TipTap emitted". Philo post-normalizes the markdown so the next load can reconstruct the same structure.
 
 ## Load Path: Raw Markdown Back Into The Editor
 
@@ -64,12 +78,31 @@ The read flow is the inverse:
 The normalization inside `loadDailyNote()` is important:
 
 1. `parseFrontmatter()` strips frontmatter and extracts `city`.
-2. `resolveExcalidrawEmbeds()` turns `![[drawing.excalidraw]]` into a placeholder HTML node.
-3. `replaceMentionWikiLinksWithChips()` turns `[[...]]` links into mention-chip HTML nodes.
-4. `resolveMarkdownImages()` converts relative markdown image paths into Tauri asset-protocol URLs the editor can display.
-5. `md2json()` parses the final markdown/HTML mix into a TipTap document.
+2. `rewriteNoteLinksToDateMentionLinks()` converts daily-note wiki links into canonical date mentions.
+3. `resolveExcalidrawEmbeds()` turns `![[drawing.excalidraw]]` into a placeholder HTML node.
+4. `replaceMentionWikiLinksWithChips()` turns `[[...]]` links into mention-chip HTML nodes.
+5. `resolveMarkdownImages()` converts relative markdown image paths into Tauri asset-protocol URLs the editor can display.
+6. `md2json()` parses the final markdown/HTML mix into a TipTap document.
 
 The Tauri command `read_markdown_file(path)` just returns the raw file contents or `null` if the file does not exist.
+
+## What `md2json()` Actually Does
+
+The current load path does several markdown-specific repairs before the content ever reaches the editor:
+
+1. Line endings are normalized to `\n`.
+2. If the note is in a vault, leading tabs are expanded to parser-friendly spaces for parsing only.
+   This does not rewrite the file on disk.
+3. Obsidian-style nested bare task lines like `\t [ ] child` are rewritten to a parser-safe form like `\t- [ ] child` before lexing.
+4. `MarkdownManager.instance.lexer()` is used directly so Philo can preserve blank lines that `marked` sometimes reports as:
+   - explicit `space` tokens
+   - leading `\n` on the next token
+   - trailing `\n\n` on the previous token
+5. Mixed top-level list tokens are split manually when `marked` merges bullet items and task items into one `list` token.
+   This is what preserves a blank line between a bullet list and a task list across reloads.
+6. Blank lines are reintroduced as explicit empty TipTap paragraph nodes.
+
+That means the md -> TipTap path is intentionally more opinionated than a raw markdown parse. Philo has to compensate for parser edge cases around blank lines, mixed lists, empty bullet items, and Obsidian-style indentation.
 
 ## How The Editor Knows What To Render
 
@@ -89,6 +122,16 @@ That pairing is what makes the round-trip work:
 
 The editor is therefore not reading the markdown file directly on every keystroke. It reads a TipTap document that was derived from markdown when the note was loaded.
 
+## Editor Behavior That Matters For Sync
+
+The live editor now uses normal block splitting for Enter at the top level. That matters because list creation depends on real paragraph boundaries:
+
+- typing plain text, pressing Enter, and then typing `-` should create a real bullet list item
+- pressing `cmd+l` on a blank block should turn that block into a task item
+- blank lines in the editor are represented as actual empty paragraph nodes, not newline characters embedded in the previous paragraph
+
+The markdown serializer assumes the TipTap document is already structurally correct before it writes to disk. If the editor shape is wrong, the markdown file will be wrong too.
+
 ## External File Sync Behavior
 
 Philo already does a limited form of filesystem sync with the raw markdown file:
@@ -104,6 +147,7 @@ Current limitations:
 - The watcher only re-syncs today's note, not every already-mounted past note.
 - Sync is file-level reload, not operational merge. The latest disk read replaces the in-memory note state.
 - Autosave is still editor-driven, so local editor changes are usually written back within 500 ms.
+- Local writes suppress the watcher briefly so Philo does not immediately reload the file it just saved and reset the editor selection.
 
 ## Obsidian / Vault Integration
 
@@ -112,6 +156,7 @@ When Philo is pointed at an Obsidian vault, it tries to honor the vault layout i
 - `detectObsidianFolders()` reads `.obsidian` config to detect the daily-notes folder, attachments folder, excalidraw folder, and filename format.
 - `bootstrap_obsidian_vault()` can create a minimal `.obsidian` setup for a fresh vault.
 - Mention links and Excalidraw embeds intentionally use Obsidian-friendly syntax so the markdown stays portable.
+- Vault-backed notes load with tab indentation assumptions and save back with tab indentation as well.
 
 ## Practical Example
 
@@ -122,7 +167,7 @@ A note might look like this on disk:
 city: Seoul
 ---
 
-- [ ] Review draft [[2026-03-09]]
+- [ ] Review draft [[2026_03_09]]
 
 ![[weekly-plan.excalidraw]]
 
