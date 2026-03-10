@@ -57,6 +57,7 @@ export function AiComposer({
       <div className="relative mx-auto w-full max-w-2xl px-4 pb-3">
         <div className="space-y-2">
           <AiResultPanel
+            isThinking={isSubmitting}
             answer={answer}
             citations={citations}
             pendingChanges={pendingChanges}

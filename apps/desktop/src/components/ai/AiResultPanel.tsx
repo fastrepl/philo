@@ -1,7 +1,9 @@
+import { LoaderCircle, } from "lucide-react";
 import type { AssistantCitation, AssistantPendingChange, } from "../../services/assistant";
 import { AiDiffPreview, } from "./AiDiffPreview";
 
 interface AiResultPanelProps {
+  isThinking: boolean;
   answer: string | null;
   citations: AssistantCitation[];
   pendingChanges: AssistantPendingChange[];
@@ -12,6 +14,7 @@ interface AiResultPanelProps {
 }
 
 export function AiResultPanel({
+  isThinking,
   answer,
   citations,
   pendingChanges,
@@ -20,13 +23,25 @@ export function AiResultPanel({
   onApplyChange,
   onDiscardChange,
 }: AiResultPanelProps,) {
-  if (!answer && citations.length === 0 && pendingChanges.length === 0) {
+  if (!isThinking && !answer && citations.length === 0 && pendingChanges.length === 0) {
     return null;
   }
 
   return (
     <div className="max-h-[56vh] overflow-y-auto rounded-[24px] border border-gray-200 bg-white/96 shadow-[0_-12px_36px_rgba(15,23,42,0.12)]">
       <div className="space-y-4 px-4 py-4">
+        {isThinking && (
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500">
+              <LoaderCircle size={16} className="animate-spin" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-900">Sophia is thinking</p>
+              <p className="text-xs text-slate-500">Searching notes and composing a reply.</p>
+            </div>
+          </div>
+        )}
+
         {answer && (
           <div className="space-y-2">
             <p
