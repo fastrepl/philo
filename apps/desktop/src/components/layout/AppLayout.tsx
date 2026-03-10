@@ -290,7 +290,11 @@ export default function AppLayout() {
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "j") {
         event.preventDefault();
-        openAiComposer();
+        if (aiComposerOpen) {
+          closeAiComposer();
+        } else {
+          openAiComposer();
+        }
         return;
       }
 
