@@ -51,8 +51,8 @@ export function AiComposer({
       className="fixed inset-x-0 bottom-0 z-[95] transition-transform duration-300 ease-out"
       style={{ transform: open ? "translateY(0)" : "translateY(100%)", }}
     >
-      <div className="relative mx-auto w-full max-w-2xl px-4 pb-5">
-        <div className="space-y-3">
+      <div className="relative mx-auto w-full max-w-2xl px-4 pb-3">
+        <div className="space-y-2">
           <AiResultPanel
             answer={answer}
             citations={citations}
@@ -83,7 +83,7 @@ export function AiComposer({
             : (
               <div className="space-y-2">
                 <form
-                  className="flex items-center gap-4 rounded-[32px] border border-gray-200 bg-white px-5 py-5 shadow-[0_-20px_60px_rgba(15,23,42,0.12)]"
+                  className="flex items-center gap-3 rounded-[28px] border border-gray-200 bg-white px-4 py-3 shadow-[0_-16px_44px_rgba(15,23,42,0.1)]"
                   onSubmit={(event,) => {
                     event.preventDefault();
                     onSubmit();
@@ -94,12 +94,12 @@ export function AiComposer({
                     value={prompt}
                     onChange={(event,) => onPromptChange(event.target.value,)}
                     placeholder="chat with notes."
-                    className="min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-hidden placeholder:text-gray-400"
+                    className="min-w-0 flex-1 bg-transparent px-1 text-[15px] text-gray-900 outline-hidden placeholder:text-gray-400"
                   />
                   <button
                     type="submit"
                     disabled={isSubmitting || !prompt.trim()}
-                    className="shrink-0 rounded-full bg-gray-900 px-5 py-3 text-sm text-white transition-colors disabled:cursor-not-allowed disabled:bg-gray-300"
+                    className="shrink-0 rounded-full bg-gray-900 px-4 py-2.5 text-sm text-white transition-colors disabled:cursor-not-allowed disabled:bg-gray-300"
                     style={{ fontFamily: "'IBM Plex Mono', monospace", }}
                   >
                     {isSubmitting ? "Running..." : "Run"}
