@@ -2,13 +2,14 @@
 #[macro_use]
 extern crate objc;
 
+pub mod philo_tools;
+
 use rusqlite::{params, Connection};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 use std::{env, fs};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager};
@@ -89,51 +90,23 @@ fn write_markdown_file(path: String, content: String) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
 
-    atomic_write(&target, content.as_bytes())
+    fs::write(target, content).map_err(|e| e.to_string())
 }
 
-fn atomic_write(path: &Path, content: &[u8]) -> Result<(), String> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| "Missing parent directory".to_string())?;
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| "Invalid file name".to_string())?;
-
-    let nonce = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|e| e.to_string())?
-        .as_nanos();
-    let tmp_path = parent.join(format!(".{file_name}.tmp.{}.{}", std::process::id(), nonce));
-
-    let mut temp_file = fs::OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(&tmp_path)
-        .map_err(|e| e.to_string())?;
-
-    temp_file.write_all(content).map_err(|e| e.to_string())?;
-    temp_file.sync_all().map_err(|e| e.to_string())?;
-    drop(temp_file);
-
-    #[cfg(target_os = "windows")]
-    if path.exists() {
-        fs::remove_file(path).map_err(|e| e.to_string())?;
+#[tauri::command]
+fn run_ai_tool(
+    command: String,
+    argv: Vec<String>,
+    stdin: Option<String>,
+) -> Result<philo_tools::ToolCommandOutput, String> {
+    if command == "philo" {
+        philo_tools::run_sidecar_philo(&argv, stdin)
+    } else {
+        philo_tools::run_tool_command(philo_tools::ToolCommand::SafeShell {
+            command,
+            args: argv,
+        })
     }
-
-    if let Err(err) = fs::rename(&tmp_path, path) {
-        let _ = fs::remove_file(&tmp_path);
-        return Err(err.to_string());
-    }
-
-    #[cfg(target_family = "unix")]
-    {
-        let dir = fs::File::open(parent).map_err(|e| e.to_string())?;
-        dir.sync_all().map_err(|e| e.to_string())?;
-    }
-
-    Ok(())
 }
 
 fn should_skip_dir(name: &str) -> bool {
@@ -273,7 +246,7 @@ fn ensure_folder_in_vault(vault_dir: &Path, folder: &str) -> Result<(), String> 
 
 fn write_json_file(path: &Path, value: Value) -> Result<(), String> {
     let serialized = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
-    atomic_write(path, serialized.as_bytes())
+    fs::write(path, serialized).map_err(|e| e.to_string())
 }
 
 #[derive(Serialize)]
@@ -823,6 +796,7 @@ pub fn run() {
             bootstrap_obsidian_vault,
             read_markdown_file,
             write_markdown_file,
+            run_ai_tool,
             set_window_opacity,
             search_markdown_files
         ])
