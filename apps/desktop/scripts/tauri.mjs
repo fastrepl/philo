@@ -98,7 +98,7 @@ try {
     await buildSidecar("release",);
   }
 
-  await run("tauri", tauriArgs,);
+  await run("pnpm", ["exec", "tauri", ...tauriArgs,],);
 } catch (error) {
   console.error(error instanceof Error ? error.message : error,);
   process.exit(1,);
