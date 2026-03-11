@@ -22,7 +22,6 @@ import { saveDailyNote, } from "../../services/storage";
 import type { DailyNote, } from "../../types/note";
 import { EditorBubbleMenu, } from "../editor/EditorBubbleMenu";
 import { ClipboardTextSerializer, } from "../editor/extensions/clipboard";
-import { CustomDocument, } from "../editor/extensions/document/DocumentExtension";
 import { ExcalidrawExtension, } from "../editor/extensions/excalidraw/ExcalidrawExtension";
 import { HashtagExtension, } from "../editor/extensions/hashtag/HashtagExtension";
 import { CustomListKeymap, } from "../editor/extensions/list-keymap";
@@ -105,12 +104,10 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
     const editor = useEditor({
       extensions: [
         StarterKit.configure({
-          document: false,
           heading: { levels: [1, 2, 3, 4, 5, 6,], },
           listKeymap: false,
           paragraph: false,
         },),
-        CustomDocument,
         CustomParagraph,
         Image.configure({ inline: true, allowBase64: false, },),
         Underline,

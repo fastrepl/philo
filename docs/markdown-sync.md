@@ -58,11 +58,9 @@ There is no separate database for note bodies. The markdown file is the source o
 
 1. `mergeTopLevelParagraphRuns()` collapses adjacent top-level paragraphs into one markdown paragraph with embedded newline text.
    This is how Philo preserves editor blank lines without writing placeholder text like `&nbsp;`.
-2. `CustomDocument` overrides the default top-level block serializer so explicit empty paragraphs map back to exact markdown blank lines instead of being double-counted around lists.
-3. Adjacent top-level list nodes serialize with a single newline when there is no separator paragraph between them.
-   This is what lets Philo preserve a tight bullet-to-task transition as `- bullet` followed immediately by `- [ ] task`.
-4. Empty bullet items are normalized from `-` to `-`, because TipTap's default serializer emits `-` but its parser reparses that as plain paragraph text instead of an empty bullet item.
-5. When Philo is pointed at a vault, serialization uses tab indentation (`{ style: "tab", size: 1 }`) so the file on disk matches Obsidian's layout more closely.
+2. Long newline runs are compacted so repeated saves do not grow extra blank lines accidentally.
+3. Empty bullet items are normalized from `-` to `-`, because TipTap's default serializer emits `-` but its parser reparses that as plain paragraph text instead of an empty bullet item.
+4. When Philo is pointed at a vault, serialization uses tab indentation (`{ style: "tab", size: 1 }`) so the file on disk matches Obsidian's layout more closely.
 
 The practical consequence is that the file on disk is not just "whatever TipTap emitted". Philo post-normalizes the markdown so the next load can reconstruct the same structure.
 
@@ -100,10 +98,8 @@ The current load path does several markdown-specific repairs before the content 
    - explicit `space` tokens
    - leading `\n` on the next token
    - trailing `\n\n` on the previous token
-5. Top-level `list` tokens are split manually when `marked` merges:
-   - bullet items and task items into one token
-   - loose list items of the same kind into one token
-     This is what preserves both tight mixed lists and blank lines inside loose lists across reloads.
+5. Mixed top-level list tokens are split manually when `marked` merges bullet items and task items into one `list` token.
+   This is what preserves a blank line between a bullet list and a task list across reloads.
 6. Blank lines are reintroduced as explicit empty TipTap paragraph nodes.
 
 That means the md -> TipTap path is intentionally more opinionated than a raw markdown parse. Philo has to compensate for parser edge cases around blank lines, mixed lists, empty bullet items, and Obsidian-style indentation.

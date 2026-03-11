@@ -8,7 +8,6 @@ import { MarkdownManager, } from "@tiptap/markdown";
 import type { JSONContent, } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
-import { CustomDocument, } from "../components/editor/extensions/document/DocumentExtension";
 import { ExcalidrawExtension, } from "../components/editor/extensions/excalidraw/ExcalidrawExtension";
 import { HashtagExtension, } from "../components/editor/extensions/hashtag/HashtagExtension";
 import { MentionChipExtension, } from "../components/editor/extensions/mention/MentionChipExtension";
@@ -50,12 +49,10 @@ interface MarkdownListToken extends MarkdownToken {
 function getExtensions() {
   return [
     StarterKit.configure({
-      document: false,
       heading: { levels: [1, 2, 3, 4, 5, 6,], },
       listKeymap: false,
       paragraph: false,
     },),
-    CustomDocument,
     CustomParagraph,
     Image.configure({ inline: true, allowBase64: false, },),
     Underline,
@@ -189,47 +186,37 @@ function parseMarkdownContent(raw: string, manager: MarkdownManager,): JSONConte
   return isValidContent(parsed,) && parsed.content ? parsed.content : [];
 }
 
-function shouldSplitListToken(token: MarkdownToken,): token is MarkdownListToken {
+function isMixedListToken(token: MarkdownToken,): token is MarkdownListToken {
   if (token.type !== "list") return false;
   if (!Array.isArray((token as MarkdownListToken).items,)) return false;
 
   const items = (token as MarkdownListToken).items ?? [];
-  if (items.length === 0) return false;
-
-  let previousTaskState = items[0].task === true;
-  let previousTrailingNewlines = countTrailingNewlines(items[0].raw ?? "",);
-
-  for (let index = 1; index < items.length; index += 1) {
-    const currentTaskState = items[index].task === true;
-    if (currentTaskState !== previousTaskState || previousTrailingNewlines > 1) {
-      return true;
-    }
-
-    previousTaskState = currentTaskState;
-    previousTrailingNewlines = countTrailingNewlines(items[index].raw ?? "",);
-  }
-
-  return false;
+  const hasTask = items.some(item => item.task === true);
+  const hasNonTask = items.some(item => item.task !== true);
+  return hasTask && hasNonTask;
 }
 
-function parseListToken(token: MarkdownListToken, manager: MarkdownManager,): JSONContent[] {
+function parseMixedListToken(token: MarkdownListToken, manager: MarkdownManager,): JSONContent[] {
   const groups: string[] = [];
   let currentTaskState: boolean | null = null;
   let currentRaw = "";
-  let previousTrailingNewlines = 0;
 
   for (const item of token.items ?? []) {
     const itemTaskState = item.task === true;
     const itemRaw = item.raw ?? "";
 
-    if (currentRaw && (currentTaskState !== itemTaskState || previousTrailingNewlines > 1)) {
+    if (currentTaskState === null || currentTaskState === itemTaskState) {
+      currentTaskState = itemTaskState;
+      currentRaw += itemRaw;
+      continue;
+    }
+
+    if (currentRaw) {
       groups.push(currentRaw,);
-      currentRaw = "";
     }
 
     currentTaskState = itemTaskState;
-    currentRaw += itemRaw;
-    previousTrailingNewlines = countTrailingNewlines(itemRaw,);
+    currentRaw = itemRaw;
   }
 
   if (currentRaw) {
@@ -294,8 +281,8 @@ function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONC
       continue;
     }
 
-    const parsedContent = shouldSplitListToken(token,)
-      ? parseListToken(token, manager,)
+    const parsedContent = isMixedListToken(token,)
+      ? parseMixedListToken(token, manager,)
       : parseMarkdownContent(normalizedRaw, manager,);
 
     if (parsedContent.length > 0) {
@@ -326,7 +313,9 @@ export function md2json(markdown: string, options?: { indentation?: MarkdownInde
 export function json2md(json: JSONContent, options?: { indentation?: MarkdownIndentation; },): string {
   try {
     const serialized = getMarkdownManager(options?.indentation,).serialize(mergeTopLevelParagraphRuns(json,),);
-    return serialized.replace(/^([ \t]*)- $/gm, "$1-",);
+    return serialized
+      .replace(/\n{4,}/g, (run,) => "\n".repeat(Math.floor(run.length / 2,),),)
+      .replace(/^([ \t]*)- $/gm, "$1-",);
   } catch {
     return "";
   }
