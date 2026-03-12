@@ -13,6 +13,13 @@ alwaysApply: true
 - Do not batch unrelated changes into a single commit.
 - If a task involves multiple steps, commit after each step — not all at the end.
 
+## Branching (Git Butler)
+
+- Use Git Butler to manage branches so independent work can run concurrently.
+- Prefer one branch and PR per logical unit of work.
+- If a change depends on another open change, use stacked branches and stacked PRs so dependency order is explicit.
+- Only split work into multiple PRs when dependency or review scope makes it necessary.
+
 ## Releases
 
 - When asked to create a release: bump the version in `apps/desktop/src-tauri/Cargo.toml` and `apps/desktop/src-tauri/tauri.conf.json`, run `pnpm run release:check`, then commit, push, and create the release with `gh release create`. Do not create the release if `pnpm run release:check` fails. The CI workflow (`.github/workflows/release.yml`) will automatically build and upload platform binaries (`.dmg`, `.exe`, etc.) to the release.
