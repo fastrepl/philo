@@ -1,6 +1,10 @@
 import { join, } from "@tauri-apps/api/path";
 import { open as openDialog, } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState, } from "react";
+import claudeAiSymbol from "../../assets/claude-ai-symbol.svg";
+import googleGeminiIcon from "../../assets/google-gemini-icon.svg";
+import openaiSymbol from "../../assets/openai-symbol.svg";
+import openrouterIcon from "../../assets/openrouter.svg";
 import { connectGoogleAccount, } from "../../services/google";
 import { detectObsidianFolders, } from "../../services/obsidian";
 import { applyFilenamePattern, getJournalDir, initJournalScope, resetJournalDir, } from "../../services/paths";
@@ -34,6 +38,13 @@ const AI_PROVIDER_PLACEHOLDERS: Record<AiProvider, string> = {
   openai: "sk-...",
   google: "AIza...",
   openrouter: "sk-or-v1-...",
+};
+
+const AI_PROVIDER_ICONS: Record<AiProvider, string> = {
+  anthropic: claudeAiSymbol,
+  openai: openaiSymbol,
+  google: googleGeminiIcon,
+  openrouter: openrouterIcon,
 };
 
 const mono = { fontFamily: "'IBM Plex Mono', monospace", };
@@ -391,8 +402,17 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                 >
                   <label className="mb-2 flex items-center gap-2 text-sm cursor-pointer" style={mono}>
                     <span
-                      className={`inline-block h-2 w-2 rounded-full ${selected ? "bg-violet-500" : "bg-gray-300"}`}
-                    />
+                      className={`flex h-6 w-6 items-center justify-center rounded-md border bg-white ${
+                        selected ? "border-violet-200" : "border-gray-200"
+                      }`}
+                    >
+                      <img
+                        src={AI_PROVIDER_ICONS[provider]}
+                        alt=""
+                        className="h-4 w-4 object-contain"
+                        aria-hidden="true"
+                      />
+                    </span>
                     <span className={selected ? "text-violet-700" : "text-gray-600"}>
                       {getAiProviderLabel(provider,)}
                     </span>
