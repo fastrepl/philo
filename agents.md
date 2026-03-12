@@ -9,13 +9,15 @@ alwaysApply: true
 ## Commit Discipline
 
 - Commit after every discrete action. Each meaningful change (e.g. adding a feature, fixing a bug, refactoring, updating docs, adding a test) must be committed individually before moving on.
-- Use concise, imperative commit messages (e.g. `add bucket column reordering`, `fix off-by-one in timeline view`).
+- Commit messages must use the intent as the title and a concise summary of what was done as the description/body.
 - Do not batch unrelated changes into a single commit.
 - If a task involves multiple steps, commit after each step — not all at the end.
 
 ## Branching (Git Butler)
 
 - Use Git Butler to manage branches so independent work can run concurrently.
+- If the current branch is `main`, commit directly on `main`.
+- If the current branch name is `gitbutler/workspace` or starts with `gitbutler/workspace`, use the `/commit-msg` skill to draft the commit message, create a GitButler virtual branch for the logical change, and push that virtual branch.
 - Prefer one branch and PR per logical unit of work.
 - If a change depends on another open change, use stacked branches and stacked PRs so dependency order is explicit.
 - Only split work into multiple PRs when dependency or review scope makes it necessary.
