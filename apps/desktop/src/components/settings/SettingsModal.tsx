@@ -655,7 +655,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             Preview: <span className="text-gray-600">{filenamePreview}</span>
           </p>
           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-            <span style={mono}>Tokens:</span>
             <FilenameTokenChip token="YYYY" />
             <FilenameTokenChip token="MM" />
             <FilenameTokenChip token="DD" />
