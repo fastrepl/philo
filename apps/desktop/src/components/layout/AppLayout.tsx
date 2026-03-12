@@ -80,6 +80,7 @@ function DateHeader({
   const [isEditingCity, setIsEditingCity,] = useState(false,);
   const displayCity = city?.trim() || fallbackCity?.trim() || "";
   const [draftCity, setDraftCity,] = useState(displayCity,);
+  const cityInputWidthCh = Math.max(draftCity.length, "Add city".length,) + 1;
 
   useEffect(() => {
     if (!isEditingCity) {
@@ -138,6 +139,7 @@ function DateHeader({
               }}
               placeholder="Add city"
               className="min-w-0 rounded-md border border-gray-200 dark:border-gray-700 bg-transparent px-2 py-1 text-sm text-gray-500 dark:text-gray-400 font-sans focus:outline-hidden focus:border-gray-400 dark:focus:border-gray-500"
+              style={{ width: `${cityInputWidthCh}ch`, maxWidth: "100%", }}
             />
           )
           : (
