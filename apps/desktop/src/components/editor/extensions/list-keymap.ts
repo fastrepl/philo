@@ -6,7 +6,15 @@ export const CustomListKeymap = ListKeymap.extend({
   addKeyboardShortcuts() {
     const originalShortcuts = this.parent?.() ?? {};
 
-    const getListItemType = () => this.editor.schema.nodes.listItem;
+    const getListItemType = () => {
+      const state = this.editor.state;
+      const taskItemType = this.editor.schema.nodes.taskItem;
+      const listItemType = this.editor.schema.nodes.listItem;
+
+      if (taskItemType && isNodeActive(state, taskItemType.name,)) return taskItemType;
+      if (listItemType && isNodeActive(state, listItemType.name,)) return listItemType;
+      return listItemType ?? taskItemType ?? null;
+    };
 
     const tryJoinLists = (editor: typeof this.editor,): boolean => {
       const { state, } = editor;
@@ -17,9 +25,11 @@ export const CustomListKeymap = ListKeymap.extend({
 
       const orderedListType = schema.nodes.orderedList;
       const bulletListType = schema.nodes.bulletList;
-      if (!orderedListType && !bulletListType) return false;
+      const taskListType = schema.nodes.taskList;
+      if (!orderedListType && !bulletListType && !taskListType) return false;
 
-      const isListType = (type: typeof orderedListType,) => type === orderedListType || type === bulletListType;
+      const isListType = (type: typeof orderedListType,) =>
+        type === orderedListType || type === bulletListType || type === taskListType;
 
       const currentNode = $from.parent;
       const isEmptyParagraph = currentNode.type === schema.nodes.paragraph
