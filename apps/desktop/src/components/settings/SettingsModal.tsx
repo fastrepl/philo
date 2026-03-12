@@ -44,17 +44,22 @@ const mono = { fontFamily: "'IBM Plex Mono', monospace", };
 
 export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const [settings, setSettings,] = useState<Settings | null>(null,);
-  const [saved, setSaved,] = useState(false,);
+  const [saveState, setSaveState,] = useState<"idle" | "saving" | "error">("idle",);
   const [defaultJournalDir, setDefaultJournalDir,] = useState("",);
   const [googleBusy, setGoogleBusy,] = useState(false,);
   const [googleError, setGoogleError,] = useState("",);
   const inputRef = useRef<HTMLInputElement>(null,);
+  const settingsRef = useRef<Settings | null>(null,);
+  const lastSavedSettingsRef = useRef<Settings | null>(null,);
+  const activeSaveRef = useRef<Promise<void> | null>(null,);
 
   useEffect(() => {
     if (open) {
       loadSettings().then((s,) => {
+        settingsRef.current = s;
+        lastSavedSettingsRef.current = s;
         setSettings(s,);
-        setSaved(false,);
+        setSaveState("idle",);
         setGoogleBusy(false,);
         setGoogleError("",);
       },);
@@ -69,9 +74,29 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const effectivePattern = settings.filenamePattern || DEFAULT_FILENAME_PATTERN;
   const filenamePreview = applyFilenamePattern(effectivePattern, getToday(),) + ".md";
 
-  const update = (partial: Partial<Settings>,) => {
-    setSettings((current,) => current ? { ...current, ...partial, } : current);
-    setSaved(false,);
+  const buildPersistedSettings = async (current: Settings,) => {
+    const normalizedVault = current.vaultDir.trim();
+    const normalizedDaily = current.dailyLogsFolder.trim();
+    return {
+      ...current,
+      anthropicApiKey: current.anthropicApiKey.trim(),
+      openaiApiKey: current.openaiApiKey.trim(),
+      googleApiKey: current.googleApiKey.trim(),
+      openrouterApiKey: current.openrouterApiKey.trim(),
+      googleOAuthClientId: current.googleOAuthClientId.trim(),
+      googleAccountEmail: current.googleAccountEmail.trim(),
+      googleAccessToken: current.googleAccessToken.trim(),
+      googleRefreshToken: current.googleRefreshToken.trim(),
+      googleAccessTokenExpiresAt: current.googleAccessTokenExpiresAt,
+      googleGrantedScopes: [...current.googleGrantedScopes,],
+      vaultDir: normalizedVault,
+      dailyLogsFolder: normalizedDaily,
+      excalidrawFolder: current.excalidrawFolder.trim(),
+      assetsFolder: current.assetsFolder.trim(),
+      journalDir: normalizedVault && normalizedDaily
+        ? await join(normalizedVault, normalizedDaily,)
+        : current.journalDir,
+    };
   };
 
   const buildGooglePatch = (partial: Partial<Settings>,) => ({
@@ -83,12 +108,62 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
     googleGrantedScopes: partial.googleGrantedScopes ?? settings.googleGrantedScopes,
   });
 
+  const persistSettingsNow = async (nextSettings: Settings,) => {
+    const task = (async () => {
+      try {
+        const normalized = await buildPersistedSettings(nextSettings,);
+        await saveSettings(normalized,);
+
+        const previous = lastSavedSettingsRef.current;
+        const scopeChanged = !previous
+          || previous.journalDir !== normalized.journalDir
+          || previous.vaultDir !== normalized.vaultDir
+          || previous.dailyLogsFolder !== normalized.dailyLogsFolder
+          || previous.excalidrawFolder !== normalized.excalidrawFolder
+          || previous.assetsFolder !== normalized.assetsFolder;
+
+        if (scopeChanged) {
+          await resetJournalDir(normalized.journalDir || undefined,);
+          await initJournalScope();
+        }
+
+        lastSavedSettingsRef.current = normalized;
+        settingsRef.current = normalized;
+        setSettings(normalized,);
+      } catch (err) {
+        console.error("Failed to save settings:", err,);
+        setSaveState("error",);
+        throw err;
+      }
+    })();
+
+    activeSaveRef.current = task;
+    await task;
+    if (activeSaveRef.current === task) {
+      activeSaveRef.current = null;
+    }
+  };
+
+  const update = (partial: Partial<Settings>,) => {
+    const current = settingsRef.current;
+    if (!current) return;
+    const nextSettings = { ...current, ...partial, };
+    settingsRef.current = nextSettings;
+    setSettings(nextSettings,);
+    if (saveState === "error") {
+      setSaveState("idle",);
+    }
+  };
+
   const persistGooglePatch = async (partial: Partial<Settings>,) => {
     const googlePatch = buildGooglePatch(partial,);
     const persisted = await loadSettings();
-    await saveSettings({ ...persisted, ...googlePatch, },);
-    setSettings((current,) => current ? { ...current, ...googlePatch, } : current);
-    setSaved(false,);
+    const nextSettings = { ...persisted, ...googlePatch, };
+    await saveSettings(nextSettings,);
+    settingsRef.current = nextSettings;
+    lastSavedSettingsRef.current = nextSettings;
+    setSettings(nextSettings,);
+    setSaveState("idle",);
   };
 
   const updateAiKey = (provider: AiProvider, value: string,) => {
@@ -118,42 +193,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
         return settings.googleApiKey;
       case "openrouter":
         return settings.openrouterApiKey;
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const normalizedVault = settings.vaultDir.trim();
-      const normalizedDaily = settings.dailyLogsFolder.trim();
-      const nextSettings = {
-        ...settings,
-        anthropicApiKey: settings.anthropicApiKey.trim(),
-        openaiApiKey: settings.openaiApiKey.trim(),
-        googleApiKey: settings.googleApiKey.trim(),
-        openrouterApiKey: settings.openrouterApiKey.trim(),
-        googleOAuthClientId: settings.googleOAuthClientId.trim(),
-        googleAccountEmail: settings.googleAccountEmail.trim(),
-        googleAccessToken: settings.googleAccessToken.trim(),
-        googleRefreshToken: settings.googleRefreshToken.trim(),
-        googleAccessTokenExpiresAt: settings.googleAccessTokenExpiresAt,
-        googleGrantedScopes: [...settings.googleGrantedScopes,],
-        vaultDir: normalizedVault,
-        dailyLogsFolder: normalizedDaily,
-        excalidrawFolder: settings.excalidrawFolder.trim(),
-        assetsFolder: settings.assetsFolder.trim(),
-        journalDir: normalizedVault && normalizedDaily
-          ? await join(normalizedVault, normalizedDaily,)
-          : settings.journalDir,
-      };
-      await saveSettings(nextSettings,);
-      // Reset cached journal dir so it picks up the new setting
-      await resetJournalDir(nextSettings.journalDir || undefined,);
-      await initJournalScope();
-      setSettings(nextSettings,);
-      setSaved(true,);
-      setTimeout(() => setSaved(false,), 2000,);
-    } catch (err) {
-      console.error("Failed to save settings:", err,);
     }
   };
 
@@ -192,20 +231,15 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
 
   const detectFromVault = async (vaultDir: string,) => {
     const normalizedVaultDir = vaultDir.trim();
-    if (!normalizedVaultDir) return;
+    if (!normalizedVaultDir) return null;
 
     const detected = await detectObsidianFolders(normalizedVaultDir,);
-    setSettings((current,) => {
-      if (!current) return current;
-      return {
-        ...current,
-        filenamePattern: detected.filenamePattern || current.filenamePattern,
-        dailyLogsFolder: detected.dailyLogsFolder || current.dailyLogsFolder,
-        excalidrawFolder: detected.excalidrawFolder || current.excalidrawFolder,
-        assetsFolder: detected.assetsFolder || current.assetsFolder,
-      };
-    },);
-    setSaved(false,);
+    return {
+      filenamePattern: detected.filenamePattern || undefined,
+      dailyLogsFolder: detected.dailyLogsFolder || undefined,
+      excalidrawFolder: detected.excalidrawFolder || undefined,
+      assetsFolder: detected.assetsFolder || undefined,
+    };
   };
 
   const handleChooseVault = async () => {
@@ -216,16 +250,33 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       defaultPath: defaultPath || undefined,
     },);
     if (selected) {
-      update({ vaultDir: selected, },);
-      await detectFromVault(selected,);
+      const detected = await detectFromVault(selected,);
+      update({
+        vaultDir: selected,
+        ...(detected ?? {}),
+      },);
+    }
+  };
+
+  const handleRequestClose = async () => {
+    const nextSettings = settingsRef.current;
+    if (!nextSettings) {
+      onClose();
+      return;
+    }
+
+    setSaveState("saving",);
+    try {
+      await persistSettingsNow(nextSettings,);
+      onClose();
+    } catch {
+      // Keep the modal open so the user can retry or copy their changes.
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent,) => {
     if (e.key === "Escape") {
-      onClose();
-    } else if (e.key === "Enter" && e.metaKey) {
-      handleSave();
+      void handleRequestClose();
     }
   };
 
@@ -236,7 +287,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center"
-      onClick={onClose}
+      onClick={() => void handleRequestClose()}
       onKeyDown={handleKeyDown}
     >
       <div
@@ -257,7 +308,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             Settings
           </h2>
           <button
-            onClick={onClose}
+            onClick={() => void handleRequestClose()}
             className="text-gray-400 hover:text-gray-600 transition-colors text-lg cursor-pointer"
           >
             ✕
@@ -531,28 +582,20 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           </p>
         </div>
 
-        {/* Actions */}
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 rounded-lg transition-colors cursor-pointer"
-            style={mono}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 text-sm text-white rounded-lg transition-all cursor-pointer"
-            style={{
-              ...mono,
-              background: saved
-                ? "linear-gradient(to bottom, #22c55e, #16a34a)"
-                : "linear-gradient(to bottom, #7c3aed, #5b21b6)",
-            }}
-          >
-            {saved ? "✓ Saved" : "Save"}
-          </button>
-        </div>
+        <p
+          className={`mt-6 text-xs ${
+            saveState === "error"
+              ? "text-red-600"
+              : "text-gray-400"
+          }`}
+          style={mono}
+        >
+          {saveState === "saving"
+            ? "Saving changes..."
+            : saveState === "error"
+            ? "Could not save changes."
+            : "Changes save when you close settings."}
+        </p>
       </div>
     </div>
   );
