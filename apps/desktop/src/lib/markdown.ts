@@ -263,7 +263,7 @@ function parseListToken(token: MarkdownListToken, manager: MarkdownManager,): JS
 }
 
 function getBlockSeparatorParagraphCount(separatorNewlines: number, sawContent: boolean,): number {
-  return sawContent ? Math.max(0, separatorNewlines - 2,) : separatorNewlines;
+  return sawContent ? Math.max(0, separatorNewlines - 1,) : separatorNewlines;
 }
 
 function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONContent[] {
@@ -339,6 +339,7 @@ export function json2md(json: JSONContent, options?: { indentation?: MarkdownInd
   try {
     const serialized = getMarkdownManager(options?.indentation,).serialize(mergeTopLevelParagraphRuns(json,),);
     return serialized
+      .replace(/\n{4,}/g, (run,) => "\n".repeat(Math.floor(run.length / 2,),),)
       .replace(/^([ \t]*)- $/gm, "$1-",);
   } catch {
     return "";
