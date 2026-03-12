@@ -2,6 +2,7 @@
   "name": "@philo/desktop",
   "private": true,
   "version": "0.0.10",
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "dev": "vite",

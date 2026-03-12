@@ -55,6 +55,10 @@ Tauri v2 · React 19 · TypeScript · TipTap · Tailwind CSS v4 · Anthropic Cla
 
 Run `pnpm run release:check` after bumping the desktop version and before creating a GitHub release. It verifies formatting, frontend typechecks and build, and the Rust fmt/check/clippy/test/build steps that the desktop release depends on.
 
+## License
+
+Philo is licensed under the GNU General Public License v3.0 or later. See [LICENSE](LICENSE).
+
 ## Internal docs
 
 - [Data storage and configuration](docs/data-storage-and-configuration.md)

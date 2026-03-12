@@ -2,7 +2,8 @@
 name = "philo"
 version = "0.0.43"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["John Jeong"]
+license = "GPL-3.0-or-later"
 edition = "2021"
 default-run = "philo"
 
