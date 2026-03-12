@@ -48,6 +48,34 @@ const AI_PROVIDER_ICONS: Record<AiProvider, string> = {
 };
 
 const mono = { fontFamily: "'IBM Plex Mono', monospace", };
+const googleButtonText = { fontFamily: "'Roboto', 'IBM Plex Sans', sans-serif", };
+
+function GoogleMark() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-[18px] w-[18px] shrink-0"
+      viewBox="0 0 18 18"
+    >
+      <path
+        fill="#4285F4"
+        d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.482h4.844a4.14 4.14 0 0 1-1.797 2.716v2.258h2.909c1.703-1.567 2.684-3.874 2.684-6.615"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.909-2.258c-.806.54-1.837.859-3.047.859-2.344 0-4.328-1.583-5.037-3.711H.957v2.332A8.997 8.997 0 0 0 9 18"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.963 10.71A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.283-1.71V4.958H.957A9 9 0 0 0 0 9c0 1.45.347 2.823.957 4.042z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.346l2.582-2.582C13.463.892 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.963 7.29C4.672 5.163 6.656 3.58 9 3.58"
+      />
+    </svg>
+  );
+}
 
 export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const [settings, setSettings,] = useState<Settings | null>(null,);
@@ -450,13 +478,15 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             <button
               onClick={handleConnectGoogle}
               disabled={googleBusy}
-              className="px-4 py-2 text-sm text-white rounded-lg transition-all cursor-pointer disabled:opacity-60 disabled:cursor-default"
+              className="inline-flex min-h-10 items-center gap-3 rounded-full border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
               style={{
-                ...mono,
-                background: "linear-gradient(to bottom, #1d4ed8, #1e3a8a)",
+                ...googleButtonText,
+                backgroundColor: "#f2f2f2",
+                borderColor: "#d2d2d2",
               }}
             >
-              {googleBusy ? "Waiting for Google…" : "Connect with Google"}
+              <GoogleMark />
+              <span>{googleBusy ? "Waiting for Google..." : "Continue with Google"}</span>
             </button>
           </div>
         </div>
