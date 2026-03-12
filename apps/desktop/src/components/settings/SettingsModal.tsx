@@ -43,6 +43,8 @@ const AI_PROVIDER_ICONS: Record<AiProvider, string> = {
 
 const mono = { fontFamily: "'IBM Plex Mono', monospace", };
 const googleButtonText = { fontFamily: "'Roboto', 'IBM Plex Sans', sans-serif", };
+const filenameTokenChip =
+  "inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600";
 
 function GoogleMark() {
   return (
@@ -68,6 +70,14 @@ function GoogleMark() {
         d="M9 3.58c1.321 0 2.508.454 3.44 1.346l2.582-2.582C13.463.892 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.963 7.29C4.672 5.163 6.656 3.58 9 3.58"
       />
     </svg>
+  );
+}
+
+function FilenameTokenChip({ token, }: { token: "YYYY" | "MM" | "DD"; },) {
+  return (
+    <span className={filenameTokenChip} style={mono}>
+      {`{${token}}`}
+    </span>
   );
 }
 
@@ -589,15 +599,15 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           <p className="text-xs text-gray-400" style={mono}>
             Preview: <span className="text-gray-600">{filenamePreview}</span>
           </p>
-          <p className="text-xs text-gray-400" style={mono}>
-            Tokens: {"{"}
-            <span className="text-gray-600">YYYY</span>
-            {"}"}, {"{"}
-            <span className="text-gray-600">MM</span>
-            {"}"}, {"{"}
-            <span className="text-gray-600">DD</span>
-            {"}"}. Use <span className="text-gray-600">/</span> for subdirectories.
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+            <span style={mono}>Tokens:</span>
+            <FilenameTokenChip token="YYYY" />
+            <FilenameTokenChip token="MM" />
+            <FilenameTokenChip token="DD" />
+            <span style={mono}>
+              Use <span className="text-gray-600">/</span> for subdirectories.
+            </span>
+          </div>
           <p className="text-xs text-amber-600" style={mono}>
             Changing this will not rename existing files.
           </p>
