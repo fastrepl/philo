@@ -45,6 +45,7 @@ const mono = { fontFamily: "'IBM Plex Mono', monospace", };
 const googleButtonText = { fontFamily: "'Roboto', 'IBM Plex Sans', sans-serif", };
 const filenameTokenChip =
   "inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600";
+const FILENAME_TOKEN_REGEX = /(\{YYYY\}|\{MM\}|\{DD\})/g;
 
 function GoogleMark() {
   return (
@@ -73,11 +74,60 @@ function GoogleMark() {
   );
 }
 
-function FilenameTokenChip({ token, }: { token: "YYYY" | "MM" | "DD"; },) {
+function FilenameTokenChip(
+  {
+    token,
+    variant = "legend",
+    muted = false,
+  }: {
+    token: "YYYY" | "MM" | "DD";
+    variant?: "legend" | "field";
+    muted?: boolean;
+  },
+) {
+  const classes = variant === "field"
+    ? `inline-flex items-center rounded-md border px-2 py-1 text-xs ${
+      muted
+        ? "border-gray-200 bg-gray-50 text-gray-400"
+        : "border-violet-200 bg-violet-50 text-violet-700"
+    }`
+    : filenameTokenChip;
+
   return (
-    <span className={filenameTokenChip} style={mono}>
-      {`{${token}}`}
+    <span className={classes} style={mono}>
+      {token}
     </span>
+  );
+}
+
+function FilenamePatternFieldValue({ value, muted = false, }: { value: string; muted?: boolean; },) {
+  const segments = value.split(FILENAME_TOKEN_REGEX,).filter(Boolean,);
+
+  return (
+    <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap">
+      {segments.map((segment, index,) => {
+        if (segment === "{YYYY}" || segment === "{MM}" || segment === "{DD}") {
+          return (
+            <FilenameTokenChip
+              key={`${segment}-${index}`}
+              token={segment.slice(1, -1,) as "YYYY" | "MM" | "DD"}
+              variant="field"
+              muted={muted}
+            />
+          );
+        }
+
+        return (
+          <span
+            key={`${segment}-${index}`}
+            className={muted ? "text-gray-400" : "text-gray-900"}
+            style={mono}
+          >
+            {segment}
+          </span>
+        );
+      },)}
+    </div>
   );
 }
 
@@ -578,19 +628,27 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           <label className="block text-sm text-gray-600" style={mono}>
             Filename Pattern
           </label>
-          <input
-            ref={filenamePatternInputRef}
-            type="text"
-            value={settings.filenamePattern}
-            onChange={(e,) => update({ filenamePattern: e.target.value, },)}
-            placeholder={DEFAULT_FILENAME_PATTERN}
-            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${
-              validationErrors.filenamePattern
-                ? "border-red-300 bg-red-50/40 focus:ring-red-500/20 focus:border-red-400"
-                : "border-gray-200 focus:ring-violet-500/30 focus:border-violet-400"
-            }`}
-            style={mono}
-          />
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden px-3 py-2">
+              <FilenamePatternFieldValue
+                value={settings.filenamePattern || DEFAULT_FILENAME_PATTERN}
+                muted={!settings.filenamePattern}
+              />
+            </div>
+            <input
+              ref={filenamePatternInputRef}
+              type="text"
+              value={settings.filenamePattern}
+              onChange={(e,) => update({ filenamePattern: e.target.value, },)}
+              placeholder={DEFAULT_FILENAME_PATTERN}
+              className={`w-full px-3 py-2 border rounded-lg text-sm text-transparent caret-gray-900 placeholder:text-transparent focus:outline-none focus:ring-2 transition-all ${
+                validationErrors.filenamePattern
+                  ? "border-red-300 bg-red-50/40 focus:ring-red-500/20 focus:border-red-400"
+                  : "border-gray-200 focus:ring-violet-500/30 focus:border-violet-400"
+              }`}
+              style={mono}
+            />
+          </div>
           {validationErrors.filenamePattern && (
             <p className="text-xs text-red-600" style={mono}>
               {validationErrors.filenamePattern}
