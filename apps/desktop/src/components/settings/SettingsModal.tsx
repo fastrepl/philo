@@ -136,6 +136,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const [settings, setSettings,] = useState<Settings | null>(null,);
   const [saveState, setSaveState,] = useState<"idle" | "saving" | "error">("idle",);
   const [validationErrors, setValidationErrors,] = useState<Partial<Record<ValidationField, string>>>({},);
+  const [isFilenamePatternFocused, setIsFilenamePatternFocused,] = useState(false,);
   const [defaultJournalDir, setDefaultJournalDir,] = useState("",);
   const [googleBusy, setGoogleBusy,] = useState(false,);
   const [googleError, setGoogleError,] = useState("",);
@@ -156,6 +157,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
         setSettings(s,);
         setSaveState("idle",);
         setValidationErrors({},);
+        setIsFilenamePatternFocused(false,);
         setGoogleBusy(false,);
         setGoogleError("",);
       },);
@@ -653,7 +655,11 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             Filename Pattern
           </label>
           <div className="relative">
-            <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden px-3 py-2">
+            <div
+              className={`pointer-events-none absolute inset-0 flex items-center overflow-hidden px-3 py-2 ${
+                isFilenamePatternFocused ? "opacity-0" : "opacity-100"
+              }`}
+            >
               <FilenamePatternFieldValue
                 value={settings.filenamePattern || DEFAULT_FILENAME_PATTERN}
                 muted={!settings.filenamePattern}
@@ -664,8 +670,14 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               type="text"
               value={settings.filenamePattern}
               onChange={(e,) => update({ filenamePattern: e.target.value, },)}
+              onFocus={() => setIsFilenamePatternFocused(true,)}
+              onBlur={() => setIsFilenamePatternFocused(false,)}
               placeholder={DEFAULT_FILENAME_PATTERN}
-              className={`w-full px-3 py-2 border rounded-lg text-sm text-transparent caret-gray-900 placeholder:text-transparent focus:outline-none focus:ring-2 transition-all ${
+              className={`w-full px-3 py-2 border rounded-lg text-sm caret-gray-900 focus:outline-none focus:ring-2 transition-all ${
+                isFilenamePatternFocused
+                  ? "text-gray-900 placeholder:text-gray-400"
+                  : "text-transparent placeholder:text-transparent"
+              } ${
                 validationErrors.filenamePattern
                   ? "border-red-300 bg-red-50/40 focus:ring-red-500/20 focus:border-red-400"
                   : "border-gray-200 focus:ring-violet-500/30 focus:border-violet-400"
