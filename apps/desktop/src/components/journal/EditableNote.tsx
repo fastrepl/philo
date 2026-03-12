@@ -7,7 +7,6 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Table, TableCell, TableHeader, TableRow, } from "@tiptap/extension-table";
 import TaskList from "@tiptap/extension-task-list";
-import Underline from "@tiptap/extension-underline";
 import { Fragment, } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, } from "@tiptap/pm/state";
 import { EditorContent, useEditor, } from "@tiptap/react";
@@ -28,6 +27,7 @@ import { CustomListKeymap, } from "../editor/extensions/list-keymap";
 import { buildMentionChipSuggestion, MentionChipExtension, } from "../editor/extensions/mention/MentionChipExtension";
 import { CustomParagraph, } from "../editor/extensions/paragraph/ParagraphExtension";
 import { CustomTaskItem, } from "../editor/extensions/task-item/TaskItemNode";
+import { UnderlineExtension, } from "../editor/extensions/underline/UnderlineExtension";
 import { WidgetExtension, } from "../editor/extensions/widget/WidgetExtension";
 
 export interface EditableNoteHandle {
@@ -107,10 +107,11 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           heading: { levels: [1, 2, 3, 4, 5, 6,], },
           listKeymap: false,
           paragraph: false,
+          underline: false,
         },),
         CustomParagraph,
         Image.configure({ inline: true, allowBase64: false, },),
-        Underline,
+        UnderlineExtension,
         Placeholder.configure({
           placeholder: ({ editor, },) => (editor.isEmpty ? placeholder : ""),
         },),

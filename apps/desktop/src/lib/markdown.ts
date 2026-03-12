@@ -3,7 +3,6 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import { Table, TableCell, TableHeader, TableRow, } from "@tiptap/extension-table";
 import TaskList from "@tiptap/extension-task-list";
-import Underline from "@tiptap/extension-underline";
 import { MarkdownManager, } from "@tiptap/markdown";
 import type { JSONContent, } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -13,6 +12,7 @@ import { HashtagExtension, } from "../components/editor/extensions/hashtag/Hasht
 import { MentionChipExtension, } from "../components/editor/extensions/mention/MentionChipExtension";
 import { CustomParagraph, } from "../components/editor/extensions/paragraph/ParagraphExtension";
 import { CustomTaskItem, } from "../components/editor/extensions/task-item/TaskItemNode";
+import { UnderlineExtension, } from "../components/editor/extensions/underline/UnderlineExtension";
 import { WidgetExtension, } from "../components/editor/extensions/widget/WidgetExtension";
 
 export const EMPTY_DOC: JSONContent = {
@@ -52,10 +52,11 @@ function getExtensions() {
       heading: { levels: [1, 2, 3, 4, 5, 6,], },
       listKeymap: false,
       paragraph: false,
+      underline: false,
     },),
     CustomParagraph,
     Image.configure({ inline: true, allowBase64: false, },),
-    Underline,
+    UnderlineExtension,
     Link.configure({ openOnClick: false, },),
     TaskList,
     CustomTaskItem.configure({ nested: true, },),
