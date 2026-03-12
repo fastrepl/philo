@@ -58,9 +58,8 @@ There is no separate database for note bodies. The markdown file is the source o
 
 1. `mergeTopLevelParagraphRuns()` collapses adjacent top-level paragraphs into one markdown paragraph with embedded newline text.
    This is how Philo preserves editor blank lines without writing placeholder text like `&nbsp;`.
-2. Long newline runs are compacted so repeated saves do not grow extra blank lines accidentally.
-3. Empty bullet items are normalized from `-` to `-`, because TipTap's default serializer emits `-` but its parser reparses that as plain paragraph text instead of an empty bullet item.
-4. When Philo is pointed at a vault, serialization uses tab indentation (`{ style: "tab", size: 1 }`) so the file on disk matches Obsidian's layout more closely.
+2. Empty bullet items are normalized from `-` to `-`, because TipTap's default serializer emits `-` but its parser reparses that as plain paragraph text instead of an empty bullet item.
+3. When Philo is pointed at a vault, serialization uses tab indentation (`{ style: "tab", size: 1 }`) so the file on disk matches Obsidian's layout more closely.
 
 The practical consequence is that the file on disk is not just "whatever TipTap emitted". Philo post-normalizes the markdown so the next load can reconstruct the same structure.
 

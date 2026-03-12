@@ -359,9 +359,7 @@ export function md2json(markdown: string, options?: { indentation?: MarkdownInde
 export function json2md(json: JSONContent, options?: { indentation?: MarkdownIndentation; },): string {
   try {
     const serialized = getMarkdownManager(options?.indentation,).serialize(mergeTopLevelParagraphRuns(json,),);
-    return serialized
-      .replace(/\n{4,}/g, (run,) => "\n".repeat(Math.floor(run.length / 2,),),)
-      .replace(/^([ \t]*)- $/gm, "$1-",);
+    return serialized.replace(/^([ \t]*)- $/gm, "$1-",);
   } catch {
     return "";
   }
