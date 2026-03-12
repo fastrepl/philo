@@ -141,11 +141,10 @@ export const widgetCatalog = defineCatalog(schema, {
         columns: z.array(z.object({
           header: z.string(),
           field: z.string(),
-        }),).optional(),
+        },),).optional(),
       },),
       description: "Simple data table with either static rows or rows from a query.",
     },
   },
-  actions: {
-  },
+  actions: {},
 },);

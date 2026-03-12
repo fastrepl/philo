@@ -1,14 +1,8 @@
 import { invoke, } from "@tauri-apps/api/core";
 import { join, } from "@tauri-apps/api/path";
-import {
-  exists,
-  mkdir,
-  readDir,
-  readTextFile,
-  remove,
-  writeTextFile,
-} from "@tauri-apps/plugin-fs";
-import { getBaseDir as getAppBaseDir, getJournalDir, getVaultDirSetting, } from "./paths";
+import { exists, mkdir, readDir, readTextFile, remove, writeTextFile, } from "@tauri-apps/plugin-fs";
+import { getBaseDir as getAppBaseDir, getJournalDir, } from "./paths";
+import { getVaultDirSetting, } from "./settings";
 
 export interface SharedStorageColumn {
   name: string;
@@ -98,6 +92,7 @@ export interface AddSharedComponentInput extends AddToLibraryInput {
 
 const LIBRARY_FILE = "library.json";
 const COMPONENT_SUFFIX = ".component.md";
+export const SHARED_COMPONENTS_UPDATED_EVENT = "philo:shared-components-updated";
 
 function isSharedItem(item: LibraryItem, id: string, componentId?: string,): boolean {
   return item.id === id || (!!componentId && item.componentId === componentId);
@@ -105,6 +100,14 @@ function isSharedItem(item: LibraryItem, id: string, componentId?: string,): boo
 
 function normalizeLegacyId(raw: string,): string {
   return raw.toLowerCase().replace(/[^a-z0-9]+/g, "-",).replace(/^-+|-+$/g, "",);
+}
+
+function emitSharedComponentsUpdated(componentId?: string,): void {
+  window.dispatchEvent(
+    new CustomEvent(SHARED_COMPONENTS_UPDATED_EVENT, {
+      detail: { componentId: componentId ?? null, },
+    },),
+  );
 }
 
 function frontmatterValue(raw: string,): string {
@@ -207,13 +210,13 @@ function normalizeStorageSchema(schema: SharedStorageSchema,): SharedStorageSche
       indexes: table.indexes
         ? table.indexes.map((index,) => ({
           ...index,
-          columns: index.columns.map((column,) => column.trim(),).filter((column,) => column),
+          columns: index.columns.map((column,) => column.trim()).filter((column,) => column),
         }))
         : [],
     })),
     namedQueries: schema.namedQueries.map((query,) => ({
       ...query,
-      columns: query.columns.map((column,) => column.trim(),).filter((column,) => column),
+      columns: query.columns.map((column,) => column.trim()).filter((column,) => column),
       filters: query.filters ?? [],
       orderBy: query.orderBy?.trim() || undefined,
       orderDesc: query.orderDesc ?? false,
@@ -221,7 +224,7 @@ function normalizeStorageSchema(schema: SharedStorageSchema,): SharedStorageSche
     })),
     namedMutations: schema.namedMutations.map((mutation,) => ({
       ...mutation,
-      setColumns: mutation.setColumns?.map((column,) => column.trim(),).filter((column,) => column) ?? [],
+      setColumns: mutation.setColumns?.map((column,) => column.trim()).filter((column,) => column) ?? [],
       filters: mutation.filters ?? [],
     })),
   };
@@ -328,6 +331,16 @@ function libraryDirArgs(baseDir: string, overrides: Record<string, unknown> = {}
   };
 }
 
+function libraryInputArgs(baseDir: string, overrides: Record<string, unknown> = {},): Record<string, unknown> {
+  return {
+    input: {
+      libraryDir: baseDir,
+      library_dir: baseDir,
+      ...overrides,
+    },
+  };
+}
+
 export async function listSharedComponents(): Promise<SharedComponentManifest[]> {
   const libraryDir = await getLibraryDir();
   return await invoke<SharedComponentManifest[]>("list_shared_components", {
@@ -339,7 +352,7 @@ export async function getSharedComponent(id: string,): Promise<SharedComponentMa
   try {
     const libraryDir = await getLibraryDir();
     return await invoke<SharedComponentManifest>("get_shared_component", {
-      ...libraryDirArgs(libraryDir, { id, }),
+      ...libraryDirArgs(libraryDir, { id, },),
     },);
   } catch {
     return null;
@@ -348,7 +361,8 @@ export async function getSharedComponent(id: string,): Promise<SharedComponentMa
 
 export async function removeSharedComponent(id: string,): Promise<void> {
   const libraryDir = await getLibraryDir();
-  await invoke("delete_shared_component", libraryDirArgs(libraryDir, { id, }),);
+  await invoke("delete_shared_component", libraryDirArgs(libraryDir, { id, },),);
+  emitSharedComponentsUpdated(id,);
 }
 
 export async function runSharedComponentQuery(
@@ -359,13 +373,13 @@ export async function runSharedComponentQuery(
   const libraryDir = await getLibraryDir();
   const result = await invoke<{ rows: Array<Record<string, unknown>>; }>(
     "run_shared_component_query",
-    {
-      ...libraryDirArgs(libraryDir, {
-        componentId: componentId,
-        queryName: queryName,
-      }),
+    libraryInputArgs(libraryDir, {
+      componentId,
+      component_id: componentId,
+      queryName,
+      query_name: queryName,
       params,
-    },
+    },),
   );
   return result.rows;
 }
@@ -376,24 +390,36 @@ export async function runSharedComponentMutation(
   params: Record<string, unknown> = {},
 ): Promise<number> {
   const libraryDir = await getLibraryDir();
-  const result = await invoke<{ changedRows: number; }>("run_shared_component_mutation", {
-    ...libraryDirArgs(libraryDir, {
-      componentId: componentId,
-      mutationName: mutationName,
-    }),
-    params,
-  },);
+  const result = await invoke<{ changedRows: number; }>(
+    "run_shared_component_mutation",
+    libraryInputArgs(libraryDir, {
+      componentId,
+      component_id: componentId,
+      mutationName,
+      mutation_name: mutationName,
+      params,
+    },),
+  );
   return result.changedRows;
 }
 
-export async function updateSharedComponent(id: string, uiSpec: unknown, prompt: string,): Promise<SharedComponentManifest> {
+export async function updateSharedComponent(
+  id: string,
+  uiSpec: unknown,
+  prompt: string,
+): Promise<SharedComponentManifest> {
   const libraryDir = await getLibraryDir();
-  return await invoke<SharedComponentManifest>("update_shared_component", {
-    ...libraryDirArgs(libraryDir,),
-    id,
-    uiSpec,
-    prompt,
-  },);
+  const manifest = await invoke<SharedComponentManifest>(
+    "update_shared_component",
+    libraryInputArgs(libraryDir, {
+      id,
+      uiSpec,
+      ui_spec: uiSpec,
+      prompt,
+    },),
+  );
+  emitSharedComponentsUpdated(id,);
+  return manifest;
 }
 
 export async function loadLibrary(): Promise<LibraryItem[]> {
@@ -416,12 +442,12 @@ export async function loadLibrary(): Promise<LibraryItem[]> {
   }
 
   const seen = new Set<string>();
-  const merged = [...shared, ...items].filter((item,) => {
+  const merged = [...shared, ...items,].filter((item,) => {
     const key = item.componentId ?? item.id;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    if (seen.has(key,)) return false;
+    seen.add(key,);
     return true;
-  });
+  },);
   return merged.sort((a, b,) => b.savedAt.localeCompare(a.savedAt,));
 }
 
@@ -431,20 +457,25 @@ export async function addToLibrary(
   if ("uiSpec" in item && "storageSchema" in item) {
     const libraryDir = await getLibraryDir();
     const id = crypto.randomUUID();
-    const parsed = parseJsonOrString(item.uiSpec, null);
+    const parsed = parseJsonOrString(item.uiSpec, null,);
     if (!parsed) {
       throw new Error("Invalid shared component spec. Must be valid JSON.",);
     }
-    const manifest = await invoke<SharedComponentManifest>("create_shared_component", {
-      ...libraryDirArgs(libraryDir,),
-      id,
-      title: item.title,
-      description: item.description,
-      prompt: item.prompt,
-      uiSpec: parsed,
-      storageSchema: normalizeStorageSchema(item.storageSchema,),
-    },);
-    return toLibraryFromManifest(manifest);
+    const manifest = await invoke<SharedComponentManifest>(
+      "create_shared_component",
+      libraryInputArgs(libraryDir, {
+        id,
+        title: item.title,
+        description: item.description,
+        prompt: item.prompt,
+        uiSpec: parsed,
+        ui_spec: parsed,
+        storageSchema: normalizeStorageSchema(item.storageSchema,),
+        storage_schema: normalizeStorageSchema(item.storageSchema,),
+      },),
+    );
+    emitSharedComponentsUpdated(manifest.id,);
+    return toLibraryFromManifest(manifest,);
   }
 
   const libraryDir = await ensureLibraryDir();

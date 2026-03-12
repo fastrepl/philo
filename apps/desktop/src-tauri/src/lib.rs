@@ -172,7 +172,7 @@ struct SharedComponentManifest {
     schema_version: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct SharedStorageSchema {
     tables: Vec<SharedStorageTable>,
@@ -180,7 +180,7 @@ struct SharedStorageSchema {
     named_mutations: Vec<SharedStorageMutation>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct SharedStorageTable {
     name: String,
@@ -188,7 +188,7 @@ struct SharedStorageTable {
     indexes: Option<Vec<SharedStorageIndex>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct SharedStorageColumn {
     name: String,
@@ -200,7 +200,7 @@ struct SharedStorageColumn {
     primary_key: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct SharedStorageIndex {
     name: String,
@@ -209,7 +209,7 @@ struct SharedStorageIndex {
     unique: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct SharedStorageQuery {
     name: String,
@@ -226,7 +226,7 @@ struct SharedStorageQuery {
     limit: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct SharedStorageMutation {
     name: String,
@@ -238,7 +238,7 @@ struct SharedStorageMutation {
     filters: Vec<SharedStorageFilter>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct SharedStorageFilter {
     column: String,
@@ -499,15 +499,17 @@ fn validate_storage_schema(schema: &SharedStorageSchema) -> Result<(), String> {
             return Err(format!("Duplicate table name: {}", table.name));
         }
         if table.columns.is_empty() {
-            return Err(format!("Table {} must have at least one column.", table.name));
+            return Err(format!(
+                "Table {} must have at least one column.",
+                table.name
+            ));
         }
         let mut column_names = std::collections::HashSet::new();
         for column in &table.columns {
             if !is_valid_column_name(&column.name) {
                 return Err(format!(
                     "Invalid column name '{}' in table '{}'.",
-                    column.name,
-                    table.name,
+                    column.name, table.name,
                 ));
             }
             if !column_names.insert(column.name.clone()) {
@@ -526,21 +528,28 @@ fn validate_storage_schema(schema: &SharedStorageSchema) -> Result<(), String> {
         if let Some(indexes) = &table.indexes {
             for index in indexes {
                 if !is_valid_identifier(&index.name) {
-                    return Err(format!("Invalid index name '{}' in table '{}'.", index.name, table.name));
+                    return Err(format!(
+                        "Invalid index name '{}' in table '{}'.",
+                        index.name, table.name
+                    ));
                 }
                 if index.columns.is_empty() {
-                    return Err(format!("Index '{}' in table '{}' must include at least one column.", index.name, table.name));
+                    return Err(format!(
+                        "Index '{}' in table '{}' must include at least one column.",
+                        index.name, table.name
+                    ));
                 }
                 for column in &index.columns {
                     if !is_valid_column_name(column) {
-                        return Err(format!("Invalid index column '{}' for table '{}'.", column, table.name));
+                        return Err(format!(
+                            "Invalid index column '{}' for table '{}'.",
+                            column, table.name
+                        ));
                     }
                     if !column_names.contains(column) {
                         return Err(format!(
                             "Index '{}' references missing column '{}' in table '{}'.",
-                            index.name,
-                            column,
-                            table.name,
+                            index.name, column, table.name,
                         ));
                     }
                 }
@@ -567,9 +576,13 @@ fn validate_storage_schema(schema: &SharedStorageSchema) -> Result<(), String> {
             return Err(format!("Invalid query name: {name}"));
         }
         if query.table.is_empty() || !is_valid_table_name(&query.table) {
-            return Err(format!("Query '{name}' has invalid table '{}'.", query.table));
+            return Err(format!(
+                "Query '{name}' has invalid table '{}'.",
+                query.table
+            ));
         }
-        let valid_columns = table_columns.get(&query.table)
+        let valid_columns = table_columns
+            .get(&query.table)
             .ok_or_else(|| format!("Query '{name}' references unknown table '{}'.", query.table))?;
         for column in &query.columns {
             if !valid_columns.contains(column) && column != "*" {
@@ -581,10 +594,15 @@ fn validate_storage_schema(schema: &SharedStorageSchema) -> Result<(), String> {
         }
         if let Some(order_by) = &query.order_by {
             if !is_valid_column_name(order_by) {
-                return Err(format!("Query '{name}' has invalid orderBy '{}'.", order_by));
+                return Err(format!(
+                    "Query '{name}' has invalid orderBy '{}'.",
+                    order_by
+                ));
             }
             if !valid_columns.contains(order_by) {
-                return Err(format!("Query '{name}' orders by unknown column '{order_by}'."));
+                return Err(format!(
+                    "Query '{name}' orders by unknown column '{order_by}'."
+                ));
             }
         }
         for filter in &query.filters {
@@ -626,11 +644,17 @@ fn validate_storage_schema(schema: &SharedStorageSchema) -> Result<(), String> {
         }
         let kind = mutation.kind.to_lowercase();
         if !matches!(kind.as_str(), "insert" | "update" | "delete") {
-            return Err(format!("Mutation '{}' has unsupported kind '{}'.", mutation.name, mutation.kind));
+            return Err(format!(
+                "Mutation '{}' has unsupported kind '{}'.",
+                mutation.name, mutation.kind
+            ));
         }
-        let valid_columns = table_columns
-            .get(&mutation.table)
-            .ok_or_else(|| format!("Mutation '{}' references unknown table '{}'.", mutation.name, mutation.table))?;
+        let valid_columns = table_columns.get(&mutation.table).ok_or_else(|| {
+            format!(
+                "Mutation '{}' references unknown table '{}'.",
+                mutation.name, mutation.table
+            )
+        })?;
         for filter in &mutation.filters {
             if !valid_columns.contains(&filter.column) {
                 return Err(format!(
@@ -660,13 +684,22 @@ fn validate_storage_schema(schema: &SharedStorageSchema) -> Result<(), String> {
             }
         }
         if kind == "update" && mutation.set_columns.is_empty() {
-            return Err(format!("Update mutation '{}' needs at least one set column.", mutation.name));
+            return Err(format!(
+                "Update mutation '{}' needs at least one set column.",
+                mutation.name
+            ));
         }
         if kind == "delete" && mutation.filters.is_empty() {
-            return Err(format!("Delete mutation '{}' needs filters.", mutation.name));
+            return Err(format!(
+                "Delete mutation '{}' needs filters.",
+                mutation.name
+            ));
         }
         if kind == "insert" && mutation.set_columns.is_empty() {
-            return Err(format!("Insert mutation '{}' needs set columns.", mutation.name));
+            return Err(format!(
+                "Insert mutation '{}' needs set columns.",
+                mutation.name
+            ));
         }
     }
 
@@ -683,7 +716,9 @@ fn build_component_directory(dir: &str, id: &str) -> Result<PathBuf, String> {
 }
 
 fn read_params_as_object(value: &Value) -> Result<HashMap<String, Value>, String> {
-    let object = value.as_object().ok_or_else(|| "params must be an object.".to_string())?;
+    let object = value
+        .as_object()
+        .ok_or_else(|| "params must be an object.".to_string())?;
     Ok(object.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
 }
 
@@ -699,11 +734,9 @@ fn to_sql_value(value: &Value) -> Result<rusqlite::types::Value, String> {
             } else {
                 Err("Invalid numeric value.".to_string())
             }
-        },
+        }
         Value::String(value) => Ok(rusqlite::types::Value::Text(value.clone())),
-        Value::Array(_) | Value::Object(_) => {
-            Ok(rusqlite::types::Value::Text(value.to_string()))
-        },
+        Value::Array(_) | Value::Object(_) => Ok(rusqlite::types::Value::Text(value.to_string())),
     }
 }
 
@@ -726,10 +759,7 @@ fn row_to_json(row: &rusqlite::Row<'_>, names: &[String]) -> Value {
     Value::Object(object)
 }
 
-fn build_named_select(
-    schema: &SharedStorageSchema,
-    query_name: &str,
-) -> Result<String, String> {
+fn build_named_select(schema: &SharedStorageSchema, query_name: &str) -> Result<String, String> {
     let named_query = schema
         .named_queries
         .iter()
@@ -755,7 +785,10 @@ fn build_named_select(
     );
     for filter in &named_query.filters {
         let op = valid_filter_operator(&filter.operator).ok_or_else(|| {
-            format!("Query '{query_name}' uses unsupported operator '{}'.", filter.operator)
+            format!(
+                "Query '{query_name}' uses unsupported operator '{}'.",
+                filter.operator
+            )
         })?;
         sql.push_str(&format!(
             " AND {} {} ?",
@@ -767,7 +800,11 @@ fn build_named_select(
         sql.push_str(&format!(
             " ORDER BY {} {}",
             quoted_identifier(order_by),
-            if named_query.order_desc { "DESC" } else { "ASC" }
+            if named_query.order_desc {
+                "DESC"
+            } else {
+                "ASC"
+            }
         ));
     }
     if let Some(limit) = named_query.limit {
@@ -779,7 +816,7 @@ fn build_named_select(
 fn build_named_mutation(
     schema: &SharedStorageSchema,
     mutation_name: &str,
-) -> Result<(String, &SharedStorageMutation), String> {
+) -> Result<(String, SharedStorageMutation), String> {
     let mutation = schema
         .named_mutations
         .iter()
@@ -802,7 +839,7 @@ fn build_named_mutation(
                 .collect::<Vec<_>>()
                 .join(", ");
             format!("INSERT INTO {table} ({set_columns}) VALUES ({placeholders})")
-        },
+        }
         "update" => {
             let set_columns = mutation
                 .set_columns
@@ -825,7 +862,7 @@ fn build_named_mutation(
                 ));
             }
             format!("UPDATE {table} SET {set_columns} WHERE 1=1{filter_expr}")
-        },
+        }
         "delete" => {
             let mut filter_expr = String::new();
             for filter in &mutation.filters {
@@ -842,10 +879,10 @@ fn build_named_mutation(
                 ));
             }
             format!("DELETE FROM {table} WHERE 1=1{filter_expr}")
-        },
+        }
         _ => return Err(format!("Unsupported mutation kind '{}'.", mutation.kind)),
     };
-    Ok((sql, mutation))
+    Ok((sql, mutation.clone()))
 }
 
 fn list_directory_dirs(dir: &Path) -> Result<Vec<PathBuf>, String> {
@@ -861,8 +898,7 @@ fn list_directory_dirs(dir: &Path) -> Result<Vec<PathBuf>, String> {
 }
 
 fn write_manifest(path: &Path, manifest: &SharedComponentManifest) -> Result<(), String> {
-    let serialized =
-        serde_json::to_string_pretty(manifest).map_err(|e| e.to_string())?;
+    let serialized = serde_json::to_string_pretty(manifest).map_err(|e| e.to_string())?;
     fs::write(path, serialized).map_err(|e| e.to_string())
 }
 
@@ -871,9 +907,16 @@ fn read_manifest(path: &Path) -> Option<SharedComponentManifest> {
     serde_json::from_str::<SharedComponentManifest>(&raw).ok()
 }
 
-fn verify_component_metadata(conn: &Connection, component_id: &str, schema_version: u32) -> Result<(), String> {
+fn verify_component_metadata(
+    conn: &Connection,
+    component_id: &str,
+    schema_version: u32,
+) -> Result<(), String> {
     let mut stmt = conn
-        .prepare(&format!("SELECT component_id, schema_version FROM {storage_table}", storage_table = storage_table_name()))
+        .prepare(&format!(
+            "SELECT component_id, schema_version FROM {storage_table}",
+            storage_table = storage_table_name()
+        ))
         .map_err(|e| e.to_string())?;
     let row = stmt
         .query_row(params![], |row| {
@@ -892,23 +935,33 @@ fn verify_component_metadata(conn: &Connection, component_id: &str, schema_versi
 }
 
 fn initialize_component_db(path: &Path, manifest: &SharedComponentManifest) -> Result<(), String> {
-    let conn = Connection::open(path).map_err(|e| e.to_string())?;
+    let mut conn = Connection::open(path).map_err(|e| e.to_string())?;
     let schema = &manifest.storage_schema;
-    let mut tx = conn.transaction().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
     tx.execute("PRAGMA foreign_keys = ON;", params![])
         .map_err(|e| e.to_string())?;
     for table in &schema.tables {
         let mut columns = Vec::new();
         for column in &table.columns {
-            let typ = canonicalize_component_storage_type(&column.kind)
-                .ok_or_else(|| format!("Unsupported type '{}' for column '{}'.", column.kind, column.name))?;
+            let typ = canonicalize_component_storage_type(&column.kind).ok_or_else(|| {
+                format!(
+                    "Unsupported type '{}' for column '{}'.",
+                    column.kind, column.name
+                )
+            })?;
             let nullable = if column.not_null { " NOT NULL" } else { "" };
             let primary = if column.primary_key {
                 " PRIMARY KEY"
             } else {
                 ""
             };
-            columns.push(format!("{} {}{}{}", quoted_identifier(&column.name), typ, primary, nullable));
+            columns.push(format!(
+                "{} {}{}{}",
+                quoted_identifier(&column.name),
+                typ,
+                primary,
+                nullable
+            ));
         }
         let sql = format!(
             "CREATE TABLE {} ({})",
@@ -931,7 +984,8 @@ fn initialize_component_db(path: &Path, manifest: &SharedComponentManifest) -> R
                     quoted_identifier(&index.name),
                     quoted_identifier(&table.name),
                 );
-                tx.execute(&create_index_sql, params![]).map_err(|e| e.to_string())?;
+                tx.execute(&create_index_sql, params![])
+                    .map_err(|e| e.to_string())?;
             }
         }
     }
@@ -940,7 +994,8 @@ fn initialize_component_db(path: &Path, manifest: &SharedComponentManifest) -> R
         "CREATE TABLE {table} (component_id TEXT PRIMARY KEY, schema_version INTEGER NOT NULL)",
         table = storage_table_name()
     );
-    tx.execute(&metadata_sql, params![]).map_err(|e| e.to_string())?;
+    tx.execute(&metadata_sql, params![])
+        .map_err(|e| e.to_string())?;
     tx.execute(
         &format!(
             "INSERT INTO {table} (component_id, schema_version) VALUES (?1, ?2)",
@@ -1251,7 +1306,9 @@ fn search_markdown_files(
 }
 
 #[tauri::command]
-fn create_shared_component(input: CreateSharedComponentInput) -> Result<SharedComponentManifest, String> {
+fn create_shared_component(
+    input: CreateSharedComponentInput,
+) -> Result<SharedComponentManifest, String> {
     if input.title.trim().is_empty() {
         return Err("title is required.".to_string());
     }
@@ -1312,7 +1369,10 @@ fn list_shared_components(library_dir: String) -> Result<Vec<SharedComponentMani
     for path in entries {
         let manifest = read_manifest(&path.join("manifest.json"));
         if let Some(mut parsed) = manifest {
-            parsed.storage_schema.tables.sort_by(|a, b| a.name.cmp(&b.name));
+            parsed
+                .storage_schema
+                .tables
+                .sort_by(|a, b| a.name.cmp(&b.name));
             output.push(parsed);
         }
     }
@@ -1321,7 +1381,10 @@ fn list_shared_components(library_dir: String) -> Result<Vec<SharedComponentMani
 }
 
 #[tauri::command]
-fn get_shared_component(library_dir: String, id: String) -> Result<SharedComponentManifest, String> {
+fn get_shared_component(
+    library_dir: String,
+    id: String,
+) -> Result<SharedComponentManifest, String> {
     let path = manifest_path(&library_dir, &id)?;
     match read_manifest(&path) {
         Some(manifest) => Ok(manifest),
@@ -1330,13 +1393,16 @@ fn get_shared_component(library_dir: String, id: String) -> Result<SharedCompone
 }
 
 #[tauri::command]
-fn update_shared_component(input: UpdateSharedComponentInput) -> Result<SharedComponentManifest, String> {
+fn update_shared_component(
+    input: UpdateSharedComponentInput,
+) -> Result<SharedComponentManifest, String> {
     if input.id.trim().is_empty() {
         return Err("id is required.".to_string());
     }
 
     let existing_path = manifest_path(&input.library_dir, &input.id)?;
-    let existing = read_manifest(&existing_path).ok_or_else(|| "Component not found.".to_string())?;
+    let existing =
+        read_manifest(&existing_path).ok_or_else(|| "Component not found.".to_string())?;
     if let Some(proposed_schema) = input.storage_schema {
         if proposed_schema != existing.storage_schema {
             return Err("storageSchema cannot be changed for this component version.".to_string());
@@ -1398,12 +1464,18 @@ fn run_shared_component_query(input: SharedQueryInput) -> Result<SharedQueryResu
     }
 
     let column_names = if named_query.columns.len() == 1 && named_query.columns[0] == "*" {
-        let mut pragma = conn.prepare(&format!("PRAGMA table_info({})", quoted_identifier(&named_query.table)))
+        let mut pragma = conn
+            .prepare(&format!(
+                "PRAGMA table_info({})",
+                quoted_identifier(&named_query.table)
+            ))
             .map_err(|e| e.to_string())?;
-        let rows = pragma.query_map(params![], |row| {
-            let name: String = row.get(1)?;
-            Ok(name)
-        }).map_err(|e| e.to_string())?;
+        let rows = pragma
+            .query_map(params![], |row| {
+                let name: String = row.get(1)?;
+                Ok(name)
+            })
+            .map_err(|e| e.to_string())?;
         let mut names = Vec::new();
         for row in rows {
             names.push(row.map_err(|e| e.to_string())?);
@@ -1414,7 +1486,9 @@ fn run_shared_component_query(input: SharedQueryInput) -> Result<SharedQueryResu
     };
 
     let rows = stmt
-        .query_map(rusqlite::params_from_iter(values), |row| Ok(row_to_json(row, &column_names)))
+        .query_map(rusqlite::params_from_iter(values), |row| {
+            Ok(row_to_json(row, &column_names))
+        })
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
@@ -1423,7 +1497,9 @@ fn run_shared_component_query(input: SharedQueryInput) -> Result<SharedQueryResu
 }
 
 #[tauri::command]
-fn run_shared_component_mutation(input: SharedMutationInput) -> Result<SharedMutationResult, String> {
+fn run_shared_component_mutation(
+    input: SharedMutationInput,
+) -> Result<SharedMutationResult, String> {
     let manifest = get_shared_component(input.library_dir.clone(), input.component_id.clone())?;
     let params = read_params_as_object(&input.params)?;
     let named_mutation = manifest
@@ -1842,4 +1918,223 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::SystemTime;
+
+    fn sample_storage_schema() -> SharedStorageSchema {
+        SharedStorageSchema {
+            tables: vec![SharedStorageTable {
+                name: "items".to_string(),
+                columns: vec![
+                    SharedStorageColumn {
+                        name: "id".to_string(),
+                        kind: "integer".to_string(),
+                        not_null: true,
+                        primary_key: true,
+                    },
+                    SharedStorageColumn {
+                        name: "title".to_string(),
+                        kind: "text".to_string(),
+                        not_null: true,
+                        primary_key: false,
+                    },
+                    SharedStorageColumn {
+                        name: "done".to_string(),
+                        kind: "integer".to_string(),
+                        not_null: true,
+                        primary_key: false,
+                    },
+                ],
+                indexes: Some(vec![SharedStorageIndex {
+                    name: "idx_items_title".to_string(),
+                    columns: vec!["title".to_string()],
+                    unique: false,
+                }]),
+            }],
+            named_queries: vec![
+                SharedStorageQuery {
+                    name: "listItems".to_string(),
+                    table: "items".to_string(),
+                    columns: vec!["*".to_string()],
+                    filters: vec![],
+                    order_by: Some("id".to_string()),
+                    order_desc: false,
+                    limit: Some(50),
+                },
+                SharedStorageQuery {
+                    name: "findItem".to_string(),
+                    table: "items".to_string(),
+                    columns: vec!["id".to_string(), "title".to_string(), "done".to_string()],
+                    filters: vec![SharedStorageFilter {
+                        column: "id".to_string(),
+                        operator: "eq".to_string(),
+                        parameter: "id".to_string(),
+                    }],
+                    order_by: None,
+                    order_desc: false,
+                    limit: Some(1),
+                },
+            ],
+            named_mutations: vec![
+                SharedStorageMutation {
+                    name: "insertItem".to_string(),
+                    table: "items".to_string(),
+                    kind: "insert".to_string(),
+                    set_columns: vec!["id".to_string(), "title".to_string(), "done".to_string()],
+                    filters: vec![],
+                },
+                SharedStorageMutation {
+                    name: "updateTitle".to_string(),
+                    table: "items".to_string(),
+                    kind: "update".to_string(),
+                    set_columns: vec!["title".to_string()],
+                    filters: vec![SharedStorageFilter {
+                        column: "id".to_string(),
+                        operator: "eq".to_string(),
+                        parameter: "id".to_string(),
+                    }],
+                },
+                SharedStorageMutation {
+                    name: "deleteItem".to_string(),
+                    table: "items".to_string(),
+                    kind: "delete".to_string(),
+                    set_columns: vec![],
+                    filters: vec![SharedStorageFilter {
+                        column: "id".to_string(),
+                        operator: "eq".to_string(),
+                        parameter: "id".to_string(),
+                    }],
+                },
+            ],
+        }
+    }
+
+    fn sample_manifest(component_id: &str) -> SharedComponentManifest {
+        SharedComponentManifest {
+            id: component_id.to_string(),
+            title: "Shared Items".to_string(),
+            description: "A shared item tracker".to_string(),
+            prompt: "Build a shared item tracker".to_string(),
+            created_at: "2026-03-12T00:00:00.000Z".to_string(),
+            updated_at: "2026-03-12T00:00:00.000Z".to_string(),
+            ui_spec: json!({
+                "root": "card",
+                "elements": {
+                    "card": {
+                        "type": "Card",
+                        "props": { "title": "Items" },
+                        "children": []
+                    }
+                }
+            }),
+            storage_kind: "sqlite".to_string(),
+            storage_schema: sample_storage_schema(),
+            schema_version: SHARED_SCHEMA_VERSION,
+        }
+    }
+
+    fn temp_library_dir(label: &str) -> PathBuf {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        env::temp_dir().join(format!("philo-{label}-{suffix}"))
+    }
+
+    #[test]
+    fn validate_storage_schema_rejects_unknown_query_column() {
+        let mut schema = sample_storage_schema();
+        schema.named_queries[0].columns = vec!["missing".to_string()];
+
+        let error = validate_storage_schema(&schema).unwrap_err();
+        assert!(error.contains("unknown column"));
+    }
+
+    #[test]
+    fn shared_component_db_supports_named_queries_and_mutations() {
+        let library_dir = temp_library_dir("shared-db");
+        let component_id = "component-shared";
+        let component_dir = library_dir.join(component_id);
+        fs::create_dir_all(&component_dir).unwrap();
+
+        let manifest = sample_manifest(component_id);
+        let manifest_path = component_dir.join("manifest.json");
+        let db_path = component_dir.join("component.sqlite3");
+
+        write_manifest(&manifest_path, &manifest).unwrap();
+        initialize_component_db(&db_path, &manifest).unwrap();
+
+        let insert_result = run_shared_component_mutation(SharedMutationInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            mutation_name: "insertItem".to_string(),
+            params: json!({
+                "id": 1,
+                "title": "First item",
+                "done": 0
+            }),
+        })
+        .unwrap();
+        assert_eq!(insert_result.changed_rows, 1);
+
+        let list_result = run_shared_component_query(SharedQueryInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            query_name: "listItems".to_string(),
+            params: json!({}),
+        })
+        .unwrap();
+        assert_eq!(list_result.rows.len(), 1);
+        assert_eq!(list_result.rows[0]["title"], json!("First item"));
+
+        let update_result = run_shared_component_mutation(SharedMutationInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            mutation_name: "updateTitle".to_string(),
+            params: json!({
+                "id": 1,
+                "title": "Updated item"
+            }),
+        })
+        .unwrap();
+        assert_eq!(update_result.changed_rows, 1);
+
+        let find_result = run_shared_component_query(SharedQueryInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            query_name: "findItem".to_string(),
+            params: json!({
+                "id": 1
+            }),
+        })
+        .unwrap();
+        assert_eq!(find_result.rows.len(), 1);
+        assert_eq!(find_result.rows[0]["title"], json!("Updated item"));
+
+        let delete_result = run_shared_component_mutation(SharedMutationInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            mutation_name: "deleteItem".to_string(),
+            params: json!({
+                "id": 1
+            }),
+        })
+        .unwrap();
+        assert_eq!(delete_result.changed_rows, 1);
+
+        let empty_result = run_shared_component_query(SharedQueryInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            query_name: "listItems".to_string(),
+            params: json!({}),
+        })
+        .unwrap();
+        assert!(empty_result.rows.is_empty());
+
+        let _ = fs::remove_dir_all(&library_dir);
+    }
 }

@@ -4,21 +4,19 @@ import { NodeViewWrapper, } from "@tiptap/react";
 import type { NodeViewProps, } from "@tiptap/react";
 import { Component, useCallback, useEffect, useMemo, useState, } from "react";
 import type { ErrorInfo, ReactNode, } from "react";
+import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../../../services/ai";
+import { generateSharedWidget, generateWidget, } from "../../../../services/generate";
 import {
   addToLibrary,
   getSharedComponent,
   runSharedComponentMutation,
   runSharedComponentQuery,
-  type SharedStorageSchema,
+  SHARED_COMPONENTS_UPDATED_EVENT,
   type SharedComponentManifest,
+  type SharedStorageSchema,
   updateSharedComponent,
 } from "../../../../services/library";
-import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../../../services/ai";
-import { generateSharedWidget, generateWidget, } from "../../../../services/generate";
-import {
-  WidgetRuntimeProvider,
-  type SharedWidgetRuntimeApi,
-} from "./registry";
+import { type SharedWidgetRuntimeApi, WidgetRuntimeProvider, } from "./registry";
 import { registry, } from "./registry";
 
 function cloneSchema(value: SharedStorageSchema,): SharedStorageSchema {
@@ -43,7 +41,7 @@ function cloneSchema(value: SharedStorageSchema,): SharedStorageSchema {
           const byColumn = a.column.localeCompare(b.column,);
           if (byColumn !== 0) return byColumn;
           return a.parameter.localeCompare(b.parameter,);
-        }),
+        },),
       })),
     namedMutations: value.namedMutations
       .slice()
@@ -54,14 +52,14 @@ function cloneSchema(value: SharedStorageSchema,): SharedStorageSchema {
           const byColumn = a.column.localeCompare(b.column,);
           if (byColumn !== 0) return byColumn;
           return a.parameter.localeCompare(b.parameter,);
-        }),
+        },),
         setColumns: mutation.setColumns.slice().sort(),
       })),
   };
 }
 
 function storageSchemaMatch(a: SharedStorageSchema, b: SharedStorageSchema,): boolean {
-  return JSON.stringify(cloneSchema(a)) === JSON.stringify(cloneSchema(b));
+  return JSON.stringify(cloneSchema(a,),) === JSON.stringify(cloneSchema(b,),);
 }
 
 function parseSpec(candidate: unknown,): Spec | null {
@@ -108,7 +106,7 @@ function deriveTitle(prompt: string,): string {
   return firstSentence.slice(0, 37,) + "...";
 }
 
-export function WidgetView({ node, updateAttributes, deleteNode, selected, }: NodeViewProps,) {
+export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProps,) {
   const { spec: specStr, saved, prompt, loading, error, componentId, } = node.attrs as {
     spec: string;
     saved: boolean;
@@ -119,7 +117,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   };
   const [missingComponent, setMissingComponent,] = useState(false,);
   const [sharedLoading, setSharedLoading,] = useState(false,);
-  const [manifest, setManifest,] = useState<SharedComponentManifest | null>(null);
+  const [manifest, setManifest,] = useState<SharedComponentManifest | null>(null,);
   const [sharedLoadError, setSharedLoadError,] = useState<string | null>(null,);
   const [runtimeRefreshToken, setRuntimeRefreshToken,] = useState(0,);
 
@@ -157,7 +155,22 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     loadManifest();
   }, [loadManifest,],);
 
-  const isShared = Boolean(componentId);
+  useEffect(() => {
+    if (!componentId) return;
+
+    const handleSharedUpdate = (event: Event,) => {
+      const detail = (event as CustomEvent<{ componentId?: string | null; }>).detail;
+      if (detail?.componentId && detail.componentId !== componentId) {
+        return;
+      }
+      void loadManifest();
+    };
+
+    window.addEventListener(SHARED_COMPONENTS_UPDATED_EVENT, handleSharedUpdate,);
+    return () => window.removeEventListener(SHARED_COMPONENTS_UPDATED_EVENT, handleSharedUpdate,);
+  }, [componentId, loadManifest,],);
+
+  const isShared = Boolean(componentId,);
   const runtimeApi: SharedWidgetRuntimeApi = useMemo(() => {
     if (!isShared || !componentId || missingComponent || !manifest) {
       return {
@@ -172,21 +185,22 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
 
     return {
       mode: "shared",
-      runQuery: async (queryName: string, params: Record<string, unknown> = {},) => runSharedComponentQuery(componentId, queryName, params,),
+      runQuery: async (queryName: string, params: Record<string, unknown> = {},) =>
+        runSharedComponentQuery(componentId, queryName, params,),
       runMutation: async (mutationName: string, params: Record<string, unknown> = {},) => {
         const changed = await runSharedComponentMutation(componentId, mutationName, params,);
-        setRuntimeRefreshToken((value,) => value + 1,);
+        setRuntimeRefreshToken((value,) => value + 1);
         return changed;
       },
       refresh: () => {
-        setRuntimeRefreshToken((value,) => value + 1,);
+        setRuntimeRefreshToken((value,) => value + 1);
       },
       refreshToken: runtimeRefreshToken,
     };
-  }, [componentId, isShared, manifest, missingComponent, runtimeRefreshToken],);
+  }, [componentId, isShared, manifest, missingComponent, runtimeRefreshToken,],);
 
-  const sharedSpec = manifest?.uiSpec ? parseSpec(manifest.uiSpec) : null;
-  const currentSpec = useMemo(() => (isShared ? sharedSpec : inlineSpec), [isShared, sharedSpec, inlineSpec],);
+  const sharedSpec = manifest?.uiSpec ? parseSpec(manifest.uiSpec,) : null;
+  const currentSpec = useMemo(() => (isShared ? sharedSpec : inlineSpec), [isShared, sharedSpec, inlineSpec,],);
 
   const handleRebuild = async () => {
     updateAttributes({ loading: true, error: "", },);
@@ -194,7 +208,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       if (isShared && manifest) {
         const generated = await generateSharedWidget(prompt, manifest.storageSchema,);
         if (!storageSchemaMatch(generated.storageSchema, manifest.storageSchema,)) {
-          throw new Error("Storage schema changed. Save as a new component to rebuild with a new DB schema.");
+          throw new Error("Storage schema changed. Save as a new component to rebuild with a new DB schema.",);
         }
         const next = await updateSharedComponent(manifest.id, generated.uiSpec, manifest.prompt,);
         setManifest(next,);
@@ -206,7 +220,10 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       updateAttributes({ spec: JSON.stringify(nextSpec,), loading: false, error: "", },);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : typeof err === "string" ? err : "Something went wrong.";
-      updateAttributes({ loading: false, error: isAiKeyMissingError(errMsg) ? getAiConfigurationMessage(errMsg,) : errMsg, },);
+      updateAttributes({
+        loading: false,
+        error: isAiKeyMissingError(errMsg,) ? getAiConfigurationMessage(errMsg,) : errMsg,
+      },);
     }
   };
 
@@ -218,7 +235,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       const uiSpec = inlineSpec;
       const generated = await generateSharedWidget(prompt, undefined,);
       if (!generated.uiSpec || !generated.storageSchema) {
-        throw new Error("Missing shared component generation data.");
+        throw new Error("Missing shared component generation data.",);
       }
 
       const item = await addToLibrary({
@@ -237,10 +254,15 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         loading: false,
         error: "",
       },);
-      setManifest(await getSharedComponent(item.componentId ?? "",),);
+      if (item.componentId) {
+        setManifest(await getSharedComponent(item.componentId,),);
+      }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : typeof err === "string" ? err : "Something went wrong.";
-      updateAttributes({ loading: false, error: isAiKeyMissingError(errMsg) ? getAiConfigurationMessage(errMsg,) : errMsg, },);
+      updateAttributes({
+        loading: false,
+        error: isAiKeyMissingError(errMsg,) ? getAiConfigurationMessage(errMsg,) : errMsg,
+      },);
     }
   };
 
@@ -249,8 +271,8 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const toolbarState = isShared
     ? saved ? "Shared" : "Insert" // fallback, not expected for shared
     : saved
-      ? "Saved"
-      : "Unsaved";
+    ? "Saved"
+    : "Unsaved";
 
   return (
     <NodeViewWrapper className="widget-node">
@@ -260,7 +282,11 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
             {prompt.length > 50 ? prompt.slice(0, 50,) + "..." : prompt}
           </span>
           <div className="widget-actions">
-            <button className="widget-btn widget-btn-rebuild" onClick={handleRebuild} disabled={loading || sharedLoading}>
+            <button
+              className="widget-btn widget-btn-rebuild"
+              onClick={handleRebuild}
+              disabled={loading || sharedLoading}
+            >
               {loading || sharedLoading ? "Updating..." : "Rebuild"}
             </button>
             <button

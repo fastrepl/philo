@@ -1,16 +1,16 @@
-import { createContext, Fragment, useCallback, useContext, useEffect, useMemo, useState, type ReactNode, } from "react";
 import { defineRegistry, } from "@json-render/react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState, } from "react";
 import { widgetCatalog, } from "./catalog";
 
 export interface SharedWidgetRuntimeApi {
   mode: "inline" | "shared";
-  runQuery: (queryName: string, params?: Record<string, unknown>) => Promise<Array<Record<string, unknown>>>;
-  runMutation: (mutationName: string, params?: Record<string, unknown>) => Promise<number>;
+  runQuery: (queryName: string, params?: Record<string, unknown>,) => Promise<Array<Record<string, unknown>>>;
+  runMutation: (mutationName: string, params?: Record<string, unknown>,) => Promise<number>;
   refresh: () => void;
   refreshToken: number;
 }
 
-const WidgetRuntimeContext = createContext<SharedWidgetRuntimeApi | null>(null);
+const WidgetRuntimeContext = createContext<SharedWidgetRuntimeApi | null>(null,);
 
 export function WidgetRuntimeProvider({
   children,
@@ -23,17 +23,17 @@ export function WidgetRuntimeProvider({
 }
 
 function useWidgetRuntime(): SharedWidgetRuntimeApi | null {
-  return useContext(WidgetRuntimeContext);
+  return useContext(WidgetRuntimeContext,);
 }
 
 type RowMap = Record<string, unknown>;
 
-function asRowMapArray(rows: unknown): RowMap[] {
-  if (!Array.isArray(rows)) return [];
+function asRowMapArray(rows: unknown,): RowMap[] {
+  if (!Array.isArray(rows,)) return [];
   return rows.filter((row,): row is RowMap => {
     if (!row || typeof row !== "object") return false;
     return true;
-  });
+  },);
 }
 
 function useSharedRows(queryName?: string,): {
@@ -43,9 +43,9 @@ function useSharedRows(queryName?: string,): {
   refresh: () => Promise<void>;
 } {
   const runtime = useWidgetRuntime();
-  const [loading, setLoading] = useState(false,);
-  const [rows, setRows] = useState<RowMap[]>([],);
-  const [error, setError] = useState<string | null>(null,);
+  const [loading, setLoading,] = useState(false,);
+  const [rows, setRows,] = useState<RowMap[]>([],);
+  const [error, setError,] = useState<string | null>(null,);
 
   const refresh = useCallback(async () => {
     if (!queryName || !runtime || runtime.mode !== "shared") {
@@ -59,18 +59,18 @@ function useSharedRows(queryName?: string,): {
     setError(null,);
     try {
       const data = await runtime.runQuery(queryName, {},);
-      setRows(asRowMapArray(data,));
+      setRows(asRowMapArray(data,),);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Query failed.",);
       setRows([],);
     } finally {
       setLoading(false,);
     }
-  }, [queryName, runtime],);
+  }, [queryName, runtime,],);
 
   useEffect(() => {
     refresh();
-  }, [refresh, runtime?.refreshToken],);
+  }, [refresh, runtime?.refreshToken,],);
 
   return { loading, rows, error, refresh, };
 }
@@ -78,7 +78,7 @@ function useSharedRows(queryName?: string,): {
 function toStringValue(value: unknown,): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "boolean") return value ? "true" : "false";
-  return String(value);
+  return String(value,);
 }
 
 function normalizeBoolean(value: unknown,): boolean {
@@ -87,13 +87,13 @@ function normalizeBoolean(value: unknown,): boolean {
   if (typeof value === "string") {
     return value.toLowerCase() === "true" || value.toLowerCase() === "1";
   }
-  return Boolean(value);
+  return Boolean(value,);
 }
 
 function createMutationParams(row: RowMap | null, bindColumn: string | undefined, value: unknown,): RowMap {
   const result: RowMap = {};
   if (row) {
-    Object.assign(result, row);
+    Object.assign(result, row,);
   }
   if (bindColumn) {
     result[bindColumn] = value;
@@ -270,7 +270,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
         error: { bg: "#fef2f2", fg: "#ef4444", },
         info: { bg: "#eef2ff", fg: "#6366f1", },
       } as const;
-      const color = palette[props.variant ?? "default"]; 
+      const color = palette[props.variant ?? "default"];
       return (
         <span
           style={{
@@ -291,8 +291,8 @@ export const { registry, } = defineRegistry(widgetCatalog, {
 
     Button: ({ props, },) => {
       const runtime = useWidgetRuntime();
-      const [running, setRunning] = useState(false,);
-      const canMutate = Boolean(runtime && runtime.mode === "shared" && props.mutation);
+      const [running, setRunning,] = useState(false,);
+      const canMutate = Boolean(runtime && runtime.mode === "shared" && props.mutation,);
 
       const handleClick = async () => {
         if (!canMutate || !runtime || !props.mutation) return;
@@ -339,15 +339,15 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       const initial = runtimeMode === "shared" && boundRow && props.bindColumn
         ? boundRow[props.bindColumn]
         : props.value;
-      const [value, setValue] = useState(toStringValue(initial ?? ""),);
+      const [value, setValue,] = useState(toStringValue(initial ?? "",),);
 
       useEffect(() => {
-        setValue(toStringValue(initial ?? ""),);
-      }, [initial, runtimeMode, props.value],);
+        setValue(toStringValue(initial ?? "",),);
+      }, [initial, runtimeMode, props.value,],);
 
       const canWrite = !!(runtimeMode === "shared" && runtime && props.mutation);
 
-      const submit = async (next: string) => {
+      const submit = async (next: string,) => {
         if (!canWrite || !runtime || !props.mutation || !props.bindColumn) {
           return;
         }
@@ -414,15 +414,15 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       const initial = runtimeMode === "shared" && boundRow && props.bindColumn
         ? boundRow[props.bindColumn]
         : props.checked;
-      const checked = normalizeBoolean(initial);
-      const [localChecked, setLocalChecked] = useState(checked,);
+      const checked = normalizeBoolean(initial,);
+      const [localChecked, setLocalChecked,] = useState(checked,);
       const canWrite = !!(runtimeMode === "shared" && runtime && props.mutation);
 
       useEffect(() => {
         setLocalChecked(checked,);
-      }, [checked, runtimeMode],);
+      }, [checked, runtimeMode,],);
 
-      const submit = async (next: boolean) => {
+      const submit = async (next: boolean,) => {
         if (!canWrite || !runtime || !props.mutation || !props.bindColumn) {
           return;
         }
@@ -503,7 +503,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       );
     },
 
-    Divider: () => <div style={{ borderTop: "1px solid #e5e7eb" }} />,
+    Divider: () => <div style={{ borderTop: "1px solid #e5e7eb", }} />,
 
     Spacer: ({ props, },) => (
       <div
@@ -526,8 +526,8 @@ export const { registry, } = defineRegistry(widgetCatalog, {
     Image: ({ props, },) => (
       <img
         src={props.src}
-        alt={props.alt ?? "",}
-        style={{ maxWidth: "100%", borderRadius: props.rounded ? 8 : 0 }}
+        alt={props.alt ?? ""}
+        style={{ maxWidth: "100%", borderRadius: props.rounded ? 8 : 0, }}
       />
     ),
 
@@ -552,7 +552,15 @@ export const { registry, } = defineRegistry(widgetCatalog, {
               props.trailingColumn ? row[props.trailingColumn] : row.trailing,
             ),
           }));
-      }, [props.query, runtime?.mode, rows, props.descriptionColumn, props.labelColumn, props.trailingColumn, staticItems],);
+      }, [
+        props.query,
+        runtime?.mode,
+        rows,
+        props.descriptionColumn,
+        props.labelColumn,
+        props.trailingColumn,
+        staticItems,
+      ],);
 
       return (
         <ul
@@ -564,25 +572,23 @@ export const { registry, } = defineRegistry(widgetCatalog, {
             color: "#1f2937",
           }}
         >
-          {loading ? (
-            <li style={{ color: "#9ca3af", padding: "6px 0", fontSize: "12px", }}>Loading…</li>
-          ) : error ? (
-            <li style={{ color: "#b91c1c", padding: "6px 0", fontSize: "12px", }}>{error}</li>
-          ) : items.length === 0 ? (
-            <li style={{ color: "#9ca3af", padding: "6px 0", fontSize: "12px", }}>No items</li>
-          ) : (
-            items.map((item, index,) => (
-              <li key={index} style={{ padding: "8px 0", borderBottom: "1px solid #f3f4f6" }}>
-                <div style={{ fontSize: "13px", fontWeight: 500 }}>{item.label}</div>
-                {item.description && (
-                  <div style={{ fontSize: "12px", color: "#6b7280" }}>{item.description}</div>
-                )}
-                {item.trailing && (
-                  <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>{item.trailing}</div>
-                )}
-              </li>
-            ))
-          )}
+          {loading
+            ? <li style={{ color: "#9ca3af", padding: "6px 0", fontSize: "12px", }}>Loading…</li>
+            : error
+            ? <li style={{ color: "#b91c1c", padding: "6px 0", fontSize: "12px", }}>{error}</li>
+            : items.length === 0
+            ? <li style={{ color: "#9ca3af", padding: "6px 0", fontSize: "12px", }}>No items</li>
+            : (
+              items.map((item, index,) => (
+                <li key={index} style={{ padding: "8px 0", borderBottom: "1px solid #f3f4f6", }}>
+                  <div style={{ fontSize: "13px", fontWeight: 500, }}>{item.label}</div>
+                  {item.description && <div style={{ fontSize: "12px", color: "#6b7280", }}>{item.description}</div>}
+                  {item.trailing && (
+                    <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px", }}>{item.trailing}</div>
+                  )}
+                </li>
+              ))
+            )}
         </ul>
       );
     },
@@ -601,13 +607,13 @@ export const { registry, } = defineRegistry(widgetCatalog, {
 
         return rows.map((row,) =>
           queryColumns.length
-            ? queryColumns.map((column,) => toStringValue(row[column.field]))
-            : Object.values(row).map((value,) => toStringValue(value)),
+            ? queryColumns.map((column,) => toStringValue(row[column.field],))
+            : Object.values(row,).map((value,) => toStringValue(value,))
         );
-      }, [props.query, runtime?.mode, rows, queryColumns, props.rows],);
+      }, [props.query, runtime?.mode, rows, queryColumns, props.rows,],);
 
       return (
-        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'IBM Plex Sans', sans-serif" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'IBM Plex Sans', sans-serif", }}>
           <thead>
             <tr>
               {headers.map((h, i,) => (
@@ -630,35 +636,53 @@ export const { registry, } = defineRegistry(widgetCatalog, {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <td style={{ padding: "10px 12px", color: "#9ca3af", fontSize: "12px" }} colSpan={Math.max(1, headers.length,)}>
-                  Loading…
-                </td>
-              </tr>
-            ) : error ? (
-              <tr>
-                <td style={{ padding: "10px 12px", color: "#b91c1c", fontSize: "12px" }} colSpan={Math.max(1, headers.length,)}>
-                  {error}
-                </td>
-              </tr>
-            ) : body.length === 0 ? (
-              <tr>
-                <td style={{ padding: "10px 12px", color: "#9ca3af", fontSize: "12px" }} colSpan={Math.max(1, headers.length,)}>
-                  No rows
-                </td>
-              </tr>
-            ) : (
-              body.map((row, ri,) => (
-                <tr key={ri}>
-                  {row.map((cell, ci,) => (
-                    <td key={ci} style={{ padding: "8px 12px", borderBottom: "1px solid #f3f4f6", color: "#1f2937", }}>
-                      {cell}
-                    </td>
-                  ))}
+            {loading
+              ? (
+                <tr>
+                  <td
+                    style={{ padding: "10px 12px", color: "#9ca3af", fontSize: "12px", }}
+                    colSpan={Math.max(1, headers.length,)}
+                  >
+                    Loading…
+                  </td>
                 </tr>
-              ))
-            )}
+              )
+              : error
+              ? (
+                <tr>
+                  <td
+                    style={{ padding: "10px 12px", color: "#b91c1c", fontSize: "12px", }}
+                    colSpan={Math.max(1, headers.length,)}
+                  >
+                    {error}
+                  </td>
+                </tr>
+              )
+              : body.length === 0
+              ? (
+                <tr>
+                  <td
+                    style={{ padding: "10px 12px", color: "#9ca3af", fontSize: "12px", }}
+                    colSpan={Math.max(1, headers.length,)}
+                  >
+                    No rows
+                  </td>
+                </tr>
+              )
+              : (
+                body.map((row, ri,) => (
+                  <tr key={ri}>
+                    {row.map((cell, ci,) => (
+                      <td
+                        key={ci}
+                        style={{ padding: "8px 12px", borderBottom: "1px solid #f3f4f6", color: "#1f2937", }}
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
           </tbody>
         </table>
       );
