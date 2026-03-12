@@ -906,11 +906,13 @@ export default function AppLayout() {
         onInsert={(item: LibraryItem,) => {
           const editor = todayEditorRef.current?.editor;
           if (!editor) return;
+          const isShared = !!item.componentId && !!item.storageKind;
           editor.chain().focus().insertContent({
             type: "widget",
             attrs: {
               id: crypto.randomUUID(),
-              spec: item.html,
+              spec: isShared ? "" : item.html,
+              componentId: isShared ? item.componentId : null,
               prompt: item.prompt,
               saved: true,
               loading: false,

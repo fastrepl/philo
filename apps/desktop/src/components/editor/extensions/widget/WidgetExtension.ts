@@ -17,6 +17,7 @@ export interface WidgetAttributes {
   id: string;
   /** JSON-stringified Spec from json-render, or empty string */
   spec: string;
+  componentId?: string | null;
   prompt: string;
   saved: boolean;
   loading: boolean;
@@ -63,7 +64,11 @@ export const WidgetExtension = Node.create({
     const a = node.attrs || {};
     const parts = ['<div data-widget=""',];
     if (a.id) parts.push(` data-id="${escapeAttr(String(a.id,),)}"`,);
-    if (a.spec) parts.push(` data-spec="${escapeAttr(String(a.spec,),)}"`,);
+    if (a.componentId) {
+      parts.push(` data-component-id="${escapeAttr(String(a.componentId,),)}"`,);
+    } else if (a.spec) {
+      parts.push(` data-spec="${escapeAttr(String(a.spec,),)}"`,);
+    }
     if (a.prompt) parts.push(` data-prompt="${escapeAttr(String(a.prompt,),)}"`,);
     if (a.saved) parts.push(' data-saved="true"',);
     parts.push("></div>",);
@@ -72,9 +77,25 @@ export const WidgetExtension = Node.create({
 
   addAttributes() {
     return {
-      id: { default: null, },
-      spec: { default: "", },
-      prompt: { default: "", },
+      id: {
+        default: null,
+        parseHTML: (el: HTMLElement,) => el.getAttribute("data-id",),
+      },
+      spec: {
+        default: "",
+        parseHTML: (el: HTMLElement,) => el.getAttribute("data-spec",) || "",
+      },
+      componentId: {
+        default: null,
+        parseHTML: (el: HTMLElement,) => {
+          const raw = el.getAttribute("data-component-id",);
+          return raw || null;
+        },
+      },
+      prompt: {
+        default: "",
+        parseHTML: (el: HTMLElement,) => el.getAttribute("data-prompt",) || "",
+      },
       saved: {
         default: false,
         parseHTML: (el: HTMLElement,) => el.getAttribute("data-saved",) === "true",

@@ -1,7 +1,68 @@
+import { invoke, } from "@tauri-apps/api/core";
 import { join, } from "@tauri-apps/api/path";
 import { exists, mkdir, readDir, readTextFile, remove, writeTextFile, } from "@tauri-apps/plugin-fs";
-import { getBaseDir, getJournalDir, } from "./paths";
+import { getBaseDir as getAppBaseDir, getJournalDir, } from "./paths";
 import { getVaultDirSetting, } from "./settings";
+
+export interface SharedStorageColumn {
+  name: string;
+  type: string;
+  notNull?: boolean;
+  primaryKey?: boolean;
+}
+
+export interface SharedStorageIndex {
+  name: string;
+  columns: string[];
+  unique?: boolean;
+}
+
+export interface SharedStorageFilter {
+  column: string;
+  operator?: "eq" | "neq" | "lt" | "lte" | "gt" | "gte";
+  parameter: string;
+}
+
+export interface SharedStorageQuery {
+  name: string;
+  table: string;
+  columns: string[];
+  filters: SharedStorageFilter[];
+  orderBy?: string;
+  orderDesc?: boolean;
+  limit?: number;
+}
+
+export interface SharedStorageMutation {
+  name: string;
+  table: string;
+  kind: "insert" | "update" | "delete";
+  setColumns: string[];
+  filters: SharedStorageFilter[];
+}
+
+export interface SharedStorageSchema {
+  tables: Array<{
+    name: string;
+    columns: SharedStorageColumn[];
+    indexes?: SharedStorageIndex[];
+  }>;
+  namedQueries: SharedStorageQuery[];
+  namedMutations: SharedStorageMutation[];
+}
+
+export interface SharedComponentManifest {
+  id: string;
+  title: string;
+  description: string;
+  prompt: string;
+  createdAt: string;
+  updatedAt: string;
+  uiSpec: unknown;
+  storageKind: "sqlite";
+  storageSchema: SharedStorageSchema;
+  schemaVersion: number;
+}
 
 export interface LibraryItem {
   id: string;
@@ -10,14 +71,43 @@ export interface LibraryItem {
   html: string;
   prompt: string;
   savedAt: string;
+  componentId?: string;
+  storageKind?: "sqlite";
+  storageSchema?: SharedStorageSchema;
+  schemaVersion?: number;
+  uiSpec?: unknown;
+}
+
+export interface AddToLibraryInput {
+  title: string;
+  description: string;
+  prompt: string;
+  html: string;
+}
+
+export interface AddSharedComponentInput extends AddToLibraryInput {
+  uiSpec: string;
+  storageSchema: SharedStorageSchema;
 }
 
 const LIBRARY_FILE = "library.json";
 const COMPONENT_SUFFIX = ".component.md";
+export const SHARED_COMPONENTS_UPDATED_EVENT = "philo:shared-components-updated";
 
-function slugify(input: string,): string {
-  const slug = input.toLowerCase().replace(/[^a-z0-9]+/g, "-",).replace(/^-+|-+$/g, "",);
-  return slug || "component";
+function isSharedItem(item: LibraryItem, id: string, componentId?: string,): boolean {
+  return item.id === id || (!!componentId && item.componentId === componentId);
+}
+
+function normalizeLegacyId(raw: string,): string {
+  return raw.toLowerCase().replace(/[^a-z0-9]+/g, "-",).replace(/^-+|-+$/g, "",);
+}
+
+function emitSharedComponentsUpdated(componentId?: string,): void {
+  window.dispatchEvent(
+    new CustomEvent(SHARED_COMPONENTS_UPDATED_EVENT, {
+      detail: { componentId: componentId ?? null, },
+    },),
+  );
 }
 
 function frontmatterValue(raw: string,): string {
@@ -44,7 +134,7 @@ function parseComponentMarkdown(raw: string,): LibraryItem | null {
     meta[key] = frontmatterValue(line.slice(separator + 1,),);
   }
 
-  const specMatch = match[2].match(/```(?:json|jsonc|json-render|jsonui)?\n([\s\S]*?)```/,);
+  const specMatch = match[2].match(/```(?:json|jsonc|jsonui|json-render)?\n([\s\S]*?)```/,);
   const spec = specMatch?.[1]?.trim();
   if (!meta.id || !meta.title || !meta.prompt || !meta.savedAt || !spec) return null;
 
@@ -59,13 +149,6 @@ function parseComponentMarkdown(raw: string,): LibraryItem | null {
 }
 
 function serializeComponentMarkdown(item: LibraryItem,): string {
-  const spec = (() => {
-    try {
-      return JSON.stringify(JSON.parse(item.html,), null, 2,);
-    } catch {
-      return item.html.trim();
-    }
-  })();
   return [
     "---",
     `id: ${JSON.stringify(item.id,)}`,
@@ -76,10 +159,75 @@ function serializeComponentMarkdown(item: LibraryItem,): string {
     "---",
     "",
     "```json",
-    spec,
+    (() => {
+      try {
+        return JSON.stringify(JSON.parse(item.html,), null, 2,);
+      } catch {
+        return item.html.trim();
+      }
+    })(),
     "```",
     "",
   ].join("\n",);
+}
+
+function toLibraryFromManifest(manifest: SharedComponentManifest,): LibraryItem {
+  const spec = typeof manifest.uiSpec === "string"
+    ? manifest.uiSpec
+    : JSON.stringify(manifest.uiSpec, null, 2,);
+  return {
+    id: manifest.id,
+    title: manifest.title,
+    description: manifest.description,
+    html: spec,
+    prompt: manifest.prompt,
+    savedAt: manifest.updatedAt,
+    componentId: manifest.id,
+    storageKind: manifest.storageKind,
+    storageSchema: manifest.storageSchema,
+    schemaVersion: manifest.schemaVersion,
+    uiSpec: manifest.uiSpec,
+  };
+}
+
+function parseJsonOrString(input: string, fallback: unknown = "",): unknown {
+  try {
+    return JSON.parse(input,);
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeStorageSchema(schema: SharedStorageSchema,): SharedStorageSchema {
+  return {
+    tables: schema.tables.map((table,) => ({
+      ...table,
+      columns: table.columns.map((column,) => ({
+        ...column,
+        name: column.name.trim(),
+        type: column.type.toLowerCase(),
+      })).filter((column,) => column.name),
+      indexes: table.indexes
+        ? table.indexes.map((index,) => ({
+          ...index,
+          columns: index.columns.map((column,) => column.trim()).filter((column,) => column),
+        }))
+        : [],
+    })),
+    namedQueries: schema.namedQueries.map((query,) => ({
+      ...query,
+      columns: query.columns.map((column,) => column.trim()).filter((column,) => column),
+      filters: query.filters ?? [],
+      orderBy: query.orderBy?.trim() || undefined,
+      orderDesc: query.orderDesc ?? false,
+      limit: query.limit,
+    })),
+    namedMutations: schema.namedMutations.map((mutation,) => ({
+      ...mutation,
+      setColumns: mutation.setColumns?.map((column,) => column.trim()).filter((column,) => column) ?? [],
+      filters: mutation.filters ?? [],
+    })),
+  };
 }
 
 async function getLibraryDir(): Promise<string> {
@@ -97,19 +245,7 @@ async function ensureLibraryDir(): Promise<string> {
   return dir;
 }
 
-async function getLibraryPath(): Promise<string> {
-  const base = await getBaseDir();
-  return await join(base, LIBRARY_FILE,);
-}
-
-async function writeComponentFile(item: LibraryItem,): Promise<void> {
-  const libraryDir = await ensureLibraryDir();
-  const filename = `${slugify(item.title,)}-${item.id}${COMPONENT_SUFFIX}`;
-  const path = await join(libraryDir, filename,);
-  await writeTextFile(path, serializeComponentMarkdown(item,),);
-}
-
-async function listComponentItems(): Promise<LibraryItem[]> {
+async function listLegacyItems(): Promise<LibraryItem[]> {
   const libraryDir = await ensureLibraryDir();
   const entries = await readDir(libraryDir,);
   const items = await Promise.all(
@@ -129,14 +265,24 @@ async function listComponentItems(): Promise<LibraryItem[]> {
 }
 
 async function migrateLegacyLibraryJson(): Promise<LibraryItem[]> {
-  const path = await getLibraryPath();
+  const dir = await getLibraryDir();
+  const base = await getAppBaseDirectory();
+  const path = await join(base, LIBRARY_FILE,);
   if (!(await exists(path,))) return [];
 
   try {
     const raw = await readTextFile(path,);
-    const parsed = JSON.parse(raw,) as LibraryItem[];
+    const parsed = JSON.parse(raw,) as Array<{
+      id?: string;
+      title?: string;
+      description?: string;
+      prompt?: string;
+      html?: string;
+      savedAt?: string;
+    }>;
     if (!Array.isArray(parsed,) || parsed.length === 0) return [];
-    const migrated = parsed
+
+    const normalized = parsed
       .map((item,) => {
         if (!item || typeof item !== "object") return null;
         const id = typeof item.id === "string" && item.id ? item.id : crypto.randomUUID();
@@ -146,49 +292,230 @@ async function migrateLegacyLibraryJson(): Promise<LibraryItem[]> {
         const prompt = typeof item.prompt === "string" ? item.prompt : "";
         const html = typeof item.html === "string" ? item.html : "";
         if (!prompt || !html) return null;
-        return { id, title, description, prompt, html, savedAt, };
+        return {
+          id,
+          title,
+          description,
+          html,
+          prompt,
+          savedAt,
+        };
       },)
       .filter((item,): item is LibraryItem => item !== null);
-    await Promise.all(migrated.map((item,) => writeComponentFile(item,)),);
-    return migrated;
+
+    for (const item of normalized) {
+      const filename = `${normalizeLegacyId(item.title,)}-${item.id}${COMPONENT_SUFFIX}`;
+      const fullPath = await join(dir, filename,);
+      const existsLegacy = await exists(fullPath,);
+      if (!existsLegacy) {
+        await writeTextFile(fullPath, serializeComponentMarkdown(item,),);
+      }
+    }
+    return normalized;
   } catch {
     return [];
   }
 }
 
-export async function loadLibrary(): Promise<LibraryItem[]> {
-  let items = await listComponentItems();
-  if (items.length === 0) {
-    items = await migrateLegacyLibraryJson();
-  }
-  return items.sort((a, b,) => b.savedAt.localeCompare(a.savedAt,));
+async function getAppBaseDirectory(): Promise<string> {
+  const base = await getAppBaseDir();
+  if (base.trim()) return base;
+  return "/";
 }
 
-export async function addToLibrary(item: Omit<LibraryItem, "id" | "savedAt">,): Promise<LibraryItem> {
+function libraryDirArgs(baseDir: string, overrides: Record<string, unknown> = {},): Record<string, unknown> {
+  return {
+    libraryDir: baseDir,
+    library_dir: baseDir,
+    ...overrides,
+  };
+}
+
+function libraryInputArgs(baseDir: string, overrides: Record<string, unknown> = {},): Record<string, unknown> {
+  return {
+    input: {
+      libraryDir: baseDir,
+      library_dir: baseDir,
+      ...overrides,
+    },
+  };
+}
+
+export async function listSharedComponents(): Promise<SharedComponentManifest[]> {
+  const libraryDir = await getLibraryDir();
+  return await invoke<SharedComponentManifest[]>("list_shared_components", {
+    ...libraryDirArgs(libraryDir,),
+  },);
+}
+
+export async function getSharedComponent(id: string,): Promise<SharedComponentManifest | null> {
+  try {
+    const libraryDir = await getLibraryDir();
+    return await invoke<SharedComponentManifest>("get_shared_component", {
+      ...libraryDirArgs(libraryDir, { id, },),
+    },);
+  } catch {
+    return null;
+  }
+}
+
+export async function removeSharedComponent(id: string,): Promise<void> {
+  const libraryDir = await getLibraryDir();
+  await invoke("delete_shared_component", libraryDirArgs(libraryDir, { id, },),);
+  emitSharedComponentsUpdated(id,);
+}
+
+export async function runSharedComponentQuery(
+  componentId: string,
+  queryName: string,
+  params: Record<string, unknown> = {},
+): Promise<Array<Record<string, unknown>>> {
+  const libraryDir = await getLibraryDir();
+  const result = await invoke<{ rows: Array<Record<string, unknown>>; }>(
+    "run_shared_component_query",
+    libraryInputArgs(libraryDir, {
+      componentId,
+      component_id: componentId,
+      queryName,
+      query_name: queryName,
+      params,
+    },),
+  );
+  return result.rows;
+}
+
+export async function runSharedComponentMutation(
+  componentId: string,
+  mutationName: string,
+  params: Record<string, unknown> = {},
+): Promise<number> {
+  const libraryDir = await getLibraryDir();
+  const result = await invoke<{ changedRows: number; }>(
+    "run_shared_component_mutation",
+    libraryInputArgs(libraryDir, {
+      componentId,
+      component_id: componentId,
+      mutationName,
+      mutation_name: mutationName,
+      params,
+    },),
+  );
+  return result.changedRows;
+}
+
+export async function updateSharedComponent(
+  id: string,
+  uiSpec: unknown,
+  prompt: string,
+): Promise<SharedComponentManifest> {
+  const libraryDir = await getLibraryDir();
+  const manifest = await invoke<SharedComponentManifest>(
+    "update_shared_component",
+    libraryInputArgs(libraryDir, {
+      id,
+      uiSpec,
+      ui_spec: uiSpec,
+      prompt,
+    },),
+  );
+  emitSharedComponentsUpdated(id,);
+  return manifest;
+}
+
+export async function loadLibrary(): Promise<LibraryItem[]> {
+  let shared: LibraryItem[] = [];
+  let items = await listLegacyItems();
+
+  try {
+    const manifestItems = await listSharedComponents();
+    shared = manifestItems.map(toLibraryFromManifest,).sort((a, b,) => b.savedAt.localeCompare(a.savedAt,));
+    if (!items.length) {
+      const migrated = await migrateLegacyLibraryJson();
+      if (migrated.length > 0) {
+        items = migrated;
+      }
+    }
+  } catch {
+    if (!items.length) {
+      items = await migrateLegacyLibraryJson();
+    }
+  }
+
+  const seen = new Set<string>();
+  const merged = [...shared, ...items,].filter((item,) => {
+    const key = item.componentId ?? item.id;
+    if (seen.has(key,)) return false;
+    seen.add(key,);
+    return true;
+  },);
+  return merged.sort((a, b,) => b.savedAt.localeCompare(a.savedAt,));
+}
+
+export async function addToLibrary(
+  item: AddToLibraryInput | AddSharedComponentInput,
+): Promise<LibraryItem> {
+  if ("uiSpec" in item && "storageSchema" in item) {
+    const libraryDir = await getLibraryDir();
+    const id = crypto.randomUUID();
+    const parsed = parseJsonOrString(item.uiSpec, null,);
+    if (!parsed) {
+      throw new Error("Invalid shared component spec. Must be valid JSON.",);
+    }
+    const manifest = await invoke<SharedComponentManifest>(
+      "create_shared_component",
+      libraryInputArgs(libraryDir, {
+        id,
+        title: item.title,
+        description: item.description,
+        prompt: item.prompt,
+        uiSpec: parsed,
+        ui_spec: parsed,
+        storageSchema: normalizeStorageSchema(item.storageSchema,),
+        storage_schema: normalizeStorageSchema(item.storageSchema,),
+      },),
+    );
+    emitSharedComponentsUpdated(manifest.id,);
+    return toLibraryFromManifest(manifest,);
+  }
+
+  const libraryDir = await ensureLibraryDir();
+  const normalizedTitle = item.title.trim();
+  const id = crypto.randomUUID();
   const newItem: LibraryItem = {
-    ...item,
-    id: crypto.randomUUID(),
+    id,
+    title: normalizedTitle,
+    description: item.description,
+    html: item.html,
+    prompt: item.prompt,
     savedAt: new Date().toISOString(),
   };
-  await writeComponentFile(newItem,);
+  const filename = `${normalizeLegacyId(newItem.title,)}-${newItem.id}${COMPONENT_SUFFIX}`;
+  const path = await join(libraryDir, filename,);
+  await writeTextFile(path, serializeComponentMarkdown(newItem,),);
   return newItem;
 }
 
 export async function removeFromLibrary(id: string,): Promise<void> {
-  const libraryDir = await ensureLibraryDir();
-  const entries = await readDir(libraryDir,);
-  for (const entry of entries) {
-    if (!entry.isFile || !entry.name.toLowerCase().endsWith(COMPONENT_SUFFIX,)) continue;
-    const path = await join(libraryDir, entry.name,);
-    try {
-      const raw = await readTextFile(path,);
-      const item = parseComponentMarkdown(raw,);
-      if (item?.id === id) {
-        await remove(path,);
-        return;
-      }
-    } catch {
-      continue;
-    }
-  }
+  const libraryDir = await getLibraryDir();
+  await removeSharedComponent(id,);
+  const items = await readDir(libraryDir,);
+  await Promise.all(
+    items
+      .filter((entry,) => entry.isFile && entry.name.toLowerCase().endsWith(COMPONENT_SUFFIX,))
+      .map(async (entry,) => {
+        const path = await join(libraryDir, entry.name,);
+        try {
+          const raw = await readTextFile(path,);
+          const item = parseComponentMarkdown(raw,);
+          if (!item || !isSharedItem(item, id, undefined,)) return;
+          await remove(path,);
+        } catch {
+          return;
+        }
+      },),
+  );
+}
+
+export async function addLegacyFallbackToLibrary(item: AddToLibraryInput,): Promise<LibraryItem> {
+  return addToLibrary(item,);
 }

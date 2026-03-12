@@ -1,33 +1,105 @@
 import { defineRegistry, } from "@json-render/react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState, } from "react";
 import { widgetCatalog, } from "./catalog";
 
-const gapMap = { none: "0", xs: "4px", sm: "8px", md: "12px", lg: "20px", };
-const sizeMap = { xs: "11px", sm: "12px", md: "14px", lg: "16px", xl: "20px", };
-const weightMap = { normal: "400", medium: "500", semibold: "600", bold: "700", };
-const colorMap = {
-  default: "#1f2937",
-  muted: "#9ca3af",
-  accent: "#6366f1",
-  success: "#16a34a",
-  warning: "#d97706",
-  error: "#ef4444",
-};
-const badgeColors = {
-  default: { bg: "#f3f4f6", fg: "#6b7280", },
-  success: { bg: "#f0fdf4", fg: "#16a34a", },
-  warning: { bg: "#fffbeb", fg: "#d97706", },
-  error: { bg: "#fef2f2", fg: "#ef4444", },
-  info: { bg: "#eef2ff", fg: "#6366f1", },
-};
-const barColors = {
-  default: "#6366f1",
-  success: "#16a34a",
-  warning: "#d97706",
-  error: "#ef4444",
-  accent: "#7c3aed",
-};
+export interface SharedWidgetRuntimeApi {
+  mode: "inline" | "shared";
+  runQuery: (queryName: string, params?: Record<string, unknown>,) => Promise<Array<Record<string, unknown>>>;
+  runMutation: (mutationName: string, params?: Record<string, unknown>,) => Promise<number>;
+  refresh: () => void;
+  refreshToken: number;
+}
 
-const font = "'IBM Plex Sans', sans-serif";
+const WidgetRuntimeContext = createContext<SharedWidgetRuntimeApi | null>(null,);
+
+export function WidgetRuntimeProvider({
+  children,
+  runtime,
+}: {
+  children: ReactNode;
+  runtime: SharedWidgetRuntimeApi;
+},) {
+  return <WidgetRuntimeContext.Provider value={runtime}>{children}</WidgetRuntimeContext.Provider>;
+}
+
+function useWidgetRuntime(): SharedWidgetRuntimeApi | null {
+  return useContext(WidgetRuntimeContext,);
+}
+
+type RowMap = Record<string, unknown>;
+
+function asRowMapArray(rows: unknown,): RowMap[] {
+  if (!Array.isArray(rows,)) return [];
+  return rows.filter((row,): row is RowMap => {
+    if (!row || typeof row !== "object") return false;
+    return true;
+  },);
+}
+
+function useSharedRows(queryName?: string,): {
+  loading: boolean;
+  rows: RowMap[];
+  error: string | null;
+  refresh: () => Promise<void>;
+} {
+  const runtime = useWidgetRuntime();
+  const [loading, setLoading,] = useState(false,);
+  const [rows, setRows,] = useState<RowMap[]>([],);
+  const [error, setError,] = useState<string | null>(null,);
+
+  const refresh = useCallback(async () => {
+    if (!queryName || !runtime || runtime.mode !== "shared") {
+      setRows([],);
+      setError(null,);
+      setLoading(false,);
+      return;
+    }
+
+    setLoading(true,);
+    setError(null,);
+    try {
+      const data = await runtime.runQuery(queryName, {},);
+      setRows(asRowMapArray(data,),);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Query failed.",);
+      setRows([],);
+    } finally {
+      setLoading(false,);
+    }
+  }, [queryName, runtime,],);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh, runtime?.refreshToken,],);
+
+  return { loading, rows, error, refresh, };
+}
+
+function toStringValue(value: unknown,): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return String(value,);
+}
+
+function normalizeBoolean(value: unknown,): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return value.toLowerCase() === "true" || value.toLowerCase() === "1";
+  }
+  return Boolean(value,);
+}
+
+function createMutationParams(row: RowMap | null, bindColumn: string | undefined, value: unknown,): RowMap {
+  const result: RowMap = {};
+  if (row) {
+    Object.assign(result, row,);
+  }
+  if (bindColumn) {
+    result[bindColumn] = value;
+  }
+  return result;
+}
 
 export const { registry, } = defineRegistry(widgetCatalog, {
   components: {
@@ -44,7 +116,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
             : props.padding === "lg"
             ? "24px"
             : "16px",
-          fontFamily: font,
+          fontFamily: "'IBM Plex Sans', sans-serif",
         }}
       >
         {props.title && (
@@ -61,7 +133,15 @@ export const { registry, } = defineRegistry(widgetCatalog, {
         style={{
           display: "flex",
           flexDirection: props.direction === "horizontal" ? "row" : "column",
-          gap: gapMap[props.gap ?? "md"],
+          gap: props.gap === "none"
+            ? "0"
+            : props.gap === "xs"
+            ? "4px"
+            : props.gap === "sm"
+            ? "8px"
+            : props.gap === "lg"
+            ? "20px"
+            : "12px",
           alignItems: props.align === "center"
             ? "center"
             : props.align === "end"
@@ -90,7 +170,15 @@ export const { registry, } = defineRegistry(widgetCatalog, {
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(${props.columns ?? 2}, 1fr)`,
-          gap: gapMap[props.gap ?? "md"],
+          gap: props.gap === "none"
+            ? "0"
+            : props.gap === "xs"
+            ? "4px"
+            : props.gap === "sm"
+            ? "8px"
+            : props.gap === "lg"
+            ? "20px"
+            : "12px",
         }}
       >
         {children}
@@ -100,10 +188,32 @@ export const { registry, } = defineRegistry(widgetCatalog, {
     Text: ({ props, },) => (
       <span
         style={{
-          fontFamily: font,
-          fontSize: sizeMap[props.size ?? "md"],
-          fontWeight: weightMap[props.weight ?? "normal"],
-          color: colorMap[props.color ?? "default"],
+          fontFamily: "'IBM Plex Sans', sans-serif",
+          fontSize: props.size === "xs"
+            ? "11px"
+            : props.size === "sm"
+            ? "12px"
+            : props.size === "lg"
+            ? "16px"
+            : props.size === "xl"
+            ? "20px"
+            : "14px",
+          fontWeight: props.weight === "normal"
+            ? "400"
+            : props.weight === "medium"
+            ? "500"
+            : props.weight === "semibold"
+            ? "600"
+            : "700",
+          color: props.color === "default"
+            ? "#1f2937"
+            : props.color === "accent"
+            ? "#6366f1"
+            : props.color === "success"
+            ? "#16a34a"
+            : props.color === "warning"
+            ? "#d97706"
+            : "#ef4444",
           textAlign: props.align ?? "left",
           display: "block",
           lineHeight: 1.5,
@@ -118,7 +228,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       return (
         <div
           style={{
-            fontFamily: font,
+            fontFamily: "'IBM Plex Sans', sans-serif",
             fontSize: sizes[props.level ?? "h2"],
             fontWeight: 600,
             color: "#1f2937",
@@ -131,7 +241,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
     },
 
     Metric: ({ props, },) => (
-      <div style={{ fontFamily: font, }}>
+      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", }}>
         <div style={{ fontSize: "11px", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", }}>
           {props.label}
         </div>
@@ -153,18 +263,25 @@ export const { registry, } = defineRegistry(widgetCatalog, {
     ),
 
     Badge: ({ props, },) => {
-      const c = badgeColors[props.variant ?? "default"];
+      const palette = {
+        default: { bg: "#f3f4f6", fg: "#6b7280", },
+        success: { bg: "#f0fdf4", fg: "#16a34a", },
+        warning: { bg: "#fffbeb", fg: "#d97706", },
+        error: { bg: "#fef2f2", fg: "#ef4444", },
+        info: { bg: "#eef2ff", fg: "#6366f1", },
+      } as const;
+      const color = palette[props.variant ?? "default"];
       return (
         <span
           style={{
-            fontFamily: font,
+            fontFamily: "'IBM Plex Sans', sans-serif",
             display: "inline-block",
             fontSize: "11px",
             fontWeight: 500,
             padding: "2px 8px",
             borderRadius: "100px",
-            background: c.bg,
-            color: c.fg,
+            background: color.bg,
+            color: color.fg,
           }}
         >
           {props.text}
@@ -172,14 +289,32 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       );
     },
 
-    Button: ({ props, emit, },) => {
+    Button: ({ props, },) => {
+      const runtime = useWidgetRuntime();
+      const [running, setRunning,] = useState(false,);
+      const canMutate = Boolean(runtime && runtime.mode === "shared" && props.mutation,);
+
+      const handleClick = async () => {
+        if (!canMutate || !runtime || !props.mutation) return;
+        setRunning(true,);
+        try {
+          await runtime.runMutation(props.mutation, {},);
+          runtime.refresh();
+        } finally {
+          setRunning(false,);
+        }
+      };
+
       const isPrimary = props.variant === "primary";
       const isGhost = props.variant === "ghost";
       return (
         <button
-          onClick={() => emit("press",)}
+          onClick={() => {
+            void handleClick();
+          }}
+          disabled={running && canMutate}
           style={{
-            fontFamily: font,
+            fontFamily: "'IBM Plex Sans', sans-serif",
             fontSize: props.size === "sm" ? "12px" : props.size === "lg" ? "14px" : "13px",
             padding: props.size === "sm" ? "4px 10px" : props.size === "lg" ? "10px 20px" : "6px 14px",
             borderRadius: "8px",
@@ -191,58 +326,163 @@ export const { registry, } = defineRegistry(widgetCatalog, {
             fontWeight: 500,
           }}
         >
-          {props.label}
+          {running ? "Saving..." : props.label}
         </button>
       );
     },
 
-    TextInput: ({ props, },) => (
-      <div style={{ fontFamily: font, }}>
-        {props.label && (
-          <label style={{ fontSize: "12px", color: "#6b7280", display: "block", marginBottom: "4px", }}>
-            {props.label}
-          </label>
-        )}
-        <input
-          type="text"
-          placeholder={props.placeholder}
-          style={{
-            fontFamily: font,
-            width: "100%",
-            padding: "8px 12px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            fontSize: "13px",
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-        />
-      </div>
-    ),
+    TextInput: ({ props, },) => {
+      const { rows, loading, error, refresh, } = useSharedRows(props.query,);
+      const runtime = useWidgetRuntime();
+      const boundRow = rows[0] ?? null;
+      const runtimeMode = runtime?.mode ?? "inline";
+      const initial = runtimeMode === "shared" && boundRow && props.bindColumn
+        ? boundRow[props.bindColumn]
+        : props.value;
+      const [value, setValue,] = useState(toStringValue(initial ?? "",),);
 
-    Checkbox: ({ props, },) => (
-      <label
-        style={{
-          fontFamily: font,
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          fontSize: "13px",
-          color: "#374151",
-          cursor: "pointer",
-        }}
-      >
-        <input type="checkbox" style={{ width: "16px", height: "16px", }} />
-        {props.label}
-      </label>
-    ),
+      useEffect(() => {
+        setValue(toStringValue(initial ?? "",),);
+      }, [initial, runtimeMode, props.value,],);
+
+      const canWrite = !!(runtimeMode === "shared" && runtime && props.mutation);
+
+      const submit = async (next: string,) => {
+        if (!canWrite || !runtime || !props.mutation || !props.bindColumn) {
+          return;
+        }
+        try {
+          const params = createMutationParams(boundRow, props.bindColumn, next,);
+          await runtime.runMutation(props.mutation, params,);
+          runtime.refresh();
+          if (props.query) {
+            await refresh();
+          }
+        } catch (err) {
+          console.error("Shared mutation failed", err,);
+        }
+      };
+
+      return (
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", }}>
+          {props.label && (
+            <label style={{ fontSize: "12px", color: "#6b7280", display: "block", marginBottom: "4px", }}>
+              {props.label}
+            </label>
+          )}
+          {error && <div style={{ color: "#b91c1c", fontSize: "11px", marginBottom: "4px", }}>{error}</div>}
+          <input
+            type="text"
+            value={value}
+            placeholder={props.placeholder}
+            disabled={loading}
+            onChange={(event,) => {
+              const next = event.target.value;
+              setValue(next,);
+            }}
+            onBlur={() => {
+              if (runtimeMode === "shared" && canWrite) {
+                void submit(value,);
+              }
+            }}
+            onKeyDown={(event,) => {
+              if (event.key === "Enter" && runtimeMode === "shared" && canWrite) {
+                event.preventDefault();
+                void submit(value,);
+              }
+            }}
+            style={{
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              width: "100%",
+              padding: "8px 12px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              fontSize: "13px",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+      );
+    },
+
+    Checkbox: ({ props, },) => {
+      const { rows, refresh, error, } = useSharedRows(props.query,);
+      const runtime = useWidgetRuntime();
+      const boundRow = rows[0] ?? null;
+      const runtimeMode = runtime?.mode ?? "inline";
+      const initial = runtimeMode === "shared" && boundRow && props.bindColumn
+        ? boundRow[props.bindColumn]
+        : props.checked;
+      const checked = normalizeBoolean(initial,);
+      const [localChecked, setLocalChecked,] = useState(checked,);
+      const canWrite = !!(runtimeMode === "shared" && runtime && props.mutation);
+
+      useEffect(() => {
+        setLocalChecked(checked,);
+      }, [checked, runtimeMode,],);
+
+      const submit = async (next: boolean,) => {
+        if (!canWrite || !runtime || !props.mutation || !props.bindColumn) {
+          return;
+        }
+        try {
+          await runtime.runMutation(props.mutation, createMutationParams(boundRow, props.bindColumn, next ? 1 : 0,),);
+          runtime.refresh();
+          if (props.query) {
+            await refresh();
+          }
+        } catch (err) {
+          console.error("Shared mutation failed", err,);
+          setLocalChecked(!next,);
+        }
+      };
+
+      return (
+        <label
+          style={{
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "13px",
+            color: "#374151",
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={localChecked}
+            disabled={runtimeMode === "shared" && props.mutation ? false : false}
+            onChange={(event,) => {
+              const next = event.target.checked;
+              setLocalChecked(next,);
+              if (runtimeMode === "shared" && canWrite) {
+                void submit(next,);
+              }
+            }}
+            style={{ width: "16px", height: "16px", }}
+          />
+          {props.label}
+          {error && <span style={{ fontSize: "11px", color: "#b91c1c", }}>{error}</span>}
+        </label>
+      );
+    },
 
     ProgressBar: ({ props, },) => {
       const max = props.max ?? 100;
       const pct = Math.min(100, (props.value / max) * 100,);
-      const barColor = barColors[props.color ?? "default"];
+      const barColor = props.color === "success"
+        ? "#16a34a"
+        : props.color === "warning"
+        ? "#d97706"
+        : props.color === "error"
+        ? "#ef4444"
+        : props.color === "accent"
+        ? "#7c3aed"
+        : "#6366f1";
       return (
-        <div style={{ fontFamily: font, }}>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", }}>
           <div style={{ height: "8px", borderRadius: "4px", background: "#f3f4f6", overflow: "hidden", }}>
             <div
               style={{
@@ -263,91 +503,189 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       );
     },
 
-    Divider: () => <div style={{ height: "1px", background: "#e5e7eb", margin: "4px 0", }} />,
+    Divider: () => <div style={{ borderTop: "1px solid #e5e7eb", }} />,
 
-    Spacer: ({ props, },) => {
-      const sizes = { xs: "4px", sm: "8px", md: "16px", lg: "24px", xl: "40px", };
-      return <div style={{ height: sizes[props.size ?? "md"], }} />;
-    },
+    Spacer: ({ props, },) => (
+      <div
+        style={{
+          height: props.size === "xs"
+            ? "4px"
+            : props.size === "sm"
+            ? "8px"
+            : props.size === "md"
+            ? "12px"
+            : props.size === "lg"
+            ? "16px"
+            : props.size === "xl"
+            ? "24px"
+            : "12px",
+        }}
+      />
+    ),
 
     Image: ({ props, },) => (
       <img
         src={props.src}
         alt={props.alt ?? ""}
-        style={{
-          maxWidth: "100%",
-          height: "auto",
-          borderRadius: props.rounded ? "12px" : "0",
-          display: "block",
-        }}
+        style={{ maxWidth: "100%", borderRadius: props.rounded ? 8 : 0, }}
       />
     ),
 
-    List: ({ props, },) => (
-      <div style={{ fontFamily: font, }}>
-        {props.items.map((item, i,) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "8px 0",
-              borderBottom: props.variant === "bordered" || props.variant === "striped" ? "1px solid #f3f4f6" : "none",
-              background: props.variant === "striped" && i % 2 === 1 ? "#f9fafb" : "transparent",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: "13px", color: "#1f2937", }}>{item.label}</div>
-              {item.description && (
-                <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px", }}>{item.description}</div>
-              )}
-            </div>
-            {item.trailing && (
-              <span style={{ fontSize: "13px", color: "#6b7280", flexShrink: 0, marginLeft: "12px", }}>
-                {item.trailing}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    ),
+    List: ({ props, },) => {
+      const { rows, loading, error, } = useSharedRows(props.query,);
+      const runtime = useWidgetRuntime();
+      const staticItems = props.items ?? [];
+      const items = useMemo(() => {
+        if (!props.query || runtime?.mode !== "shared") {
+          return staticItems;
+        }
 
-    Table: ({ props, },) => (
-      <table style={{ fontFamily: font, width: "100%", borderCollapse: "collapse", fontSize: "13px", }}>
-        <thead>
-          <tr>
-            {props.headers.map((h, i,) => (
-              <th
-                key={i}
-                style={{
-                  textAlign: "left",
-                  padding: "8px 12px",
-                  borderBottom: "2px solid #e5e7eb",
-                  color: "#6b7280",
-                  fontWeight: 500,
-                  fontSize: "11px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {props.rows.map((row, ri,) => (
-            <tr key={ri}>
-              {row.map((cell, ci,) => (
-                <td key={ci} style={{ padding: "8px 12px", borderBottom: "1px solid #f3f4f6", color: "#1f2937", }}>
-                  {cell}
-                </td>
+        return rows
+          .map((row,) => ({
+            label: toStringValue(
+              row[props.labelColumn ?? "label"],
+            ),
+            description: toStringValue(
+              props.descriptionColumn ? row[props.descriptionColumn] : row.description,
+            ),
+            trailing: toStringValue(
+              props.trailingColumn ? row[props.trailingColumn] : row.trailing,
+            ),
+          }));
+      }, [
+        props.query,
+        runtime?.mode,
+        rows,
+        props.descriptionColumn,
+        props.labelColumn,
+        props.trailingColumn,
+        staticItems,
+      ],);
+
+      return (
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            color: "#1f2937",
+          }}
+        >
+          {loading
+            ? <li style={{ color: "#9ca3af", padding: "6px 0", fontSize: "12px", }}>Loading…</li>
+            : error
+            ? <li style={{ color: "#b91c1c", padding: "6px 0", fontSize: "12px", }}>{error}</li>
+            : items.length === 0
+            ? <li style={{ color: "#9ca3af", padding: "6px 0", fontSize: "12px", }}>No items</li>
+            : (
+              items.map((item, index,) => (
+                <li key={index} style={{ padding: "8px 0", borderBottom: "1px solid #f3f4f6", }}>
+                  <div style={{ fontSize: "13px", fontWeight: 500, }}>{item.label}</div>
+                  {item.description && <div style={{ fontSize: "12px", color: "#6b7280", }}>{item.description}</div>}
+                  {item.trailing && (
+                    <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px", }}>{item.trailing}</div>
+                  )}
+                </li>
+              ))
+            )}
+        </ul>
+      );
+    },
+
+    Table: ({ props, },) => {
+      const runtime = useWidgetRuntime();
+      const { rows, loading, error, } = useSharedRows(props.query,);
+      const queryColumns = props.columns ?? [];
+      const headers = queryColumns.length > 0
+        ? queryColumns.map((column,) => column.header)
+        : props.headers ?? [];
+      const body = useMemo(() => {
+        if (!props.query || runtime?.mode !== "shared") {
+          return props.rows ?? [];
+        }
+
+        return rows.map((row,) =>
+          queryColumns.length
+            ? queryColumns.map((column,) => toStringValue(row[column.field],))
+            : Object.values(row,).map((value,) => toStringValue(value,))
+        );
+      }, [props.query, runtime?.mode, rows, queryColumns, props.rows,],);
+
+      return (
+        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'IBM Plex Sans', sans-serif", }}>
+          <thead>
+            <tr>
+              {headers.map((h, i,) => (
+                <th
+                  key={i}
+                  style={{
+                    textAlign: "left",
+                    padding: "8px 12px",
+                    borderBottom: "2px solid #e5e7eb",
+                    color: "#6b7280",
+                    fontWeight: 500,
+                    fontSize: "11px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {h}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    ),
+          </thead>
+          <tbody>
+            {loading
+              ? (
+                <tr>
+                  <td
+                    style={{ padding: "10px 12px", color: "#9ca3af", fontSize: "12px", }}
+                    colSpan={Math.max(1, headers.length,)}
+                  >
+                    Loading…
+                  </td>
+                </tr>
+              )
+              : error
+              ? (
+                <tr>
+                  <td
+                    style={{ padding: "10px 12px", color: "#b91c1c", fontSize: "12px", }}
+                    colSpan={Math.max(1, headers.length,)}
+                  >
+                    {error}
+                  </td>
+                </tr>
+              )
+              : body.length === 0
+              ? (
+                <tr>
+                  <td
+                    style={{ padding: "10px 12px", color: "#9ca3af", fontSize: "12px", }}
+                    colSpan={Math.max(1, headers.length,)}
+                  >
+                    No rows
+                  </td>
+                </tr>
+              )
+              : (
+                body.map((row, ri,) => (
+                  <tr key={ri}>
+                    {row.map((cell, ci,) => (
+                      <td
+                        key={ci}
+                        style={{ padding: "8px 12px", borderBottom: "1px solid #f3f4f6", color: "#1f2937", }}
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+          </tbody>
+        </table>
+      );
+    },
   },
 },);

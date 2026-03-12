@@ -66,7 +66,7 @@ export const widgetCatalog = defineCatalog(schema, {
         label: z.string(),
         variant: z.enum(["primary", "secondary", "ghost",],).optional(),
         size: z.enum(["sm", "md", "lg",],).optional(),
-        action: z.string().optional(),
+        mutation: z.string().optional(),
       },),
       description: "Clickable button with label.",
     },
@@ -74,16 +74,22 @@ export const widgetCatalog = defineCatalog(schema, {
       props: z.object({
         placeholder: z.string().optional(),
         label: z.string().optional(),
-        statePath: z.string().optional(),
+        query: z.string().optional(),
+        bindColumn: z.string().optional(),
+        mutation: z.string().optional(),
+        value: z.string().optional(),
       },),
-      description: "Text input field. Use statePath to bind to state.",
+      description: "Text input field, optionally backed by a query and mutation.",
     },
     Checkbox: {
       props: z.object({
         label: z.string(),
-        statePath: z.string().optional(),
+        query: z.string().optional(),
+        bindColumn: z.string().optional(),
+        mutation: z.string().optional(),
+        checked: z.boolean().optional(),
       },),
-      description: "Checkbox with label. Use statePath to bind to state.",
+      description: "Checkbox with label, optionally backed by a query and mutation.",
     },
     ProgressBar: {
       props: z.object({
@@ -119,19 +125,26 @@ export const widgetCatalog = defineCatalog(schema, {
           description: z.string().optional(),
           trailing: z.string().optional(),
         },),),
+        query: z.string().optional(),
+        labelColumn: z.string().optional(),
+        descriptionColumn: z.string().optional(),
+        trailingColumn: z.string().optional(),
         variant: z.enum(["plain", "bordered", "striped",],).optional(),
       },),
       description: "A list of items with label, optional description, and trailing text.",
     },
     Table: {
       props: z.object({
-        headers: z.array(z.string(),),
-        rows: z.array(z.array(z.string(),),),
+        headers: z.array(z.string(),).optional(),
+        rows: z.array(z.array(z.string(),),).optional(),
+        query: z.string().optional(),
+        columns: z.array(z.object({
+          header: z.string(),
+          field: z.string(),
+        },),).optional(),
       },),
-      description: "Simple data table with headers and rows.",
+      description: "Simple data table with either static rows or rows from a query.",
     },
   },
-  actions: {
-    setState: { description: "Update a state value at a given path", },
-  },
+  actions: {},
 },);

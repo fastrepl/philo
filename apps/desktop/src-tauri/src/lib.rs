@@ -5,7 +5,7 @@ extern crate objc;
 pub mod philo_tools;
 
 use rusqlite::{params, Connection};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -154,6 +154,171 @@ fn read_json_file(path: &PathBuf) -> Option<Value> {
     serde_json::from_str::<Value>(&raw).ok()
 }
 
+const SHARED_SCHEMA_VERSION: u32 = 1;
+const SHARED_METADATA_TABLE: &str = "philo_component_metadata";
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SharedComponentManifest {
+    id: String,
+    title: String,
+    description: String,
+    prompt: String,
+    created_at: String,
+    updated_at: String,
+    ui_spec: Value,
+    storage_kind: String,
+    storage_schema: SharedStorageSchema,
+    schema_version: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct SharedStorageSchema {
+    tables: Vec<SharedStorageTable>,
+    named_queries: Vec<SharedStorageQuery>,
+    named_mutations: Vec<SharedStorageMutation>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct SharedStorageTable {
+    name: String,
+    columns: Vec<SharedStorageColumn>,
+    indexes: Option<Vec<SharedStorageIndex>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct SharedStorageColumn {
+    name: String,
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(default)]
+    not_null: bool,
+    #[serde(default)]
+    primary_key: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct SharedStorageIndex {
+    name: String,
+    columns: Vec<String>,
+    #[serde(default)]
+    unique: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct SharedStorageQuery {
+    name: String,
+    table: String,
+    #[serde(default)]
+    columns: Vec<String>,
+    #[serde(default)]
+    filters: Vec<SharedStorageFilter>,
+    #[serde(default)]
+    order_by: Option<String>,
+    #[serde(default)]
+    order_desc: bool,
+    #[serde(default)]
+    limit: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct SharedStorageMutation {
+    name: String,
+    table: String,
+    kind: String,
+    #[serde(default)]
+    set_columns: Vec<String>,
+    #[serde(default)]
+    filters: Vec<SharedStorageFilter>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct SharedStorageFilter {
+    column: String,
+    #[serde(default = "default_filter_operator")]
+    operator: String,
+    parameter: String,
+}
+
+fn default_filter_operator() -> String {
+    "eq".to_string()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateSharedComponentInput {
+    library_dir: String,
+    id: String,
+    title: String,
+    description: String,
+    prompt: String,
+    ui_spec: Value,
+    storage_schema: SharedStorageSchema,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateSharedComponentInput {
+    library_dir: String,
+    id: String,
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    prompt: Option<String>,
+    #[serde(default)]
+    ui_spec: Option<Value>,
+    #[serde(default)]
+    storage_schema: Option<SharedStorageSchema>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SharedQueryInput {
+    library_dir: String,
+    component_id: String,
+    query_name: String,
+    #[serde(default)]
+    params: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SharedMutationInput {
+    library_dir: String,
+    component_id: String,
+    mutation_name: String,
+    #[serde(default)]
+    params: Value,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SharedMutationResult {
+    changed_rows: u64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SharedQueryResult {
+    rows: Vec<Value>,
+}
+
+fn now_timestamp() -> String {
+    match std::time::SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => format!("{}.{:03}Z", duration.as_secs(), duration.subsec_millis()),
+        Err(_) => "1970-01-01T00:00:00.000Z".to_string(),
+    }
+}
+
 fn get_string(value: &Value, key: &str) -> Option<String> {
     let text = value.get(key)?.as_str()?.trim();
     if text.is_empty() {
@@ -247,6 +412,600 @@ fn ensure_folder_in_vault(vault_dir: &Path, folder: &str) -> Result<(), String> 
 fn write_json_file(path: &Path, value: Value) -> Result<(), String> {
     let serialized = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
     fs::write(path, serialized).map_err(|e| e.to_string())
+}
+
+fn is_valid_identifier(input: &str) -> bool {
+    !input.is_empty()
+        && input
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
+}
+
+fn is_valid_table_name(name: &str) -> bool {
+    is_valid_identifier(name)
+}
+
+fn is_valid_column_name(name: &str) -> bool {
+    is_valid_identifier(name)
+}
+
+fn is_valid_component_id(name: &str) -> bool {
+    is_valid_identifier(name)
+}
+
+fn resolve_component_dir(library_dir: &str, component_id: &str) -> Result<PathBuf, String> {
+    if !is_valid_component_id(component_id) {
+        return Err("Invalid component id.".to_string());
+    }
+    let trimmed = library_dir.trim();
+    if trimmed.is_empty() {
+        return Err("libraryDir is required.".to_string());
+    }
+    let dir = PathBuf::from(trimmed).join(component_id);
+    if !dir.is_absolute() {
+        return Err("libraryDir must be an absolute path.".to_string());
+    }
+    Ok(dir)
+}
+
+fn manifest_path(library_dir: &str, component_id: &str) -> Result<PathBuf, String> {
+    Ok(resolve_component_dir(library_dir, component_id)?.join("manifest.json"))
+}
+
+fn component_db_path(library_dir: &str, component_id: &str) -> Result<PathBuf, String> {
+    Ok(resolve_component_dir(library_dir, component_id)?.join("component.sqlite3"))
+}
+
+fn storage_table_name() -> &'static str {
+    SHARED_METADATA_TABLE
+}
+
+fn canonicalize_component_storage_type(raw: &str) -> Option<&'static str> {
+    match raw.to_lowercase().as_str() {
+        "text" | "string" => Some("TEXT"),
+        "integer" | "int" | "boolean" | "bool" | "tinyint" => Some("INTEGER"),
+        "real" | "float" | "double" => Some("REAL"),
+        "blob" | "bytes" => Some("BLOB"),
+        _ => None,
+    }
+}
+
+fn quoted_identifier(value: &str) -> String {
+    format!("\"{value}\"")
+}
+
+fn valid_filter_operator(raw: &str) -> Option<&'static str> {
+    match raw.to_lowercase().as_str() {
+        "eq" => Some("="),
+        "neq" => Some("!="),
+        "lt" => Some("<"),
+        "lte" => Some("<="),
+        "gt" => Some(">"),
+        "gte" => Some(">="),
+        _ => None,
+    }
+}
+
+fn validate_storage_schema(schema: &SharedStorageSchema) -> Result<(), String> {
+    if schema.tables.is_empty() {
+        return Err("storageSchema requires at least one table.".to_string());
+    }
+    let mut table_names = std::collections::HashSet::new();
+    for table in &schema.tables {
+        if !is_valid_table_name(&table.name) {
+            return Err(format!("Invalid table name: {}", table.name));
+        }
+        if !table_names.insert(table.name.clone()) {
+            return Err(format!("Duplicate table name: {}", table.name));
+        }
+        if table.columns.is_empty() {
+            return Err(format!(
+                "Table {} must have at least one column.",
+                table.name
+            ));
+        }
+        let mut column_names = std::collections::HashSet::new();
+        for column in &table.columns {
+            if !is_valid_column_name(&column.name) {
+                return Err(format!(
+                    "Invalid column name '{}' in table '{}'.",
+                    column.name, table.name,
+                ));
+            }
+            if !column_names.insert(column.name.clone()) {
+                return Err(format!(
+                    "Duplicate column '{}' in table '{}'.",
+                    column.name, table.name,
+                ));
+            }
+            if canonicalize_component_storage_type(&column.kind).is_none() {
+                return Err(format!(
+                    "Unsupported column type '{}' in table '{}'.",
+                    column.kind, table.name,
+                ));
+            }
+        }
+        if let Some(indexes) = &table.indexes {
+            for index in indexes {
+                if !is_valid_identifier(&index.name) {
+                    return Err(format!(
+                        "Invalid index name '{}' in table '{}'.",
+                        index.name, table.name
+                    ));
+                }
+                if index.columns.is_empty() {
+                    return Err(format!(
+                        "Index '{}' in table '{}' must include at least one column.",
+                        index.name, table.name
+                    ));
+                }
+                for column in &index.columns {
+                    if !is_valid_column_name(column) {
+                        return Err(format!(
+                            "Invalid index column '{}' for table '{}'.",
+                            column, table.name
+                        ));
+                    }
+                    if !column_names.contains(column) {
+                        return Err(format!(
+                            "Index '{}' references missing column '{}' in table '{}'.",
+                            index.name, column, table.name,
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    let mut table_columns = HashMap::new();
+    for table in &schema.tables {
+        let mut columns = HashSet::new();
+        for column in &table.columns {
+            columns.insert(column.name.clone());
+        }
+        table_columns.insert(table.name.clone(), columns);
+    }
+
+    let named_queries: HashMap<&str, &SharedStorageQuery> = schema
+        .named_queries
+        .iter()
+        .map(|query| (query.name.as_str(), query))
+        .collect();
+    for (name, query) in named_queries {
+        if !is_valid_identifier(name) {
+            return Err(format!("Invalid query name: {name}"));
+        }
+        if query.table.is_empty() || !is_valid_table_name(&query.table) {
+            return Err(format!(
+                "Query '{name}' has invalid table '{}'.",
+                query.table
+            ));
+        }
+        let valid_columns = table_columns
+            .get(&query.table)
+            .ok_or_else(|| format!("Query '{name}' references unknown table '{}'.", query.table))?;
+        for column in &query.columns {
+            if !valid_columns.contains(column) && column != "*" {
+                return Err(format!(
+                    "Query '{name}' references unknown column '{column}' on table '{}'.",
+                    query.table
+                ));
+            }
+        }
+        if let Some(order_by) = &query.order_by {
+            if !is_valid_column_name(order_by) {
+                return Err(format!(
+                    "Query '{name}' has invalid orderBy '{}'.",
+                    order_by
+                ));
+            }
+            if !valid_columns.contains(order_by) {
+                return Err(format!(
+                    "Query '{name}' orders by unknown column '{order_by}'."
+                ));
+            }
+        }
+        for filter in &query.filters {
+            if !valid_columns.contains(&filter.column) {
+                return Err(format!(
+                    "Query '{name}' filters on unknown column '{}'.",
+                    filter.column,
+                ));
+            }
+            if !is_valid_identifier(&filter.parameter) {
+                return Err(format!(
+                    "Query '{name}' has invalid parameter '{}'.",
+                    filter.parameter,
+                ));
+            }
+            if valid_filter_operator(&filter.operator).is_none() {
+                return Err(format!(
+                    "Query '{name}' uses unsupported operator '{}'.",
+                    filter.operator,
+                ));
+            }
+        }
+    }
+
+    let mut query_names = HashSet::new();
+    for query in &schema.named_queries {
+        if !query_names.insert(query.name.clone()) {
+            return Err(format!("Duplicate query name '{}'.", query.name));
+        }
+    }
+
+    let mut mutation_names = HashSet::new();
+    for mutation in &schema.named_mutations {
+        if !mutation_names.insert(mutation.name.clone()) {
+            return Err(format!("Duplicate mutation name '{}'.", mutation.name));
+        }
+        if !is_valid_identifier(&mutation.kind) {
+            return Err(format!("Mutation '{}' has invalid kind.", mutation.name));
+        }
+        let kind = mutation.kind.to_lowercase();
+        if !matches!(kind.as_str(), "insert" | "update" | "delete") {
+            return Err(format!(
+                "Mutation '{}' has unsupported kind '{}'.",
+                mutation.name, mutation.kind
+            ));
+        }
+        let valid_columns = table_columns.get(&mutation.table).ok_or_else(|| {
+            format!(
+                "Mutation '{}' references unknown table '{}'.",
+                mutation.name, mutation.table
+            )
+        })?;
+        for filter in &mutation.filters {
+            if !valid_columns.contains(&filter.column) {
+                return Err(format!(
+                    "Mutation '{}' filters on unknown column '{}'.",
+                    mutation.name, filter.column,
+                ));
+            }
+            if !is_valid_identifier(&filter.parameter) {
+                return Err(format!(
+                    "Mutation '{}' has invalid parameter '{}'.",
+                    mutation.name, filter.parameter,
+                ));
+            }
+            if valid_filter_operator(&filter.operator).is_none() {
+                return Err(format!(
+                    "Mutation '{}' uses unsupported operator '{}'.",
+                    mutation.name, filter.operator,
+                ));
+            }
+        }
+        for column in &mutation.set_columns {
+            if !valid_columns.contains(column) {
+                return Err(format!(
+                    "Mutation '{}' sets unknown column '{}'.",
+                    mutation.name, column,
+                ));
+            }
+        }
+        if kind == "update" && mutation.set_columns.is_empty() {
+            return Err(format!(
+                "Update mutation '{}' needs at least one set column.",
+                mutation.name
+            ));
+        }
+        if kind == "delete" && mutation.filters.is_empty() {
+            return Err(format!(
+                "Delete mutation '{}' needs filters.",
+                mutation.name
+            ));
+        }
+        if kind == "insert" && mutation.set_columns.is_empty() {
+            return Err(format!(
+                "Insert mutation '{}' needs set columns.",
+                mutation.name
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn build_component_directory(dir: &str, id: &str) -> Result<PathBuf, String> {
+    let root = PathBuf::from(dir);
+    if !root.is_absolute() {
+        return Err("libraryDir must be an absolute path.".to_string());
+    }
+    fs::create_dir_all(&root).map_err(|e| e.to_string())?;
+    Ok(root.join(id))
+}
+
+fn read_params_as_object(value: &Value) -> Result<HashMap<String, Value>, String> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| "params must be an object.".to_string())?;
+    Ok(object.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+}
+
+fn to_sql_value(value: &Value) -> Result<rusqlite::types::Value, String> {
+    match value {
+        Value::Null => Ok(rusqlite::types::Value::Null),
+        Value::Bool(v) => Ok(rusqlite::types::Value::Integer(if *v { 1 } else { 0 })),
+        Value::Number(v) => {
+            if let Some(int) = v.as_i64() {
+                Ok(rusqlite::types::Value::Integer(int))
+            } else if let Some(float) = v.as_f64() {
+                Ok(rusqlite::types::Value::Real(float))
+            } else {
+                Err("Invalid numeric value.".to_string())
+            }
+        }
+        Value::String(value) => Ok(rusqlite::types::Value::Text(value.clone())),
+        Value::Array(_) | Value::Object(_) => Ok(rusqlite::types::Value::Text(value.to_string())),
+    }
+}
+
+fn row_to_json(row: &rusqlite::Row<'_>, names: &[String]) -> Value {
+    let mut object = serde_json::Map::new();
+    for (i, name) in names.iter().enumerate() {
+        let value = match row.get_ref(i) {
+            Ok(rusqlite::types::ValueRef::Null) => Value::Null,
+            Ok(rusqlite::types::ValueRef::Integer(v)) => Value::from(v),
+            Ok(rusqlite::types::ValueRef::Real(v)) => Value::from(v),
+            Ok(rusqlite::types::ValueRef::Text(v)) => match std::str::from_utf8(v) {
+                Ok(text) => Value::String(text.to_string()),
+                Err(_) => Value::String("".to_string()),
+            },
+            Ok(rusqlite::types::ValueRef::Blob(v)) => Value::String(format!("{:x?}", v)),
+            Err(_) => Value::Null,
+        };
+        object.insert(name.clone(), value);
+    }
+    Value::Object(object)
+}
+
+fn build_named_select(schema: &SharedStorageSchema, query_name: &str) -> Result<String, String> {
+    let named_query = schema
+        .named_queries
+        .iter()
+        .find(|q| q.name == query_name)
+        .ok_or_else(|| format!("Unknown query '{query_name}'.",))?;
+    if named_query.columns.is_empty() {
+        return Err(format!("Query '{query_name}' has no columns.",));
+    }
+    let select_expr = if named_query.columns.len() == 1 && named_query.columns[0] == "*" {
+        "*".to_string()
+    } else {
+        named_query
+            .columns
+            .iter()
+            .map(|column| quoted_identifier(column))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+
+    let mut sql = format!(
+        "SELECT {select_expr} FROM {} WHERE 1=1",
+        quoted_identifier(&named_query.table),
+    );
+    for filter in &named_query.filters {
+        let op = valid_filter_operator(&filter.operator).ok_or_else(|| {
+            format!(
+                "Query '{query_name}' uses unsupported operator '{}'.",
+                filter.operator
+            )
+        })?;
+        sql.push_str(&format!(
+            " AND {} {} ?",
+            quoted_identifier(&filter.column),
+            op,
+        ));
+    }
+    if let Some(order_by) = &named_query.order_by {
+        sql.push_str(&format!(
+            " ORDER BY {} {}",
+            quoted_identifier(order_by),
+            if named_query.order_desc {
+                "DESC"
+            } else {
+                "ASC"
+            }
+        ));
+    }
+    if let Some(limit) = named_query.limit {
+        sql.push_str(&format!(" LIMIT {limit}"));
+    }
+    Ok(sql)
+}
+
+fn build_named_mutation(
+    schema: &SharedStorageSchema,
+    mutation_name: &str,
+) -> Result<(String, SharedStorageMutation), String> {
+    let mutation = schema
+        .named_mutations
+        .iter()
+        .find(|m| m.name == mutation_name)
+        .ok_or_else(|| format!("Unknown mutation '{mutation_name}'.",))?;
+    let kind = mutation.kind.to_lowercase();
+    let table = quoted_identifier(&mutation.table);
+    let sql = match kind.as_str() {
+        "insert" => {
+            let set_columns = mutation
+                .set_columns
+                .iter()
+                .map(|column| quoted_identifier(column))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let placeholders = mutation
+                .set_columns
+                .iter()
+                .map(|_| "?")
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("INSERT INTO {table} ({set_columns}) VALUES ({placeholders})")
+        }
+        "update" => {
+            let set_columns = mutation
+                .set_columns
+                .iter()
+                .map(|column| format!("{} = ?", quoted_identifier(column)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let mut filter_expr = String::new();
+            for filter in &mutation.filters {
+                let op = valid_filter_operator(&filter.operator).ok_or_else(|| {
+                    format!(
+                        "Mutation '{}' uses unsupported operator '{}'.",
+                        mutation.name, filter.operator,
+                    )
+                })?;
+                filter_expr.push_str(&format!(
+                    " AND {} {} ?",
+                    quoted_identifier(&filter.column),
+                    op,
+                ));
+            }
+            format!("UPDATE {table} SET {set_columns} WHERE 1=1{filter_expr}")
+        }
+        "delete" => {
+            let mut filter_expr = String::new();
+            for filter in &mutation.filters {
+                let op = valid_filter_operator(&filter.operator).ok_or_else(|| {
+                    format!(
+                        "Mutation '{}' uses unsupported operator '{}'.",
+                        mutation.name, filter.operator,
+                    )
+                })?;
+                filter_expr.push_str(&format!(
+                    " AND {} {} ?",
+                    quoted_identifier(&filter.column),
+                    op,
+                ));
+            }
+            format!("DELETE FROM {table} WHERE 1=1{filter_expr}")
+        }
+        _ => return Err(format!("Unsupported mutation kind '{}'.", mutation.kind)),
+    };
+    Ok((sql, mutation.clone()))
+}
+
+fn list_directory_dirs(dir: &Path) -> Result<Vec<PathBuf>, String> {
+    let mut entries = Vec::new();
+    let read = fs::read_dir(dir).map_err(|e| e.to_string())?;
+    for entry in read {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if entry.file_type().map_err(|e| e.to_string())?.is_dir() {
+            entries.push(entry.path());
+        }
+    }
+    Ok(entries)
+}
+
+fn write_manifest(path: &Path, manifest: &SharedComponentManifest) -> Result<(), String> {
+    let serialized = serde_json::to_string_pretty(manifest).map_err(|e| e.to_string())?;
+    fs::write(path, serialized).map_err(|e| e.to_string())
+}
+
+fn read_manifest(path: &Path) -> Option<SharedComponentManifest> {
+    let raw = fs::read_to_string(path).ok()?;
+    serde_json::from_str::<SharedComponentManifest>(&raw).ok()
+}
+
+fn verify_component_metadata(
+    conn: &Connection,
+    component_id: &str,
+    schema_version: u32,
+) -> Result<(), String> {
+    let mut stmt = conn
+        .prepare(&format!(
+            "SELECT component_id, schema_version FROM {storage_table}",
+            storage_table = storage_table_name()
+        ))
+        .map_err(|e| e.to_string())?;
+    let row = stmt
+        .query_row(params![], |row| {
+            let manifest_id: String = row.get(0)?;
+            let manifest_version: u32 = row.get(1)?;
+            Ok((manifest_id, manifest_version))
+        })
+        .map_err(|e| e.to_string())?;
+    if row.0 != component_id {
+        return Err("Manifest component mismatch.".to_string());
+    }
+    if row.1 != schema_version {
+        return Err("Component schema version mismatch.".to_string());
+    }
+    Ok(())
+}
+
+fn initialize_component_db(path: &Path, manifest: &SharedComponentManifest) -> Result<(), String> {
+    let mut conn = Connection::open(path).map_err(|e| e.to_string())?;
+    let schema = &manifest.storage_schema;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    tx.execute("PRAGMA foreign_keys = ON;", params![])
+        .map_err(|e| e.to_string())?;
+    for table in &schema.tables {
+        let mut columns = Vec::new();
+        for column in &table.columns {
+            let typ = canonicalize_component_storage_type(&column.kind).ok_or_else(|| {
+                format!(
+                    "Unsupported type '{}' for column '{}'.",
+                    column.kind, column.name
+                )
+            })?;
+            let nullable = if column.not_null { " NOT NULL" } else { "" };
+            let primary = if column.primary_key {
+                " PRIMARY KEY"
+            } else {
+                ""
+            };
+            columns.push(format!(
+                "{} {}{}{}",
+                quoted_identifier(&column.name),
+                typ,
+                primary,
+                nullable
+            ));
+        }
+        let sql = format!(
+            "CREATE TABLE {} ({})",
+            quoted_identifier(&table.name),
+            columns.join(", "),
+        );
+        tx.execute(&sql, params![]).map_err(|e| e.to_string())?;
+
+        if let Some(indexes) = &table.indexes {
+            for index in indexes {
+                let unique = if index.unique { "UNIQUE " } else { "" };
+                let index_columns = index
+                    .columns
+                    .iter()
+                    .map(|c| quoted_identifier(c))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let create_index_sql = format!(
+                    "CREATE {unique}INDEX {} ON {} ({index_columns})",
+                    quoted_identifier(&index.name),
+                    quoted_identifier(&table.name),
+                );
+                tx.execute(&create_index_sql, params![])
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+    }
+
+    let metadata_sql = format!(
+        "CREATE TABLE {table} (component_id TEXT PRIMARY KEY, schema_version INTEGER NOT NULL)",
+        table = storage_table_name()
+    );
+    tx.execute(&metadata_sql, params![])
+        .map_err(|e| e.to_string())?;
+    tx.execute(
+        &format!(
+            "INSERT INTO {table} (component_id, schema_version) VALUES (?1, ?2)",
+            table = storage_table_name()
+        ),
+        params![manifest.id, manifest.schema_version as i64],
+    )
+    .map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -547,6 +1306,238 @@ fn search_markdown_files(
 }
 
 #[tauri::command]
+fn create_shared_component(
+    input: CreateSharedComponentInput,
+) -> Result<SharedComponentManifest, String> {
+    if input.title.trim().is_empty() {
+        return Err("title is required.".to_string());
+    }
+    if input.prompt.trim().is_empty() {
+        return Err("prompt is required.".to_string());
+    }
+    if !is_valid_component_id(&input.id) {
+        return Err("Invalid component id.".to_string());
+    }
+    validate_storage_schema(&input.storage_schema)?;
+
+    let schema_version = SHARED_SCHEMA_VERSION;
+    let component_dir = build_component_directory(&input.library_dir, &input.id)?;
+    let manifest_file = component_dir.join("manifest.json");
+    let db_file = component_dir.join("component.sqlite3");
+    if manifest_file.exists() || db_file.exists() || component_dir.exists() {
+        return Err("A component with this id already exists.".to_string());
+    }
+    fs::create_dir_all(&component_dir).map_err(|e| e.to_string())?;
+
+    let now = now_timestamp();
+    let manifest = SharedComponentManifest {
+        id: input.id.clone(),
+        title: input.title,
+        description: input.description,
+        prompt: input.prompt,
+        created_at: now.clone(),
+        updated_at: now,
+        ui_spec: input.ui_spec,
+        storage_kind: "sqlite".to_string(),
+        storage_schema: input.storage_schema,
+        schema_version,
+    };
+
+    if let Err(err) = initialize_component_db(&db_file, &manifest) {
+        let _ = fs::remove_dir_all(&component_dir);
+        return Err(err);
+    }
+    if let Err(err) = write_manifest(&manifest_file, &manifest) {
+        let _ = fs::remove_dir_all(&component_dir);
+        return Err(err);
+    }
+    Ok(manifest)
+}
+
+#[tauri::command]
+fn list_shared_components(library_dir: String) -> Result<Vec<SharedComponentManifest>, String> {
+    let root = PathBuf::from(library_dir.trim());
+    if !root.is_absolute() {
+        return Err("libraryDir must be an absolute path.".to_string());
+    }
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut output = Vec::new();
+    let entries = list_directory_dirs(&root)?;
+    for path in entries {
+        let manifest = read_manifest(&path.join("manifest.json"));
+        if let Some(mut parsed) = manifest {
+            parsed
+                .storage_schema
+                .tables
+                .sort_by(|a, b| a.name.cmp(&b.name));
+            output.push(parsed);
+        }
+    }
+    output.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    Ok(output)
+}
+
+#[tauri::command]
+fn get_shared_component(
+    library_dir: String,
+    id: String,
+) -> Result<SharedComponentManifest, String> {
+    let path = manifest_path(&library_dir, &id)?;
+    match read_manifest(&path) {
+        Some(manifest) => Ok(manifest),
+        None => Err("Component not found.".to_string()),
+    }
+}
+
+#[tauri::command]
+fn update_shared_component(
+    input: UpdateSharedComponentInput,
+) -> Result<SharedComponentManifest, String> {
+    if input.id.trim().is_empty() {
+        return Err("id is required.".to_string());
+    }
+
+    let existing_path = manifest_path(&input.library_dir, &input.id)?;
+    let existing =
+        read_manifest(&existing_path).ok_or_else(|| "Component not found.".to_string())?;
+    if let Some(proposed_schema) = input.storage_schema {
+        if proposed_schema != existing.storage_schema {
+            return Err("storageSchema cannot be changed for this component version.".to_string());
+        }
+    }
+
+    let next = SharedComponentManifest {
+        id: existing.id,
+        title: input.title.unwrap_or(existing.title),
+        description: input.description.unwrap_or(existing.description),
+        prompt: input.prompt.unwrap_or(existing.prompt),
+        ui_spec: input.ui_spec.unwrap_or(existing.ui_spec),
+        created_at: existing.created_at,
+        updated_at: now_timestamp(),
+        storage_kind: existing.storage_kind,
+        storage_schema: existing.storage_schema,
+        schema_version: existing.schema_version,
+    };
+
+    write_manifest(&existing_path, &next)?;
+    Ok(next)
+}
+
+#[tauri::command]
+fn delete_shared_component(library_dir: String, id: String) -> Result<(), String> {
+    if id.trim().is_empty() {
+        return Err("id is required.".to_string());
+    }
+    let dir = resolve_component_dir(&library_dir, &id)?;
+    if !dir.exists() {
+        return Ok(());
+    }
+    fs::remove_dir_all(dir).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn run_shared_component_query(input: SharedQueryInput) -> Result<SharedQueryResult, String> {
+    let manifest = get_shared_component(input.library_dir.clone(), input.component_id.clone())?;
+    let params = read_params_as_object(&input.params)?;
+    let named_query = manifest
+        .storage_schema
+        .named_queries
+        .iter()
+        .find(|query| query.name == input.query_name)
+        .ok_or_else(|| format!("Unknown query '{}'.", input.query_name))?;
+    let sql = build_named_select(&manifest.storage_schema, &named_query.name)?;
+
+    let db_path = component_db_path(&input.library_dir, &input.component_id)?;
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    verify_component_metadata(&conn, &manifest.id, manifest.schema_version)?;
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut values = Vec::new();
+    for filter in &named_query.filters {
+        let value = params
+            .get(&filter.parameter)
+            .ok_or_else(|| format!("Missing query param '{}'.", filter.parameter))?;
+        values.push(to_sql_value(value)?);
+    }
+
+    let column_names = if named_query.columns.len() == 1 && named_query.columns[0] == "*" {
+        let mut pragma = conn
+            .prepare(&format!(
+                "PRAGMA table_info({})",
+                quoted_identifier(&named_query.table)
+            ))
+            .map_err(|e| e.to_string())?;
+        let rows = pragma
+            .query_map(params![], |row| {
+                let name: String = row.get(1)?;
+                Ok(name)
+            })
+            .map_err(|e| e.to_string())?;
+        let mut names = Vec::new();
+        for row in rows {
+            names.push(row.map_err(|e| e.to_string())?);
+        }
+        names
+    } else {
+        named_query.columns.clone()
+    };
+
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(values), |row| {
+            Ok(row_to_json(row, &column_names))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(SharedQueryResult { rows })
+}
+
+#[tauri::command]
+fn run_shared_component_mutation(
+    input: SharedMutationInput,
+) -> Result<SharedMutationResult, String> {
+    let manifest = get_shared_component(input.library_dir.clone(), input.component_id.clone())?;
+    let params = read_params_as_object(&input.params)?;
+    let named_mutation = manifest
+        .storage_schema
+        .named_mutations
+        .iter()
+        .find(|mutation| mutation.name == input.mutation_name)
+        .ok_or_else(|| format!("Unknown mutation '{}'.", input.mutation_name))?;
+
+    let (sql, mutation) = build_named_mutation(&manifest.storage_schema, &named_mutation.name)?;
+    let db_path = component_db_path(&input.library_dir, &input.component_id)?;
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    verify_component_metadata(&conn, &manifest.id, manifest.schema_version)?;
+    let mut values = Vec::new();
+
+    for column in &mutation.set_columns {
+        let value = params
+            .get(column)
+            .ok_or_else(|| format!("Missing mutation value '{}'.", column))?;
+        values.push(to_sql_value(value)?);
+    }
+    for filter in &mutation.filters {
+        let value = params
+            .get(&filter.parameter)
+            .ok_or_else(|| format!("Missing mutation param '{}'.", filter.parameter))?;
+        values.push(to_sql_value(value)?);
+    }
+
+    let changed_rows = conn
+        .execute(&sql, rusqlite::params_from_iter(values))
+        .map_err(|e| e.to_string())?;
+
+    Ok(SharedMutationResult {
+        changed_rows: changed_rows as u64,
+    })
+}
+
+#[tauri::command]
 fn detect_obsidian_settings(vault_dir: String) -> ObsidianSettingsDetection {
     if vault_dir.trim().is_empty() {
         return ObsidianSettingsDetection {
@@ -798,7 +1789,14 @@ pub fn run() {
             write_markdown_file,
             run_ai_tool,
             set_window_opacity,
-            search_markdown_files
+            search_markdown_files,
+            create_shared_component,
+            list_shared_components,
+            get_shared_component,
+            update_shared_component,
+            delete_shared_component,
+            run_shared_component_query,
+            run_shared_component_mutation
         ])
         .setup(|app| {
             let app_name = if cfg!(debug_assertions) {
@@ -920,4 +1918,223 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::SystemTime;
+
+    fn sample_storage_schema() -> SharedStorageSchema {
+        SharedStorageSchema {
+            tables: vec![SharedStorageTable {
+                name: "items".to_string(),
+                columns: vec![
+                    SharedStorageColumn {
+                        name: "id".to_string(),
+                        kind: "integer".to_string(),
+                        not_null: true,
+                        primary_key: true,
+                    },
+                    SharedStorageColumn {
+                        name: "title".to_string(),
+                        kind: "text".to_string(),
+                        not_null: true,
+                        primary_key: false,
+                    },
+                    SharedStorageColumn {
+                        name: "done".to_string(),
+                        kind: "integer".to_string(),
+                        not_null: true,
+                        primary_key: false,
+                    },
+                ],
+                indexes: Some(vec![SharedStorageIndex {
+                    name: "idx_items_title".to_string(),
+                    columns: vec!["title".to_string()],
+                    unique: false,
+                }]),
+            }],
+            named_queries: vec![
+                SharedStorageQuery {
+                    name: "listItems".to_string(),
+                    table: "items".to_string(),
+                    columns: vec!["*".to_string()],
+                    filters: vec![],
+                    order_by: Some("id".to_string()),
+                    order_desc: false,
+                    limit: Some(50),
+                },
+                SharedStorageQuery {
+                    name: "findItem".to_string(),
+                    table: "items".to_string(),
+                    columns: vec!["id".to_string(), "title".to_string(), "done".to_string()],
+                    filters: vec![SharedStorageFilter {
+                        column: "id".to_string(),
+                        operator: "eq".to_string(),
+                        parameter: "id".to_string(),
+                    }],
+                    order_by: None,
+                    order_desc: false,
+                    limit: Some(1),
+                },
+            ],
+            named_mutations: vec![
+                SharedStorageMutation {
+                    name: "insertItem".to_string(),
+                    table: "items".to_string(),
+                    kind: "insert".to_string(),
+                    set_columns: vec!["id".to_string(), "title".to_string(), "done".to_string()],
+                    filters: vec![],
+                },
+                SharedStorageMutation {
+                    name: "updateTitle".to_string(),
+                    table: "items".to_string(),
+                    kind: "update".to_string(),
+                    set_columns: vec!["title".to_string()],
+                    filters: vec![SharedStorageFilter {
+                        column: "id".to_string(),
+                        operator: "eq".to_string(),
+                        parameter: "id".to_string(),
+                    }],
+                },
+                SharedStorageMutation {
+                    name: "deleteItem".to_string(),
+                    table: "items".to_string(),
+                    kind: "delete".to_string(),
+                    set_columns: vec![],
+                    filters: vec![SharedStorageFilter {
+                        column: "id".to_string(),
+                        operator: "eq".to_string(),
+                        parameter: "id".to_string(),
+                    }],
+                },
+            ],
+        }
+    }
+
+    fn sample_manifest(component_id: &str) -> SharedComponentManifest {
+        SharedComponentManifest {
+            id: component_id.to_string(),
+            title: "Shared Items".to_string(),
+            description: "A shared item tracker".to_string(),
+            prompt: "Build a shared item tracker".to_string(),
+            created_at: "2026-03-12T00:00:00.000Z".to_string(),
+            updated_at: "2026-03-12T00:00:00.000Z".to_string(),
+            ui_spec: json!({
+                "root": "card",
+                "elements": {
+                    "card": {
+                        "type": "Card",
+                        "props": { "title": "Items" },
+                        "children": []
+                    }
+                }
+            }),
+            storage_kind: "sqlite".to_string(),
+            storage_schema: sample_storage_schema(),
+            schema_version: SHARED_SCHEMA_VERSION,
+        }
+    }
+
+    fn temp_library_dir(label: &str) -> PathBuf {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        env::temp_dir().join(format!("philo-{label}-{suffix}"))
+    }
+
+    #[test]
+    fn validate_storage_schema_rejects_unknown_query_column() {
+        let mut schema = sample_storage_schema();
+        schema.named_queries[0].columns = vec!["missing".to_string()];
+
+        let error = validate_storage_schema(&schema).unwrap_err();
+        assert!(error.contains("unknown column"));
+    }
+
+    #[test]
+    fn shared_component_db_supports_named_queries_and_mutations() {
+        let library_dir = temp_library_dir("shared-db");
+        let component_id = "component-shared";
+        let component_dir = library_dir.join(component_id);
+        fs::create_dir_all(&component_dir).unwrap();
+
+        let manifest = sample_manifest(component_id);
+        let manifest_path = component_dir.join("manifest.json");
+        let db_path = component_dir.join("component.sqlite3");
+
+        write_manifest(&manifest_path, &manifest).unwrap();
+        initialize_component_db(&db_path, &manifest).unwrap();
+
+        let insert_result = run_shared_component_mutation(SharedMutationInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            mutation_name: "insertItem".to_string(),
+            params: json!({
+                "id": 1,
+                "title": "First item",
+                "done": 0
+            }),
+        })
+        .unwrap();
+        assert_eq!(insert_result.changed_rows, 1);
+
+        let list_result = run_shared_component_query(SharedQueryInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            query_name: "listItems".to_string(),
+            params: json!({}),
+        })
+        .unwrap();
+        assert_eq!(list_result.rows.len(), 1);
+        assert_eq!(list_result.rows[0]["title"], json!("First item"));
+
+        let update_result = run_shared_component_mutation(SharedMutationInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            mutation_name: "updateTitle".to_string(),
+            params: json!({
+                "id": 1,
+                "title": "Updated item"
+            }),
+        })
+        .unwrap();
+        assert_eq!(update_result.changed_rows, 1);
+
+        let find_result = run_shared_component_query(SharedQueryInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            query_name: "findItem".to_string(),
+            params: json!({
+                "id": 1
+            }),
+        })
+        .unwrap();
+        assert_eq!(find_result.rows.len(), 1);
+        assert_eq!(find_result.rows[0]["title"], json!("Updated item"));
+
+        let delete_result = run_shared_component_mutation(SharedMutationInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            mutation_name: "deleteItem".to_string(),
+            params: json!({
+                "id": 1
+            }),
+        })
+        .unwrap();
+        assert_eq!(delete_result.changed_rows, 1);
+
+        let empty_result = run_shared_component_query(SharedQueryInput {
+            library_dir: library_dir.to_string_lossy().to_string(),
+            component_id: component_id.to_string(),
+            query_name: "listItems".to_string(),
+            params: json!({}),
+        })
+        .unwrap();
+        assert!(empty_result.rows.is_empty());
+
+        let _ = fs::remove_dir_all(&library_dir);
+    }
 }
