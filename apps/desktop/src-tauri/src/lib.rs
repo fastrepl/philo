@@ -8,15 +8,40 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
+use std::io::{Read, Write};
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
-use std::time::UNIX_EPOCH;
+use std::sync::{mpsc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_fs::FsExt;
 #[cfg(desktop)]
 use tauri_plugin_updater::UpdaterExt;
+
+const GOOGLE_OAUTH_DEFAULT_TIMEOUT_MS: u64 = 180_000;
+
+#[derive(Default)]
+struct GoogleOAuthState {
+    sessions: Mutex<HashMap<String, mpsc::Receiver<GoogleOAuthCallbackPayload>>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GoogleOAuthSession {
+    session_id: String,
+    redirect_uri: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GoogleOAuthCallbackPayload {
+    code: Option<String>,
+    state: Option<String>,
+    error: Option<String>,
+}
 
 #[tauri::command]
 fn set_window_opacity(_app: AppHandle, _opacity: f64) -> Result<(), String> {
@@ -91,6 +116,186 @@ fn write_markdown_file(path: String, content: String) -> Result<(), String> {
     }
 
     fs::write(target, content).map_err(|e| e.to_string())
+}
+
+fn decode_url_component(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            b'+' => {
+                decoded.push(b' ');
+                index += 1;
+            }
+            b'%' if index + 2 < bytes.len() => {
+                let hi = bytes[index + 1] as char;
+                let lo = bytes[index + 2] as char;
+                if let (Some(hi), Some(lo)) = (hi.to_digit(16), lo.to_digit(16)) {
+                    decoded.push(((hi * 16) + lo) as u8);
+                    index += 3;
+                } else {
+                    decoded.push(bytes[index]);
+                    index += 1;
+                }
+            }
+            value => {
+                decoded.push(value);
+                index += 1;
+            }
+        }
+    }
+
+    String::from_utf8_lossy(&decoded).to_string()
+}
+
+fn parse_google_oauth_callback(path: &str) -> GoogleOAuthCallbackPayload {
+    let query = path
+        .split_once('?')
+        .map(|(_, query)| query)
+        .unwrap_or_default();
+    let mut params = HashMap::new();
+
+    for pair in query.split('&') {
+        if pair.is_empty() {
+            continue;
+        }
+        let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
+        params.insert(decode_url_component(key), decode_url_component(value));
+    }
+
+    let error = params.get("error").cloned();
+    let code = params.get("code").cloned();
+    let state = params.get("state").cloned();
+
+    GoogleOAuthCallbackPayload {
+        code,
+        state,
+        error: error.or_else(|| {
+            if params.contains_key("code") {
+                None
+            } else {
+                Some("Google did not return an authorization code.".to_string())
+            }
+        }),
+    }
+}
+
+fn write_google_oauth_response(
+    stream: &mut std::net::TcpStream,
+    status: &str,
+    body: &str,
+) -> Result<(), String> {
+    let response = format!(
+        "HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    stream
+        .write_all(response.as_bytes())
+        .map_err(|e| e.to_string())
+}
+
+fn receive_google_oauth_callback(listener: TcpListener) -> GoogleOAuthCallbackPayload {
+    let Ok((mut stream, _addr)) = listener.accept() else {
+        return GoogleOAuthCallbackPayload {
+            code: None,
+            state: None,
+            error: Some("Could not receive Google authorization callback.".to_string()),
+        };
+    };
+
+    let mut buffer = [0_u8; 8192];
+    let request_size = match stream.read(&mut buffer) {
+        Ok(size) if size > 0 => size,
+        _ => {
+            let _ = write_google_oauth_response(
+                &mut stream,
+                "400 Bad Request",
+                "<html><body><h1>Philo</h1><p>Google sign-in failed.</p></body></html>",
+            );
+            return GoogleOAuthCallbackPayload {
+                code: None,
+                state: None,
+                error: Some("Google callback request was empty.".to_string()),
+            };
+        }
+    };
+
+    let request = String::from_utf8_lossy(&buffer[..request_size]);
+    let path = request
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .unwrap_or("/");
+
+    let payload = parse_google_oauth_callback(path);
+    let body = if payload.error.is_some() {
+        "<html><body><h1>Philo</h1><p>Google sign-in failed. You can close this window and try again.</p></body></html>"
+    } else {
+        "<html><body><h1>Philo</h1><p>Google account connected. You can close this window.</p></body></html>"
+    };
+    let status = if payload.error.is_some() {
+        "400 Bad Request"
+    } else {
+        "200 OK"
+    };
+
+    let _ = write_google_oauth_response(&mut stream, status, body);
+    payload
+}
+
+#[tauri::command]
+fn start_google_oauth_callback(
+    state: State<GoogleOAuthState>,
+) -> Result<GoogleOAuthSession, String> {
+    let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
+    let port = listener.local_addr().map_err(|e| e.to_string())?.port();
+    let session_id = format!(
+        "google-oauth-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos()
+    );
+
+    let (sender, receiver) = mpsc::channel();
+    state
+        .sessions
+        .lock()
+        .map_err(|_| "Google OAuth state is unavailable.".to_string())?
+        .insert(session_id.clone(), receiver);
+
+    std::thread::spawn(move || {
+        let payload = receive_google_oauth_callback(listener);
+        let _ = sender.send(payload);
+    });
+
+    Ok(GoogleOAuthSession {
+        session_id,
+        redirect_uri: format!("http://127.0.0.1:{port}/"),
+    })
+}
+
+#[tauri::command]
+fn wait_for_google_oauth_callback(
+    session_id: String,
+    timeout_ms: Option<u64>,
+    state: State<GoogleOAuthState>,
+) -> Result<GoogleOAuthCallbackPayload, String> {
+    let receiver = state
+        .sessions
+        .lock()
+        .map_err(|_| "Google OAuth state is unavailable.".to_string())?
+        .remove(&session_id)
+        .ok_or("Google OAuth session not found.".to_string())?;
+
+    receiver
+        .recv_timeout(Duration::from_millis(
+            timeout_ms.unwrap_or(GOOGLE_OAUTH_DEFAULT_TIMEOUT_MS),
+        ))
+        .map_err(|_| "Timed out waiting for Google authorization.".to_string())
 }
 
 #[tauri::command]
@@ -1780,6 +1985,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
+        .manage(GoogleOAuthState::default())
         .invoke_handler(tauri::generate_handler![
             extend_fs_scope,
             find_obsidian_vaults,
@@ -1787,6 +1993,8 @@ pub fn run() {
             bootstrap_obsidian_vault,
             read_markdown_file,
             write_markdown_file,
+            start_google_oauth_callback,
+            wait_for_google_oauth_callback,
             run_ai_tool,
             set_window_opacity,
             search_markdown_files,

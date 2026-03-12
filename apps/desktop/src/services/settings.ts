@@ -8,6 +8,12 @@ export interface Settings {
   openaiApiKey: string;
   googleApiKey: string;
   openrouterApiKey: string;
+  googleOAuthClientId: string;
+  googleAccountEmail: string;
+  googleAccessToken: string;
+  googleRefreshToken: string;
+  googleAccessTokenExpiresAt: string;
+  googleGrantedScopes: string[];
   journalDir: string;
   filenamePattern: string;
   vaultDir: string;
@@ -36,6 +42,12 @@ const DEFAULT_SETTINGS: Settings = {
   openaiApiKey: "",
   googleApiKey: "",
   openrouterApiKey: "",
+  googleOAuthClientId: "",
+  googleAccountEmail: "",
+  googleAccessToken: "",
+  googleRefreshToken: "",
+  googleAccessTokenExpiresAt: "",
+  googleGrantedScopes: [],
   journalDir: "",
   filenamePattern: "",
   vaultDir: "",
@@ -49,6 +61,11 @@ function normalizeAiProvider(value: unknown,): AiProvider {
   return typeof value === "string" && AI_PROVIDERS.includes(value as AiProvider,)
     ? value as AiProvider
     : DEFAULT_AI_PROVIDER;
+}
+
+function normalizeGoogleGrantedScopes(value: unknown,) {
+  if (!Array.isArray(value,)) return [];
+  return value.filter((entry,): entry is string => typeof entry === "string" && entry.trim().length > 0);
 }
 
 export function getAiProviderLabel(provider: AiProvider,) {
@@ -105,6 +122,7 @@ export async function loadSettings(): Promise<Settings> {
       ...DEFAULT_SETTINGS,
       ...parsed,
       aiProvider: normalizeAiProvider(parsed.aiProvider,),
+      googleGrantedScopes: normalizeGoogleGrantedScopes(parsed.googleGrantedScopes,),
     };
   } catch {
     return { ...DEFAULT_SETTINGS, };
