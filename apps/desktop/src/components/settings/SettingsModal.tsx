@@ -615,9 +615,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           <p className="text-xs text-gray-400" style={mono}>
             Philo uses these to resolve notes, `![[*.excalidraw]]` embeds, and pasted image paths inside your vault.
           </p>
-          <p className="text-xs text-amber-600" style={mono}>
-            Changing this will not move existing files.
-          </p>
         </div>
 
         {/* Divider */}
@@ -682,7 +679,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             ? "Saving changes..."
             : saveState === "error"
             ? "Could not save changes."
-            : "Changes save when you close settings."}
+            : ""}
         </p>
       </div>
     </div>
