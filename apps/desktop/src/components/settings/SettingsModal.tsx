@@ -666,9 +666,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               Use <span className="text-gray-600">/</span> for subdirectories.
             </span>
           </div>
-          <p className="text-xs text-amber-600" style={mono}>
-            Changing this will not rename existing files.
-          </p>
         </div>
 
         <p
