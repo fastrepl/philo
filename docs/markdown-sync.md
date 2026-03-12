@@ -56,9 +56,10 @@ There is no separate database for note bodies. The markdown file is the source o
 
 `apps/desktop/src/lib/markdown.ts` is not a straight `MarkdownManager.serialize()` wrapper. The current write-side logic does a few important normalizations so the saved markdown stays stable and reparses correctly:
 
-1. `mergeTopLevelParagraphRuns()` collapses adjacent top-level paragraphs into one markdown paragraph with embedded newline text.
-   This is how Philo preserves editor blank lines without writing placeholder text like `&nbsp;`.
-2. Long newline runs are compacted so repeated saves do not grow extra blank lines accidentally.
+1. Top-level blocks are serialized one at a time and stitched together with explicit newline counts.
+   This is how Philo preserves empty paragraphs without inheriting TipTap's default double block spacing around lists.
+2. Consecutive top-level paragraphs are still merged into one markdown paragraph with embedded newline text.
+   This preserves blank lines between paragraphs without writing placeholder text like `&nbsp;`.
 3. Empty bullet items are normalized from `-` to `-`, because TipTap's default serializer emits `-` but its parser reparses that as plain paragraph text instead of an empty bullet item.
 4. When Philo is pointed at a vault, serialization uses tab indentation (`{ style: "tab", size: 1 }`) so the file on disk matches Obsidian's layout more closely.
 

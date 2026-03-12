@@ -96,54 +96,124 @@ function getMarkdownManager(indentation?: MarkdownIndentation,): MarkdownManager
   return manager;
 }
 
-function mergeTopLevelParagraphRuns(json: JSONContent,): JSONContent {
-  if (json.type !== "doc" || !Array.isArray(json.content,)) return json;
+function isEmptyParagraph(node: JSONContent,): boolean {
+  return node.type === "paragraph" && (!Array.isArray(node.content,) || node.content.length === 0);
+}
 
-  const content: JSONContent[] = [];
-  let paragraphRun: JSONContent[] = [];
+function isListNode(node: JSONContent,): boolean {
+  return [
+    "bulletList",
+    "orderedList",
+    "taskList",
+  ].includes(node.type as string,);
+}
 
-  const flushParagraphRun = () => {
-    if (paragraphRun.length === 0) return;
-    if (paragraphRun.length === 1) {
-      content.push(paragraphRun[0],);
-      paragraphRun = [];
-      return;
-    }
+function mergeParagraphNodes(paragraphs: JSONContent[],): JSONContent {
+  if (paragraphs.length === 1) {
+    return paragraphs[0];
+  }
 
-    const mergedContent: JSONContent[] = [];
+  const mergedContent: JSONContent[] = [];
 
-    paragraphRun.forEach((node, index,) => {
-      if (index > 0) {
-        mergedContent.push({ type: "text", text: "\n", },);
-      }
-
-      if (Array.isArray(node.content,) && node.content.length > 0) {
-        mergedContent.push(...node.content,);
-      }
-    },);
-
-    const lastParagraph = paragraphRun[paragraphRun.length - 1];
-    if (!Array.isArray(lastParagraph.content,) || lastParagraph.content.length === 0) {
+  paragraphs.forEach((node, index,) => {
+    if (index > 0) {
       mergedContent.push({ type: "text", text: "\n", },);
     }
 
-    content.push(mergedContent.length > 0 ? { type: "paragraph", content: mergedContent, } : { type: "paragraph", },);
-    paragraphRun = [];
+    if (Array.isArray(node.content,) && node.content.length > 0) {
+      mergedContent.push(...node.content,);
+    }
+  },);
+
+  const lastParagraph = paragraphs[paragraphs.length - 1];
+  if (isEmptyParagraph(lastParagraph,)) {
+    mergedContent.push({ type: "text", text: "\n", },);
+  }
+
+  return mergedContent.length > 0 ? { type: "paragraph", content: mergedContent, } : { type: "paragraph", };
+}
+
+function serializeBlock(node: JSONContent, manager: MarkdownManager,): string {
+  return manager.serialize({ type: "doc", content: [node,], },).replace(/\n+$/, "",);
+}
+
+function json2mdContent(json: JSONContent, manager: MarkdownManager,): string {
+  if (json.type !== "doc" || !Array.isArray(json.content,)) {
+    return serializeBlock(json, manager,);
+  }
+
+  const sourceContent = json.content.length >= 2
+      && isEmptyParagraph(json.content[0],)
+      && isListNode(json.content[1],)
+    ? json.content.slice(1,)
+    : json.content;
+
+  const parts: string[] = [];
+  let pendingEmptyParagraphs = 0;
+  let sawContent = false;
+  let index = 0;
+
+  const pushBlock = (node: JSONContent,) => {
+    const markdown = serializeBlock(node, manager,);
+    if (!markdown) return;
+
+    if (!sawContent) {
+      if (pendingEmptyParagraphs > 0) {
+        parts.push("\n".repeat(pendingEmptyParagraphs,),);
+      }
+    } else {
+      parts.push("\n".repeat(pendingEmptyParagraphs + 1,),);
+    }
+
+    parts.push(markdown,);
+    sawContent = true;
+    pendingEmptyParagraphs = 0;
   };
 
-  for (const node of json.content) {
-    if (node.type === "paragraph") {
-      paragraphRun.push(node,);
+  while (index < sourceContent.length) {
+    const node = sourceContent[index];
+
+    if (node.type !== "paragraph") {
+      pushBlock(node,);
+      index += 1;
       continue;
     }
 
-    flushParagraphRun();
-    content.push(node,);
+    let runEnd = index;
+    while (runEnd < sourceContent.length && sourceContent[runEnd].type === "paragraph") {
+      runEnd += 1;
+    }
+
+    const paragraphRun = sourceContent.slice(index, runEnd,);
+    const firstNonEmptyIndex = paragraphRun.findIndex(paragraph => !isEmptyParagraph(paragraph,));
+
+    if (firstNonEmptyIndex === -1) {
+      pendingEmptyParagraphs += paragraphRun.length;
+      index = runEnd;
+      continue;
+    }
+
+    let lastNonEmptyIndex = paragraphRun.length - 1;
+    while (lastNonEmptyIndex >= 0 && isEmptyParagraph(paragraphRun[lastNonEmptyIndex],)) {
+      lastNonEmptyIndex -= 1;
+    }
+
+    pendingEmptyParagraphs += firstNonEmptyIndex;
+
+    const contentParagraphs = paragraphRun.slice(firstNonEmptyIndex, lastNonEmptyIndex + 1,);
+    pushBlock(mergeParagraphNodes(contentParagraphs,),);
+
+    pendingEmptyParagraphs += paragraphRun.length - lastNonEmptyIndex - 1;
+    index = runEnd;
   }
 
-  flushParagraphRun();
+  if (!sawContent) {
+    return pendingEmptyParagraphs > 0 ? "\n".repeat(pendingEmptyParagraphs,) : "";
+  }
 
-  return { ...json, content, };
+  return pendingEmptyParagraphs > 0
+    ? `${parts.join("",)}${"\n".repeat(pendingEmptyParagraphs + 1,)}`
+    : parts.join("",);
 }
 
 function normalizeMarkdownForParsing(markdown: string,): string {
@@ -187,37 +257,58 @@ function parseMarkdownContent(raw: string, manager: MarkdownManager,): JSONConte
   return isValidContent(parsed,) && parsed.content ? parsed.content : [];
 }
 
-function isMixedListToken(token: MarkdownToken,): token is MarkdownListToken {
+function shouldSplitListToken(token: MarkdownToken,): token is MarkdownListToken {
   if (token.type !== "list") return false;
   if (!Array.isArray((token as MarkdownListToken).items,)) return false;
 
   const items = (token as MarkdownListToken).items ?? [];
   const hasTask = items.some(item => item.task === true);
   const hasNonTask = items.some(item => item.task !== true);
-  return hasTask && hasNonTask;
+  if (hasTask && hasNonTask) return true;
+
+  if (items.length === 0) return false;
+
+  let previousTrailingNewlines = countTrailingNewlines(items[0].raw ?? "",);
+
+  for (let index = 1; index < items.length; index += 1) {
+    const currentTrailingNewlines = countTrailingNewlines(items[index].raw ?? "",);
+    if (previousTrailingNewlines > 1) {
+      return true;
+    }
+    previousTrailingNewlines = currentTrailingNewlines;
+  }
+
+  return false;
 }
 
-function parseMixedListToken(token: MarkdownListToken, manager: MarkdownManager,): JSONContent[] {
+function parseListToken(token: MarkdownListToken, manager: MarkdownManager,): JSONContent[] {
   const groups: string[] = [];
   let currentTaskState: boolean | null = null;
   let currentRaw = "";
+  let previousTrailingNewlines = 0;
 
   for (const item of token.items ?? []) {
     const itemTaskState = item.task === true;
     const itemRaw = item.raw ?? "";
+    const currentTrailingNewlines = countTrailingNewlines(itemRaw,);
+
+    if (
+      currentRaw
+      && (currentTaskState !== itemTaskState || previousTrailingNewlines > 1)
+    ) {
+      groups.push(currentRaw,);
+      currentRaw = "";
+    }
 
     if (currentTaskState === null || currentTaskState === itemTaskState) {
       currentTaskState = itemTaskState;
       currentRaw += itemRaw;
-      continue;
+    } else {
+      currentTaskState = itemTaskState;
+      currentRaw = itemRaw;
     }
 
-    if (currentRaw) {
-      groups.push(currentRaw,);
-    }
-
-    currentTaskState = itemTaskState;
-    currentRaw = itemRaw;
+    previousTrailingNewlines = currentTrailingNewlines;
   }
 
   if (currentRaw) {
@@ -242,6 +333,10 @@ function parseMixedListToken(token: MarkdownListToken, manager: MarkdownManager,
   return content;
 }
 
+function getBlockSeparatorParagraphCount(separatorNewlines: number, sawContent: boolean,): number {
+  return sawContent ? Math.max(0, separatorNewlines - 1,) : separatorNewlines;
+}
+
 function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONContent[] {
   const tokens = manager.instance.lexer(markdown,) as MarkdownToken[];
   const content: JSONContent[] = [];
@@ -260,7 +355,7 @@ function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONC
     if (token.type === "space") {
       const newlineCount: number = (raw.match(/\n/g,) || []).length;
       const separatorNewlines: number = trailingNewlines + newlineCount;
-      const emptyParagraphCount: number = sawContent ? Math.max(0, separatorNewlines - 1,) : separatorNewlines;
+      const emptyParagraphCount = getBlockSeparatorParagraphCount(separatorNewlines, sawContent,);
       pushEmptyParagraphs(emptyParagraphCount,);
       trailingNewlines = 0;
       continue;
@@ -272,7 +367,7 @@ function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONC
 
     const leadingNewlines: number = (raw.match(/^\n+/,)?.[0].length) ?? 0;
     const separatorNewlines: number = trailingNewlines + leadingNewlines;
-    const emptyParagraphCount: number = sawContent ? Math.max(0, separatorNewlines - 1,) : separatorNewlines;
+    const emptyParagraphCount = getBlockSeparatorParagraphCount(separatorNewlines, sawContent,);
     pushEmptyParagraphs(emptyParagraphCount,);
 
     const normalizedRaw = raw.replace(/^\n+/, "",).replace(/\n+$/, "",);
@@ -282,8 +377,8 @@ function parseMarkdownBlocks(markdown: string, manager: MarkdownManager,): JSONC
       continue;
     }
 
-    const parsedContent = isMixedListToken(token,)
-      ? parseMixedListToken(token, manager,)
+    const parsedContent = shouldSplitListToken(token,)
+      ? parseListToken(token, manager,)
       : parseMarkdownContent(normalizedRaw, manager,);
 
     if (parsedContent.length > 0) {
@@ -313,10 +408,8 @@ export function md2json(markdown: string, options?: { indentation?: MarkdownInde
 
 export function json2md(json: JSONContent, options?: { indentation?: MarkdownIndentation; },): string {
   try {
-    const serialized = getMarkdownManager(options?.indentation,).serialize(mergeTopLevelParagraphRuns(json,),);
-    return serialized
-      .replace(/\n{4,}/g, (run,) => "\n".repeat(Math.floor(run.length / 2,),),)
-      .replace(/^([ \t]*)- $/gm, "$1-",);
+    const serialized = json2mdContent(json, getMarkdownManager(options?.indentation,),);
+    return serialized.replace(/^([ \t]*)- $/gm, "$1-",);
   } catch {
     return "";
   }
