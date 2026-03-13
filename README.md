@@ -10,7 +10,6 @@ It keeps your notes as markdown on disk, works with existing Obsidian vaults, ca
 
 - Keeps tomorrow, today, and recent notes in one continuous daily planning surface
 - Carries unfinished tasks forward so work does not disappear between days
-- Supports inline recurrence tags like `#daily`, `#weekly`, and `#3days`
 - Lets you chat with your notes, search across them, and prepare AI-assisted edits with dry-run diffs
 - Generates disposable or reusable widgets directly inside a note
 - Preserves markdown portability with support for images, wiki links, and Excalidraw embeds
@@ -24,7 +23,7 @@ Philo stores notes as plain markdown files on disk instead of locking them into 
 
 ### A calmer daily loop
 
-The core workflow is simple: open today, see what carried over, write what matters, and keep moving. Recurring work lives inline with the task itself, so the system stays readable in plain text.
+The core workflow is simple: open today, see what carried over, write what matters, and keep moving. Philo keeps the planning surface short instead of sending you into a heavier project system.
 
 ### AI that works inside the note
 
