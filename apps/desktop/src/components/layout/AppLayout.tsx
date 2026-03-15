@@ -173,10 +173,12 @@ function LazyNote({
   date,
   onOpenDate,
   onChatSelection,
+  onSelectionChange,
 }: {
   date: string;
   onOpenDate?: (date: string,) => void;
   onChatSelection?: (selectedText: string,) => void;
+  onSelectionChange?: (selectedText: string | null,) => void;
 },) {
   const [note, setNote,] = useState<DailyNote | null>(null,);
   const containerRef = useRef<HTMLDivElement>(null,);
@@ -212,7 +214,12 @@ function LazyNote({
           <div className="px-6 pt-12 pb-4">
             <DateHeader date={note.date} city={note.city} onCityChange={handleCityChange} />
           </div>
-          <EditableNote note={note} onOpenDate={onOpenDate} onChatSelection={onChatSelection} />
+          <EditableNote
+            note={note}
+            onOpenDate={onOpenDate}
+            onChatSelection={onChatSelection}
+            onSelectionChange={onSelectionChange}
+          />
         </>
       )}
     </div>
@@ -306,6 +313,11 @@ export default function AppLayout() {
     setAiError(null,);
     setAiSelectedText(null,);
   }, [],);
+
+  const handleAiSelectionChange = useCallback((selectedText: string | null,) => {
+    if (!aiComposerOpen) return;
+    setAiSelectedText(selectedText,);
+  }, [aiComposerOpen,],);
 
   const toggleLibrary = useCallback(() => {
     setLibraryOpen((prev,) => !prev);
@@ -927,6 +939,7 @@ export default function AppLayout() {
                     onOpenDate={scrollToDate}
                     onSave={handleTodaySave}
                     onChatSelection={openAiComposer}
+                    onSelectionChange={handleAiSelectionChange}
                   />
                 )}
               </div>
@@ -934,7 +947,12 @@ export default function AppLayout() {
               {pastDates.map((date,) => (
                 <div key={`${date}-${storageRevision}`} data-note-date={date}>
                   <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />
-                  <LazyNote date={date} onOpenDate={scrollToDate} onChatSelection={openAiComposer} />
+                  <LazyNote
+                    date={date}
+                    onOpenDate={scrollToDate}
+                    onChatSelection={openAiComposer}
+                    onSelectionChange={handleAiSelectionChange}
+                  />
                 </div>
               ))}
             </div>

@@ -41,6 +41,7 @@ interface EditableNoteProps {
   onSave?: (note: DailyNote,) => void;
   onOpenDate?: (date: string,) => void;
   onChatSelection?: (selectedText: string,) => void;
+  onSelectionChange?: (selectedText: string | null,) => void;
 }
 
 const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp",];
@@ -85,7 +86,10 @@ function moveSelectedNode(view: import("@tiptap/pm/view").EditorView, direction:
 }
 
 const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
-  function EditableNote({ note, placeholder = "Start writing...", onSave, onOpenDate, onChatSelection, }, ref,) {
+  function EditableNote(
+    { note, placeholder = "Start writing...", onSave, onOpenDate, onChatSelection, onSelectionChange, },
+    ref,
+  ) {
     const noteRef = useRef(note,);
     noteRef.current = note;
 
@@ -287,6 +291,28 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
       const incoming = parseJsonContent(note.content,);
       editor.commands.setContent(incoming, { emitUpdate: false, },);
     }, [note.content,],);
+
+    useEffect(() => {
+      if (!editor || !onSelectionChange) return;
+
+      const syncSelection = () => {
+        const { from, to, } = editor.state.selection;
+        const selectedText = editor.state.doc.textBetween(from, to,).trim();
+        if (!editor.isFocused && !selectedText) return;
+        onSelectionChange(selectedText || null,);
+      };
+
+      const clearSelection = () => onSelectionChange(null,);
+
+      syncSelection();
+      editor.on("selectionUpdate", syncSelection,);
+      editor.on("blur", clearSelection,);
+
+      return () => {
+        editor.off("selectionUpdate", syncSelection,);
+        editor.off("blur", clearSelection,);
+      };
+    }, [editor, onSelectionChange,],);
 
     return (
       <>
