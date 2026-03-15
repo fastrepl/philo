@@ -249,6 +249,7 @@ export default function AppLayout() {
   const [aiComposerOpen, setAiComposerOpen,] = useState(false,);
   const [aiPrompt, setAiPrompt,] = useState("",);
   const [aiSelectedText, setAiSelectedText,] = useState<string | null>(null,);
+  const [currentEditorSelection, setCurrentEditorSelection,] = useState<string | null>(null,);
   const [aiScope, setAiScope,] = useState<AssistantScope>("recent",);
   const [hasAiConfigured, setHasAiConfigured,] = useState(false,);
   const [aiRunning, setAiRunning,] = useState(false,);
@@ -302,11 +303,11 @@ export default function AppLayout() {
   const openAiComposer = useCallback((selectedText?: string,) => {
     setGlobalSearchOpen(false,);
     setAiScope("recent",);
-    setAiSelectedText(selectedText?.trim() || null,);
+    setAiSelectedText(selectedText?.trim() || currentEditorSelection || null,);
     setAiComposerOpen(true,);
     setAiError(null,);
     refreshAiAvailability();
-  }, [refreshAiAvailability,],);
+  }, [currentEditorSelection, refreshAiAvailability,],);
 
   const closeAiComposer = useCallback(() => {
     setAiComposerOpen(false,);
@@ -315,13 +316,15 @@ export default function AppLayout() {
   }, [],);
 
   const handleAiSelectionChange = useCallback((selectedText: string | null,) => {
-    if (!aiComposerOpen) return;
-    setAiSelectedText(selectedText,);
+    setCurrentEditorSelection(selectedText,);
+    if (aiComposerOpen) {
+      setAiSelectedText(selectedText,);
+    }
   }, [aiComposerOpen,],);
 
   const getCurrentSelectionText = useCallback(() => {
-    return window.getSelection?.()?.toString().trim() || undefined;
-  }, [],);
+    return window.getSelection?.()?.toString().trim() || currentEditorSelection || undefined;
+  }, [currentEditorSelection,],);
 
   const toggleLibrary = useCallback(() => {
     setLibraryOpen((prev,) => !prev);
