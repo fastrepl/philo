@@ -137,7 +137,7 @@ export const WidgetExtension = Node.create({
 
   addKeyboardShortcuts() {
     return {
-      "Mod-Enter": () => {
+      "Mod-Shift-b": () => {
         const { from, to, } = this.editor.state.selection;
         const selectedText = this.editor.state.doc.textBetween(from, to,);
         if (!selectedText.trim()) return false;

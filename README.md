@@ -35,10 +35,10 @@ Generated widgets start disposable. When one proves useful, save it to the libra
 
 ## Keyboard shortcuts
 
-- `⌘↵` build a widget from the current selection
-- `⌘K` open note chat
+- `⌘⇧B` build a widget from the current selection
+- `⌘J` open note chat
 - `⌘F` search notes
-- `⌘J` open the widget library
+- `⌘P` open the widget library
 - `⌘,` open settings
 
 ## Links

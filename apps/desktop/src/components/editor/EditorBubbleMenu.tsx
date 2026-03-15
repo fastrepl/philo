@@ -120,7 +120,7 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
           className={`bubble-btn bubble-btn-build ${building ? "bubble-btn-building" : ""}`}
           disabled={building}
         >
-          {building ? "Building..." : "Build ⌘↵"}
+          {building ? "Building..." : "Build ⌘⇧B"}
         </button>
       </div>
     </BubbleMenu>

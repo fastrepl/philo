@@ -384,7 +384,7 @@ export default function AppLayout() {
 
   useEffect(() => {
     const handleHotkey = (event: KeyboardEvent,) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "j") {
         event.preventDefault();
         if (aiComposerOpen) {
           closeAiComposer();
@@ -394,7 +394,7 @@ export default function AppLayout() {
         return;
       }
 
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "j") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
         event.preventDefault();
         toggleLibrary();
         return;
@@ -997,7 +997,7 @@ export default function AppLayout() {
         }}
       />
 
-      {/* Library drawer — triggered by macOS menu bar Cmd+J */}
+      {/* Library drawer — triggered by macOS menu bar Cmd+P */}
       <LibraryDrawer
         open={libraryOpen}
         onClose={() => setLibraryOpen(false,)}

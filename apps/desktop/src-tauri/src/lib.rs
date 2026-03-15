@@ -2030,7 +2030,7 @@ pub fn run() {
                 .build(app)?;
 
             let library = MenuItemBuilder::with_id("library", "Widget Library")
-                .accelerator("CmdOrCtrl+J")
+                .accelerator("CmdOrCtrl+P")
                 .build(app)?;
 
             let global_search = MenuItemBuilder::with_id("global-search", "Global Search")
