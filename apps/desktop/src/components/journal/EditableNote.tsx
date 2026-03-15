@@ -41,7 +41,7 @@ interface EditableNoteProps {
   onSave?: (note: DailyNote,) => void;
   onOpenDate?: (date: string,) => void;
   onChatSelection?: (selectedText: string,) => void;
-  onSelectionChange?: (selectedText: string | null,) => void;
+  onSelectionChange?: (editor: TiptapEditor, selectedText: string | null,) => void;
 }
 
 const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp",];
@@ -299,10 +299,10 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         const { from, to, } = editor.state.selection;
         const selectedText = editor.state.doc.textBetween(from, to,).trim();
         if (!editor.isFocused && !selectedText) return;
-        onSelectionChange(selectedText || null,);
+        onSelectionChange(editor, selectedText || null,);
       };
 
-      const clearSelection = () => onSelectionChange(null,);
+      const clearSelection = () => onSelectionChange(editor, null,);
 
       syncSelection();
       editor.on("selectionUpdate", syncSelection,);

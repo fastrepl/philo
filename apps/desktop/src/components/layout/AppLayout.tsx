@@ -3,6 +3,7 @@ import { listen, } from "@tauri-apps/api/event";
 import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { watch, } from "@tauri-apps/plugin-fs";
 import { openPath, } from "@tauri-apps/plugin-opener";
+import type { Editor as TiptapEditor, } from "@tiptap/core";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, } from "react";
 import { useCurrentDate, } from "../../hooks/useCurrentDate";
 import { useCurrentCity, } from "../../hooks/useTimezoneCity";
@@ -178,7 +179,7 @@ function LazyNote({
   date: string;
   onOpenDate?: (date: string,) => void;
   onChatSelection?: (selectedText: string,) => void;
-  onSelectionChange?: (selectedText: string | null,) => void;
+  onSelectionChange?: (editor: TiptapEditor, selectedText: string | null,) => void;
 },) {
   const [note, setNote,] = useState<DailyNote | null>(null,);
   const containerRef = useRef<HTMLDivElement>(null,);
@@ -257,6 +258,7 @@ export default function AppLayout() {
   const [aiResult, setAiResult,] = useState<AssistantResult | null>(null,);
   const [aiApplyingDates, setAiApplyingDates,] = useState<string[]>([],);
   const aiAbortControllerRef = useRef<AbortController | null>(null,);
+  const aiSelectionEditorRef = useRef<TiptapEditor | null>(null,);
   const aiLastSubmittedPromptRef = useRef("",);
   const todayNoteRef = useRef<DailyNote | null>(null,);
   const suppressWatcherUntilRef = useRef(0,);
@@ -315,7 +317,8 @@ export default function AppLayout() {
     setAiSelectedText(null,);
   }, [],);
 
-  const handleAiSelectionChange = useCallback((selectedText: string | null,) => {
+  const handleAiSelectionChange = useCallback((editor: TiptapEditor, selectedText: string | null,) => {
+    aiSelectionEditorRef.current = editor;
     setCurrentEditorSelection(selectedText,);
     if (aiComposerOpen) {
       setAiSelectedText(selectedText,);
@@ -323,6 +326,14 @@ export default function AppLayout() {
   }, [aiComposerOpen,],);
 
   const getCurrentSelectionText = useCallback(() => {
+    const editor = aiSelectionEditorRef.current;
+    if (editor && !editor.isDestroyed) {
+      const { from, to, } = editor.state.selection;
+      const selectedText = editor.state.doc.textBetween(from, to,).trim();
+      if (selectedText) {
+        return selectedText;
+      }
+    }
     return window.getSelection?.()?.toString().trim() || currentEditorSelection || undefined;
   }, [currentEditorSelection,],);
 
