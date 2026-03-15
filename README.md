@@ -61,6 +61,8 @@ If you are maintaining Philo's Google Cloud project, make sure:
 3. The bundled desktop OAuth client remains active on the project.
 4. `PHILO_GOOGLE_OAUTH_CLIENT_SECRET` is available in local build envs and GitHub Actions secrets if that client requires a secret during token exchange.
 
+For local desktop development, put `PHILO_GOOGLE_OAUTH_CLIENT_SECRET=...` in the repo root `.env` or export it in your shell before starting `pnpm dev`. The desktop Tauri launcher reads that value and passes it through to Rust for the Google token exchange.
+
 Philo currently requests:
 
 - `openid`, `email`, and `profile`

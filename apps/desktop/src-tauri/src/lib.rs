@@ -643,9 +643,11 @@ fn wait_for_google_oauth_callback(
         .map_err(|_| "Timed out waiting for Google authorization.".to_string())
 }
 
-fn google_oauth_client_secret() -> Option<&'static str> {
-    option_env!("PHILO_GOOGLE_OAUTH_CLIENT_SECRET")
-        .map(str::trim)
+fn google_oauth_client_secret() -> Option<String> {
+    env::var("PHILO_GOOGLE_OAUTH_CLIENT_SECRET")
+        .ok()
+        .or_else(|| option_env!("PHILO_GOOGLE_OAUTH_CLIENT_SECRET").map(ToOwned::to_owned))
+        .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
 }
 

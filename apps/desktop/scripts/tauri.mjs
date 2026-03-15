@@ -2,13 +2,26 @@ import { spawn, } from "node:child_process";
 import { cpSync, mkdirSync, } from "node:fs";
 import { dirname, extname, join, resolve, } from "node:path";
 import { fileURLToPath, } from "node:url";
+import { loadEnv, } from "vite";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url,),);
 const appDir = resolve(scriptDir, "..",);
+const repoDir = resolve(appDir, "..", "..",);
 const srcTauriDir = resolve(appDir, "src-tauri",);
 
 const args = process.argv.slice(2,);
 const [command, ...rest] = args;
+
+function applyEnv(mode,) {
+  for (const envDir of [repoDir, appDir,]) {
+    const loaded = loadEnv(mode, envDir, "",);
+    for (const [key, value,] of Object.entries(loaded,)) {
+      if (process.env[key] === undefined) {
+        process.env[key] = value;
+      }
+    }
+  }
+}
 
 function run(cmd, cmdArgs, options = {},) {
   return new Promise((resolvePromise, rejectPromise,) => {
@@ -92,6 +105,8 @@ const tauriArgs = command === "dev"
   : args;
 
 try {
+  applyEnv(command === "dev" ? "development" : "production",);
+
   if (command === "dev") {
     await buildSidecar("debug",);
   } else if (command === "build") {

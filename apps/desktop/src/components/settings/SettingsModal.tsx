@@ -48,6 +48,25 @@ const filenameTokenChip =
   "inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600";
 const FILENAME_TOKEN_REGEX = /(\{YYYY\}|\{MM\}|\{DD\})/g;
 
+function getErrorMessage(error: unknown, fallback: string,) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error && typeof error === "object" && "message" in error) {
+    const message = error.message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+
+  return fallback;
+}
+
 function GoogleMark() {
   return (
     <svg
@@ -343,7 +362,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       const googlePatch = await connectGoogleAccount(currentSettings,);
       await persistGooglePatch(googlePatch,);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to connect Google account.";
+      const message = getErrorMessage(err, "Failed to connect Google account.",);
       setGoogleError(message,);
     } finally {
       setGoogleBusy(false,);
