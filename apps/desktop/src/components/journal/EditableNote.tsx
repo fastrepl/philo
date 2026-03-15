@@ -26,6 +26,11 @@ import { HashtagExtension, } from "../editor/extensions/hashtag/HashtagExtension
 import { CustomListKeymap, } from "../editor/extensions/list-keymap";
 import { buildMentionChipSuggestion, MentionChipExtension, } from "../editor/extensions/mention/MentionChipExtension";
 import { CustomParagraph, } from "../editor/extensions/paragraph/ParagraphExtension";
+import {
+  PersistentSelectionHighlightExtension,
+  type PersistentSelectionRange,
+  setPersistentSelectionHighlight,
+} from "../editor/extensions/persistent-selection/PersistentSelectionHighlightExtension";
 import { CustomTaskItem, } from "../editor/extensions/task-item/TaskItemNode";
 import { UnderlineExtension, } from "../editor/extensions/underline/UnderlineExtension";
 import { WidgetExtension, } from "../editor/extensions/widget/WidgetExtension";
@@ -35,13 +40,23 @@ export interface EditableNoteHandle {
   editor: TiptapEditor | null;
 }
 
+export interface EditableNoteSelection {
+  editor: TiptapEditor;
+  noteDate: string;
+  from: number;
+  to: number;
+  text: string;
+}
+
 interface EditableNoteProps {
   note: DailyNote;
   placeholder?: string;
   onSave?: (note: DailyNote,) => void;
   onOpenDate?: (date: string,) => void;
-  onChatSelection?: (selectedText: string,) => void;
-  onSelectionChange?: (editor: TiptapEditor, selectedText: string | null,) => void;
+  onChatSelection?: (selection: EditableNoteSelection,) => void;
+  onSelectionChange?: (selection: EditableNoteSelection | null,) => void;
+  onSelectionBlur?: (editor: TiptapEditor,) => void;
+  persistentSelectionRange?: PersistentSelectionRange | null;
 }
 
 const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp",];
@@ -87,7 +102,16 @@ function moveSelectedNode(view: import("@tiptap/pm/view").EditorView, direction:
 
 const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
   function EditableNote(
-    { note, placeholder = "Start writing...", onSave, onOpenDate, onChatSelection, onSelectionChange, },
+    {
+      note,
+      placeholder = "Start writing...",
+      onSave,
+      onOpenDate,
+      onChatSelection,
+      onSelectionChange,
+      onSelectionBlur,
+      persistentSelectionRange,
+    },
     ref,
   ) {
     const noteRef = useRef(note,);
@@ -173,6 +197,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         HashtagExtension,
         ExcalidrawExtension,
         WidgetExtension,
+        PersistentSelectionHighlightExtension,
         CustomListKeymap,
         ClipboardTextSerializer,
         FileHandler.configure({
@@ -299,7 +324,17 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         const { from, to, } = editor.state.selection;
         const selectedText = editor.state.doc.textBetween(from, to,).trim();
         if (!editor.isFocused && !selectedText) return;
-        onSelectionChange(editor, selectedText || null,);
+        onSelectionChange(
+          selectedText
+            ? {
+              editor,
+              noteDate: noteRef.current.date,
+              from,
+              to,
+              text: selectedText,
+            }
+            : null,
+        );
       };
 
       syncSelection();
@@ -310,9 +345,43 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
       };
     }, [editor, onSelectionChange,],);
 
+    useEffect(() => {
+      if (!editor || !onSelectionBlur) return;
+
+      const handleBlur = () => onSelectionBlur(editor,);
+      editor.on("blur", handleBlur,);
+
+      return () => {
+        editor.off("blur", handleBlur,);
+      };
+    }, [editor, onSelectionBlur,],);
+
+    useEffect(() => {
+      if (!editor || editor.isDestroyed) return;
+      setPersistentSelectionHighlight(editor, persistentSelectionRange ?? null,);
+    }, [
+      editor,
+      persistentSelectionRange?.from,
+      persistentSelectionRange?.to,
+    ],);
+
     return (
       <>
-        {editor && onChatSelection && <EditorBubbleMenu editor={editor} onChatSelection={onChatSelection} />}
+        {editor && onChatSelection && (
+          <EditorBubbleMenu
+            editor={editor}
+            onChatSelection={(selectedText,) => {
+              const { from, to, } = editor.state.selection;
+              onChatSelection({
+                editor,
+                noteDate: noteRef.current.date,
+                from,
+                to,
+                text: selectedText,
+              },);
+            }}
+          />
+        )}
         <EditorContent editor={editor} />
       </>
     );

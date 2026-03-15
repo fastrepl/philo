@@ -28,7 +28,7 @@ import {
 } from "../../services/updater";
 import { DailyNote, formatDate, getDaysAgo, isToday, } from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
-import EditableNote, { type EditableNoteHandle, } from "../journal/EditableNote";
+import EditableNote, { type EditableNoteHandle, type EditableNoteSelection, } from "../journal/EditableNote";
 import { LibraryDrawer, } from "../library/LibraryDrawer";
 import { OnboardingModal, } from "../onboarding/OnboardingModal";
 import { SettingsModal, } from "../settings/SettingsModal";
@@ -47,6 +47,12 @@ interface GlobalSearchResult {
   relativePath: string;
   title: string;
   snippet: string;
+}
+
+interface AiSelectionHighlight {
+  noteDate: string;
+  from: number;
+  to: number;
 }
 
 function renderSearchSnippet(snippet: string,) {
@@ -175,11 +181,15 @@ function LazyNote({
   onOpenDate,
   onChatSelection,
   onSelectionChange,
+  onSelectionBlur,
+  persistentSelectionRange,
 }: {
   date: string;
   onOpenDate?: (date: string,) => void;
-  onChatSelection?: (selectedText: string,) => void;
-  onSelectionChange?: (editor: TiptapEditor, selectedText: string | null,) => void;
+  onChatSelection?: (selection: EditableNoteSelection,) => void;
+  onSelectionChange?: (selection: EditableNoteSelection | null,) => void;
+  onSelectionBlur?: (editor: TiptapEditor,) => void;
+  persistentSelectionRange?: { from: number; to: number; } | null;
 },) {
   const [note, setNote,] = useState<DailyNote | null>(null,);
   const containerRef = useRef<HTMLDivElement>(null,);
@@ -220,6 +230,8 @@ function LazyNote({
             onOpenDate={onOpenDate}
             onChatSelection={onChatSelection}
             onSelectionChange={onSelectionChange}
+            onSelectionBlur={onSelectionBlur}
+            persistentSelectionRange={persistentSelectionRange}
           />
         </>
       )}
@@ -250,7 +262,7 @@ export default function AppLayout() {
   const [aiComposerOpen, setAiComposerOpen,] = useState(false,);
   const [aiPrompt, setAiPrompt,] = useState("",);
   const [aiSelectedText, setAiSelectedText,] = useState<string | null>(null,);
-  const [currentEditorSelection, setCurrentEditorSelection,] = useState<string | null>(null,);
+  const [aiSelectionHighlight, setAiSelectionHighlight,] = useState<AiSelectionHighlight | null>(null,);
   const [aiScope, setAiScope,] = useState<AssistantScope>("recent",);
   const [hasAiConfigured, setHasAiConfigured,] = useState(false,);
   const [aiRunning, setAiRunning,] = useState(false,);
@@ -258,8 +270,7 @@ export default function AppLayout() {
   const [aiResult, setAiResult,] = useState<AssistantResult | null>(null,);
   const [aiApplyingDates, setAiApplyingDates,] = useState<string[]>([],);
   const aiAbortControllerRef = useRef<AbortController | null>(null,);
-  const aiSelectionEditorRef = useRef<TiptapEditor | null>(null,);
-  const preserveAiSelectionOnOpenRef = useRef(false,);
+  const currentSelectionRef = useRef<EditableNoteSelection | null>(null,);
   const aiLastSubmittedPromptRef = useRef("",);
   const todayNoteRef = useRef<DailyNote | null>(null,);
   const suppressWatcherUntilRef = useRef(0,);
@@ -283,6 +294,9 @@ export default function AppLayout() {
 
   const openGlobalSearch = useCallback(() => {
     setAiComposerOpen(false,);
+    setAiSelectedText(null,);
+    setAiSelectionHighlight(null,);
+    setAiError(null,);
     setGlobalSearchOpen(true,);
   }, [],);
 
@@ -303,48 +317,54 @@ export default function AppLayout() {
       .catch(console.error,);
   }, [],);
 
-  const openAiComposer = useCallback((selectedText?: string,) => {
-    const nextSelectedText = selectedText?.trim() || currentEditorSelection || null;
-    preserveAiSelectionOnOpenRef.current = Boolean(nextSelectedText,);
+  const openAiComposer = useCallback((selection?: EditableNoteSelection | string,) => {
+    const nextSelection = typeof selection === "string"
+      ? currentSelectionRef.current
+      : selection ?? currentSelectionRef.current;
+    const nextSelectedText = typeof selection === "string"
+      ? selection.trim() || nextSelection?.text || null
+      : selection?.text || nextSelection?.text || null;
     setGlobalSearchOpen(false,);
     setAiScope("recent",);
     setAiSelectedText(nextSelectedText,);
+    setAiSelectionHighlight(
+      nextSelection
+        ? { noteDate: nextSelection.noteDate, from: nextSelection.from, to: nextSelection.to, }
+        : null,
+    );
     setAiComposerOpen(true,);
     setAiError(null,);
     refreshAiAvailability();
-  }, [currentEditorSelection, refreshAiAvailability,],);
+  }, [refreshAiAvailability,],);
 
   const closeAiComposer = useCallback(() => {
-    preserveAiSelectionOnOpenRef.current = false;
     setAiComposerOpen(false,);
     setAiError(null,);
     setAiSelectedText(null,);
+    setAiSelectionHighlight(null,);
   }, [],);
 
-  const handleAiSelectionChange = useCallback((editor: TiptapEditor, selectedText: string | null,) => {
-    aiSelectionEditorRef.current = editor;
-    setCurrentEditorSelection(selectedText,);
-    if (selectedText === null && preserveAiSelectionOnOpenRef.current) {
-      preserveAiSelectionOnOpenRef.current = false;
-      return;
-    }
-    preserveAiSelectionOnOpenRef.current = false;
+  const handleAiSelectionChange = useCallback((selection: EditableNoteSelection | null,) => {
+    currentSelectionRef.current = selection;
     if (aiComposerOpen) {
-      setAiSelectedText(selectedText,);
+      setAiSelectedText(selection?.text ?? null,);
+      setAiSelectionHighlight(
+        selection
+          ? { noteDate: selection.noteDate, from: selection.from, to: selection.to, }
+          : null,
+      );
     }
   }, [aiComposerOpen,],);
 
-  const getCurrentSelectionText = useCallback(() => {
-    const editor = aiSelectionEditorRef.current;
-    if (editor && !editor.isDestroyed) {
-      const { from, to, } = editor.state.selection;
-      const selectedText = editor.state.doc.textBetween(from, to,).trim();
-      if (selectedText) {
-        return selectedText;
-      }
+  const handleAiSelectionBlur = useCallback((editor: TiptapEditor,) => {
+    if (currentSelectionRef.current?.editor === editor) {
+      currentSelectionRef.current = null;
     }
-    return window.getSelection?.()?.toString().trim() || currentEditorSelection || undefined;
-  }, [currentEditorSelection,],);
+  }, [],);
+
+  const getCurrentSelectionText = useCallback(() => {
+    return currentSelectionRef.current?.text || window.getSelection?.()?.toString().trim() || undefined;
+  }, [],);
 
   const toggleLibrary = useCallback(() => {
     setLibraryOpen((prev,) => !prev);
@@ -416,7 +436,7 @@ export default function AppLayout() {
         if (aiComposerOpen) {
           closeAiComposer();
         } else {
-          openAiComposer(getCurrentSelectionText(),);
+          openAiComposer(currentSelectionRef.current ?? getCurrentSelectionText(),);
         }
         return;
       }
@@ -977,6 +997,10 @@ export default function AppLayout() {
                     onSave={handleTodaySave}
                     onChatSelection={openAiComposer}
                     onSelectionChange={handleAiSelectionChange}
+                    onSelectionBlur={handleAiSelectionBlur}
+                    persistentSelectionRange={aiSelectionHighlight?.noteDate === todayNote.date
+                      ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                      : null}
                   />
                 )}
               </div>
@@ -989,6 +1013,10 @@ export default function AppLayout() {
                     onOpenDate={scrollToDate}
                     onChatSelection={openAiComposer}
                     onSelectionChange={handleAiSelectionChange}
+                    onSelectionBlur={handleAiSelectionBlur}
+                    persistentSelectionRange={aiSelectionHighlight?.noteDate === date
+                      ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                      : null}
                   />
                 </div>
               ))}

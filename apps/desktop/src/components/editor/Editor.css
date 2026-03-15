@@ -42,6 +42,13 @@
   display: none;
 }
 
+.tiptap .persistent-selection-highlight {
+  background: rgba(191, 219, 254, 0.72);
+  border-radius: 0.28rem;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 .tiptap hr {
   margin: 1rem 0;
   border: 0;
