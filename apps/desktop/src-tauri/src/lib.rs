@@ -196,6 +196,204 @@ fn write_google_oauth_response(
         .map_err(|e| e.to_string())
 }
 
+fn google_oauth_callback_page(success: bool) -> String {
+    let eyebrow = if success {
+        "Google connected"
+    } else {
+        "Google sign-in failed"
+    };
+    let title = if success {
+        "Account connected."
+    } else {
+        "Connection didn't go through."
+    };
+    let description = if success {
+        "Your Google account is now connected to Philo."
+    } else {
+        "Philo could not finish connecting your Google account."
+    };
+    let detail = if success {
+        "Return to the app to keep going. You can close this window."
+    } else {
+        "Close this window and try again from Philo."
+    };
+    let panel_class = if success {
+        "panel panel-success"
+    } else {
+        "panel panel-error"
+    };
+
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} | Philo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {{
+        color-scheme: light;
+        --bg: #f4f4f1;
+        --bg-soft: rgba(255, 255, 255, 0.72);
+        --line: #e2e2db;
+        --text: #252525;
+        --muted: #646460;
+        --accent: #5f70d8;
+        --success: #2f7a58;
+        --success-bg: rgba(47, 122, 88, 0.08);
+        --error: #a14e42;
+        --error-bg: rgba(161, 78, 66, 0.08);
+      }}
+
+      * {{
+        box-sizing: border-box;
+      }}
+
+      body {{
+        margin: 0;
+        min-height: 100vh;
+        font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+        background: linear-gradient(150deg, #f6f6f4 0%, #efefeb 100%);
+        color: var(--text);
+        position: relative;
+        overflow: hidden;
+      }}
+
+      .ambient {{
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at 10% 12%, rgba(255, 255, 255, 0.95) 0%, transparent 32%),
+          radial-gradient(circle at 92% 88%, rgba(95, 112, 216, 0.16) 0%, transparent 34%);
+        opacity: 0.95;
+      }}
+
+      .shell {{
+        position: relative;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 20px;
+      }}
+
+      .frame {{
+        width: min(100%, 560px);
+      }}
+
+      .brand {{
+        margin: 0 0 14px;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #3f3f3d;
+      }}
+
+      .panel {{
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        background: var(--bg-soft);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 20px 60px rgba(32, 32, 29, 0.08);
+      }}
+
+      .panel-success {{
+        box-shadow:
+          0 20px 60px rgba(32, 32, 29, 0.08),
+          inset 0 0 0 1px rgba(47, 122, 88, 0.08);
+      }}
+
+      .panel-error {{
+        box-shadow:
+          0 20px 60px rgba(32, 32, 29, 0.08),
+          inset 0 0 0 1px rgba(161, 78, 66, 0.08);
+      }}
+
+      .eyebrow {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }}
+
+      .panel-success .eyebrow {{
+        color: var(--success);
+        background: var(--success-bg);
+      }}
+
+      .panel-error .eyebrow {{
+        color: var(--error);
+        background: var(--error-bg);
+      }}
+
+      h1 {{
+        margin: 18px 0 10px;
+        font-size: clamp(28px, 4vw, 40px);
+        line-height: 1.1;
+        font-weight: 500;
+        letter-spacing: -0.04em;
+      }}
+
+      .description {{
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.7;
+        color: #3f3f3d;
+      }}
+
+      .detail {{
+        margin: 20px 0 0;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        font-size: 12px;
+        line-height: 1.7;
+        color: var(--muted);
+      }}
+
+      @media (max-width: 640px) {{
+        .shell {{
+          padding: 18px;
+        }}
+
+        .panel {{
+          padding: 22px;
+          border-radius: 20px;
+        }}
+      }}
+    </style>
+  </head>
+  <body>
+    <div class="ambient"></div>
+    <main class="shell">
+      <div class="frame">
+        <p class="brand">Philo</p>
+        <section class="{panel_class}">
+          <p class="eyebrow">{eyebrow}</p>
+          <h1>{title}</h1>
+          <p class="description">{description}</p>
+          <p class="detail">{detail}</p>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>"#
+    )
+}
+
 fn receive_google_oauth_callback(listener: TcpListener) -> GoogleOAuthCallbackPayload {
     let Ok((mut stream, _addr)) = listener.accept() else {
         return GoogleOAuthCallbackPayload {
@@ -212,7 +410,7 @@ fn receive_google_oauth_callback(listener: TcpListener) -> GoogleOAuthCallbackPa
             let _ = write_google_oauth_response(
                 &mut stream,
                 "400 Bad Request",
-                "<html><body><h1>Philo</h1><p>Google sign-in failed.</p></body></html>",
+                &google_oauth_callback_page(false),
             );
             return GoogleOAuthCallbackPayload {
                 code: None,
@@ -231,9 +429,9 @@ fn receive_google_oauth_callback(listener: TcpListener) -> GoogleOAuthCallbackPa
 
     let payload = parse_google_oauth_callback(path);
     let body = if payload.error.is_some() {
-        "<html><body><h1>Philo</h1><p>Google sign-in failed. You can close this window and try again.</p></body></html>"
+        google_oauth_callback_page(false)
     } else {
-        "<html><body><h1>Philo</h1><p>Google account connected. You can close this window.</p></body></html>"
+        google_oauth_callback_page(true)
     };
     let status = if payload.error.is_some() {
         "400 Bad Request"
@@ -241,7 +439,7 @@ fn receive_google_oauth_callback(listener: TcpListener) -> GoogleOAuthCallbackPa
         "200 OK"
     };
 
-    let _ = write_google_oauth_response(&mut stream, status, body);
+    let _ = write_google_oauth_response(&mut stream, status, &body);
     payload
 }
 
