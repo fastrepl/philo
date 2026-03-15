@@ -644,10 +644,8 @@ fn wait_for_google_oauth_callback(
 }
 
 fn google_oauth_client_secret() -> Option<String> {
-    env::var("PHILO_GOOGLE_OAUTH_CLIENT_SECRET")
+    env::var("GOOGLE_OAUTH_CLIENT_SECRET")
         .ok()
-        .or_else(|| env::var("GOOGLE_OAUTH_CLIENT_SECRET").ok())
-        .or_else(|| option_env!("PHILO_GOOGLE_OAUTH_CLIENT_SECRET").map(ToOwned::to_owned))
         .or_else(|| option_env!("GOOGLE_OAUTH_CLIENT_SECRET").map(ToOwned::to_owned))
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())

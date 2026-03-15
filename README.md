@@ -59,9 +59,9 @@ If you are maintaining Philo's Google Cloud project, make sure:
 1. The Gmail API and Google Calendar API are enabled.
 2. The OAuth consent screen is configured in `Google Auth platform`.
 3. The bundled desktop OAuth client remains active on the project.
-4. `PHILO_GOOGLE_OAUTH_CLIENT_SECRET` is available in local build envs and GitHub Actions secrets if that client requires a secret during token exchange.
+4. `GOOGLE_OAUTH_CLIENT_SECRET` is available in local build envs and GitHub Actions secrets if that client requires a secret during token exchange.
 
-For local desktop development, put either `PHILO_GOOGLE_OAUTH_CLIENT_SECRET=...` or `GOOGLE_OAUTH_CLIENT_SECRET=...` in the repo root `.env` or export it in your shell before starting `pnpm dev`. If you want to override the bundled client ID locally, `GOOGLE_OAUTH_CLIENT_ID=...` is also accepted. The desktop Tauri launcher reads those values and passes them through to Rust and Vite before startup.
+For local desktop development, put `GOOGLE_OAUTH_CLIENT_SECRET=...` in the repo root `.env` or export it in your shell before starting `pnpm dev`. If you want to override the bundled client ID locally, `GOOGLE_OAUTH_CLIENT_ID=...` is also accepted. The desktop Tauri launcher reads those values and passes them through to Rust and Vite before startup.
 
 Philo currently requests:
 

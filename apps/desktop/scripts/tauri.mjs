@@ -23,14 +23,7 @@ function applyEnv(mode,) {
   }
 }
 
-function applyGoogleOAuthAliases() {
-  if (
-    process.env.PHILO_GOOGLE_OAUTH_CLIENT_SECRET === undefined
-    && process.env.GOOGLE_OAUTH_CLIENT_SECRET
-  ) {
-    process.env.PHILO_GOOGLE_OAUTH_CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-  }
-
+function applyGoogleOAuthEnv() {
   if (
     process.env.VITE_GOOGLE_OAUTH_CLIENT_ID === undefined
     && process.env.GOOGLE_OAUTH_CLIENT_ID
@@ -122,7 +115,7 @@ const tauriArgs = command === "dev"
 
 try {
   applyEnv(command === "dev" ? "development" : "production",);
-  applyGoogleOAuthAliases();
+  applyGoogleOAuthEnv();
 
   if (command === "dev") {
     await buildSidecar("debug",);
