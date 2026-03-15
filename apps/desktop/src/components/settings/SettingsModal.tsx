@@ -6,13 +6,7 @@ import claudeAiSymbol from "../../assets/claude-ai-symbol.svg";
 import googleGeminiIcon from "../../assets/google-gemini-icon.svg";
 import openaiSymbol from "../../assets/openai-symbol.svg";
 import openrouterIcon from "../../assets/openrouter.svg";
-import {
-  connectGoogleAccount,
-  GOOGLE_ACCOUNT_SCOPES,
-  GOOGLE_CALENDAR_SCOPE,
-  GOOGLE_GMAIL_SCOPE,
-  isGoogleAccountConnected,
-} from "../../services/google";
+import { connectGoogleAccount, isGoogleAccountConnected, } from "../../services/google";
 import { detectObsidianFolders, } from "../../services/obsidian";
 import { applyFilenamePattern, getJournalDir, initJournalScope, resetJournalDir, } from "../../services/paths";
 import {
@@ -50,13 +44,6 @@ const AI_PROVIDER_ICONS: Record<AiProvider, string> = {
 
 const mono = { fontFamily: "'IBM Plex Mono', monospace", };
 const googleButtonText = { fontFamily: "'Roboto', 'IBM Plex Sans', sans-serif", };
-const GOOGLE_SCOPE_LABELS: Record<string, string> = {
-  openid: "OpenID",
-  email: "Email address",
-  profile: "Basic profile",
-  [GOOGLE_CALENDAR_SCOPE]: "Google Calendar (read-only)",
-  [GOOGLE_GMAIL_SCOPE]: "Gmail (read-only)",
-};
 const filenameTokenChip =
   "inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600";
 const FILENAME_TOKEN_REGEX = /(\{YYYY\}|\{MM\}|\{DD\})/g;
@@ -145,10 +132,6 @@ function FilenamePatternFieldValue({ value, muted = false, }: { value: string; m
   );
 }
 
-function getGoogleScopeLabel(scope: string,) {
-  return GOOGLE_SCOPE_LABELS[scope] ?? scope;
-}
-
 export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const [settings, setSettings,] = useState<Settings | null>(null,);
   const [saveState, setSaveState,] = useState<"idle" | "saving" | "error">("idle",);
@@ -216,7 +199,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const effectivePattern = settings.filenamePattern || DEFAULT_FILENAME_PATTERN;
   const filenamePreview = applyFilenamePattern(effectivePattern, getToday(),) + ".md";
   const googleConnected = isGoogleAccountConnected(settings,);
-  const googleScopes = googleConnected ? settings.googleGrantedScopes : [...GOOGLE_ACCOUNT_SCOPES,];
 
   const buildPersistedSettings = async (current: Settings,) => {
     const normalizedVault = current.vaultDir.trim();
@@ -651,21 +633,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                 Disconnect
               </button>
             )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {googleScopes.map((scope,) => (
-              <span
-                key={scope}
-                className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${
-                  googleConnected
-                    ? "border-violet-200 bg-violet-50 text-violet-700"
-                    : "border-gray-200 bg-gray-50 text-gray-500"
-                }`}
-                style={mono}
-              >
-                {getGoogleScopeLabel(scope,)}
-              </span>
-            ))}
           </div>
         </div>
 
