@@ -13,6 +13,11 @@ const capabilities = [
     placeholder: "replace with task rollover screenshot",
   },
   {
+    title: "Recurring work comes back on its own",
+    description: "Daily and scheduled tasks can return automatically, so you do not have to rebuild the same plan every morning.",
+    placeholder: "replace with recurring tasks screenshot",
+  },
+  {
     title: "Markdown, not lock-in",
     description: "Keep your journal as plain files on disk and use your existing Obsidian vault if you want.",
     placeholder: "replace with markdown vault screenshot",
@@ -21,11 +26,6 @@ const capabilities = [
     title: "Free and open source",
     description: "Philo is meant to augment your vault, not turn your daily notes into another subscription silo.",
     placeholder: "replace with repo screenshot",
-  },
-  {
-    title: "AI and claw workflows are optional",
-    description: "Widgets, in-note AI, and OpenClaw-style automation sit on top of the core loop instead of replacing it.",
-    placeholder: "replace with optional tools screenshot",
   },
 ];
 
@@ -101,8 +101,8 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
             automatically.
           </p>
           <p class="hero-note">
-            Widgets, in-note AI, and computer-use workflows are there when they help. They are not
-            the reason the app exists.
+            It is built first for people who already live in daily notes and want a calmer planning
+            loop, not a bigger system to manage.
           </p>
           <div class="download-split" data-download>
             <a class="download-button" data-download-primary href="https://github.com/ComputelessComputer/philo/releases/latest">
@@ -151,10 +151,10 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
         </section>
 
         <section class="panel enter" style="--delay: 210ms;">
-          <h2>Inline tools when a note needs one</h2>
+          <h2>Extra utilities, if you want them</h2>
           <p class="item-copy">
-            Philo is a daily notes app first. When text is not enough, you can spin up a small tool
-            inside the note and keep the ones that earn a permanent spot.
+            The core product is still the daily note. Widgets, AI help, and computer-use workflows
+            are add-ons for the moments when plain text is not enough.
           </p>
           <div class="carousel" data-carousel>
             <div class="carousel-controls">
