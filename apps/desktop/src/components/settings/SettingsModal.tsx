@@ -1,6 +1,7 @@
 import { join, } from "@tauri-apps/api/path";
 import { open as openDialog, } from "@tauri-apps/plugin-dialog";
 import { exists, } from "@tauri-apps/plugin-fs";
+import { RefreshCw, X, } from "lucide-react";
 import { useEffect, useRef, useState, } from "react";
 import claudeAiSymbol from "../../assets/claude-ai-symbol.svg";
 import googleGeminiIcon from "../../assets/google-gemini-icon.svg";
@@ -614,17 +615,27 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             </div>
             {googleConnected
               ? (
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="mt-2 flex items-center gap-2">
                   <p className="min-w-0 flex-1 text-sm text-gray-700 break-all" style={mono}>
                     {settings.googleAccountEmail}
                   </p>
                   <button
                     onClick={handleConnectGoogle}
                     disabled={googleBusy}
-                    className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-600 transition-colors cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
-                    style={mono}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
+                    title="Refresh Google connection"
+                    aria-label="Refresh Google connection"
                   >
-                    {googleBusy ? "Waiting..." : "Connect more"}
+                    <RefreshCw className={`h-4 w-4 ${googleBusy ? "animate-spin" : ""}`} strokeWidth={2} />
+                  </button>
+                  <button
+                    onClick={handleDisconnectGoogle}
+                    disabled={googleBusy}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
+                    title="Disconnect Google"
+                    aria-label="Disconnect Google"
+                  >
+                    <X className="h-4 w-4" strokeWidth={2} />
                   </button>
                 </div>
               )
@@ -640,31 +651,21 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             </p>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            {!googleConnected && (
-              <button
-                onClick={handleConnectGoogle}
-                disabled={googleBusy}
-                className="inline-flex min-h-10 items-center gap-3 rounded-full border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
-                style={{
-                  ...googleButtonText,
-                  backgroundColor: "#f2f2f2",
-                  borderColor: "#d2d2d2",
-                }}
-              >
-                <GoogleMark />
-                <span>{googleBusy ? "Waiting for Google..." : "Continue with Google"}</span>
-              </button>
-            )}
-            {googleConnected && (
-              <button
-                onClick={handleDisconnectGoogle}
-                disabled={googleBusy}
-                className="inline-flex min-h-10 items-center rounded-full border border-gray-200 bg-white px-4 text-sm text-gray-600 transition-colors cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
-                style={mono}
-              >
-                Disconnect
-              </button>
-            )}
+            <button
+              onClick={handleConnectGoogle}
+              disabled={googleBusy}
+              className="inline-flex min-h-10 items-center gap-3 rounded-full border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
+              style={{
+                ...googleButtonText,
+                backgroundColor: "#f2f2f2",
+                borderColor: "#d2d2d2",
+              }}
+            >
+              <GoogleMark />
+              <span>
+                {googleBusy ? "Waiting for Google..." : googleConnected ? "Connect more" : "Continue with Google"}
+              </span>
+            </button>
           </div>
         </div>
 
