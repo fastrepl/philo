@@ -7,6 +7,15 @@ const GEOLOCATION_TIMEOUT_MS = 10_000;
 const GEOCODE_LOOKUP_TIMEOUT_MS = 4_000;
 const REVERSE_GEOCODE_URL = "https://nominatim.openstreetmap.org/reverse";
 
+function getTimeZoneCity(): string {
+  if (typeof Intl === "undefined") return "";
+
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  if (!timeZone.includes("/",)) return "";
+
+  return timeZone.split("/",).pop()?.replace(/_/g, " ",).trim() ?? "";
+}
+
 function readCachedCity(): string {
   if (typeof window === "undefined") return "";
 
@@ -100,10 +109,11 @@ async function reverseGeocodeCity(latitude: number, longitude: number, signal: A
 }
 
 export function useCurrentCity(): string {
-  const [city, setCity,] = useState(readCachedCity,);
+  const [city, setCity,] = useState(() => readCachedCity() || getTimeZoneCity());
 
   useEffect(() => {
     let disposed = false;
+    const fallbackCity = getTimeZoneCity();
 
     async function refresh() {
       try {
@@ -120,7 +130,7 @@ export function useCurrentCity(): string {
 
         if (permissions.location !== "granted") {
           clearCachedCity();
-          setCity("",);
+          setCity(fallbackCity,);
           return;
         }
 
@@ -152,11 +162,11 @@ export function useCurrentCity(): string {
         }
 
         clearCachedCity();
-        setCity("",);
+        setCity(fallbackCity,);
       } catch (error) {
         if ((error as Error).name === "AbortError" || disposed) return;
         clearCachedCity();
-        setCity("",);
+        setCity(fallbackCity,);
       }
     }
 
