@@ -1,6 +1,6 @@
 import { invoke, } from "@tauri-apps/api/core";
 import { openUrl, } from "@tauri-apps/plugin-opener";
-import { loadSettings, saveSettings, type Settings, } from "./settings";
+import { type GoogleAccount, loadSettings, saveSettings, type Settings, } from "./settings";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_CONNECT_TIMEOUT_MS = 180_000;
@@ -40,17 +40,26 @@ interface GoogleOAuthConnectionResult {
 }
 
 interface GoogleAccessTokenResult {
+  accountEmail: string;
   accessToken: string;
   accessTokenExpiresAtMs: number;
   grantedScopes: string[];
 }
 
 export function isGoogleAccountConnected(settings: Settings,) {
-  return !!settings.googleAccountEmail.trim();
+  return settings.googleAccounts.length > 0;
 }
 
-export function hasGoogleAccess(settings: Settings, scope: string,) {
-  return settings.googleGrantedScopes.includes(scope,);
+export function hasGoogleAccess(settings: Settings, scope: string, accountEmail?: string,) {
+  const normalizedScope = scope.trim();
+  if (!normalizedScope) return false;
+
+  return settings.googleAccounts.some((account,) => {
+    if (accountEmail && account.email.toLowerCase() !== accountEmail.trim().toLowerCase()) {
+      return false;
+    }
+    return account.grantedScopes.includes(normalizedScope,);
+  },);
 }
 
 function toBase64Url(bytes: Uint8Array,) {
@@ -92,7 +101,12 @@ function toExpiryTimestamp(expiresAtMs: number,) {
   return new Date(expiresAtMs,).toISOString();
 }
 
-function buildLegacySessionInput(settings: Settings,): GoogleLegacySessionInput | null {
+function buildLegacySessionInput(settings: Settings, accountEmail?: string,): GoogleLegacySessionInput | null {
+  const legacyEmail = settings.googleAccountEmail.trim();
+  if (accountEmail && legacyEmail.toLowerCase() !== accountEmail.trim().toLowerCase()) {
+    return null;
+  }
+
   const refreshToken = settings.googleRefreshToken.trim();
   if (!refreshToken) return null;
 
@@ -109,27 +123,38 @@ function buildLegacySessionInput(settings: Settings,): GoogleLegacySessionInput 
   };
 }
 
-function buildConnectionPatch(
-  clientId: string,
+function buildGoogleAccount(
   accessTokenExpiresAtMs: number,
   email: string,
   grantedScopes: string[],
-) {
+): GoogleAccount {
+  return {
+    email,
+    accessTokenExpiresAt: toExpiryTimestamp(accessTokenExpiresAtMs,),
+    grantedScopes: buildGrantedScopes(grantedScopes,),
+  };
+}
+
+function upsertGoogleAccount(accounts: GoogleAccount[], account: GoogleAccount,) {
+  const normalizedEmail = account.email.trim().toLowerCase();
+  const next = accounts.filter((entry,) => entry.email.trim().toLowerCase() !== normalizedEmail);
+  next.push(account,);
+  return next;
+}
+
+function removeGoogleAccount(accounts: GoogleAccount[], email: string,) {
+  const normalizedEmail = email.trim().toLowerCase();
+  return accounts.filter((entry,) => entry.email.trim().toLowerCase() !== normalizedEmail);
+}
+
+function buildConnectionPatch(clientId: string, accounts: GoogleAccount[],) {
   return {
     googleOAuthClientId: clientId.trim(),
-    googleAccessToken: "",
-    googleAccessTokenExpiresAt: toExpiryTimestamp(accessTokenExpiresAtMs,),
-    googleRefreshToken: "",
-    googleAccountEmail: email,
-    googleGrantedScopes: buildGrantedScopes(grantedScopes,),
+    googleAccounts: accounts,
   } satisfies Pick<
     Settings,
     | "googleOAuthClientId"
-    | "googleAccessToken"
-    | "googleAccessTokenExpiresAt"
-    | "googleRefreshToken"
-    | "googleAccountEmail"
-    | "googleGrantedScopes"
+    | "googleAccounts"
   >;
 }
 
@@ -139,7 +164,10 @@ async function saveGoogleFields(currentSettings: Settings, partial: Partial<Sett
   return nextSettings;
 }
 
-export async function connectGoogleAccount(settings: Settings,) {
+export async function connectGoogleAccount(
+  settings: Settings,
+  options?: { expectedAccountEmail?: string; },
+) {
   const clientId = settings.googleOAuthClientId.trim();
   if (!clientId) {
     throw new Error("Google sign-in is not configured yet.",);
@@ -156,11 +184,14 @@ export async function connectGoogleAccount(settings: Settings,) {
   authUrl.searchParams.set("code_challenge", challenge,);
   authUrl.searchParams.set("code_challenge_method", "S256",);
   authUrl.searchParams.set("include_granted_scopes", "true",);
-  authUrl.searchParams.set("prompt", "consent",);
+  authUrl.searchParams.set("prompt", options?.expectedAccountEmail ? "consent select_account" : "consent",);
   authUrl.searchParams.set("redirect_uri", session.redirectUri,);
   authUrl.searchParams.set("response_type", "code",);
   authUrl.searchParams.set("scope", GOOGLE_ACCOUNT_SCOPES.join(" ",),);
   authUrl.searchParams.set("state", state,);
+  if (options?.expectedAccountEmail) {
+    authUrl.searchParams.set("login_hint", options.expectedAccountEmail,);
+  }
 
   await openUrl(authUrl.toString(),);
 
@@ -184,56 +215,72 @@ export async function connectGoogleAccount(settings: Settings,) {
       clientId,
       code: callback.code,
       codeVerifier: verifier,
-      legacySession: buildLegacySessionInput(settings,),
+      expectedAccountEmail: options?.expectedAccountEmail,
+      legacyAccountEmail: settings.googleAccountEmail.trim(),
+      legacySession: buildLegacySessionInput(settings, options?.expectedAccountEmail,),
       redirectUri: session.redirectUri,
     },
   },);
 
-  return buildConnectionPatch(
-    clientId,
+  const account = buildGoogleAccount(
     result.accessTokenExpiresAtMs,
     result.accountEmail,
     result.grantedScopes,
   );
+
+  return buildConnectionPatch(
+    clientId,
+    upsertGoogleAccount(settings.googleAccounts, account,),
+  );
 }
 
-export async function disconnectGoogleAccount(settings: Settings,) {
-  await invoke("clear_google_oauth_session",);
+export async function disconnectGoogleAccount(settings: Settings, accountEmail: string,) {
+  await invoke("clear_google_oauth_session", { accountEmail, },);
   const next = {
     ...settings,
-    googleAccountEmail: "",
-    googleAccessToken: "",
-    googleRefreshToken: "",
-    googleAccessTokenExpiresAt: "",
-    googleGrantedScopes: [],
+    googleAccounts: removeGoogleAccount(settings.googleAccounts, accountEmail,),
   } satisfies Settings;
 
   await saveSettings(next,);
   return next;
 }
 
-export async function getGoogleAccessToken() {
+export async function getGoogleAccessToken(accountEmail?: string,) {
   const settings = await loadSettings();
   const clientId = settings.googleOAuthClientId.trim();
   if (!clientId) {
     throw new Error("Reconnect Google to refresh access.",);
   }
 
+  const account = accountEmail
+    ? settings.googleAccounts.find((entry,) => entry.email.toLowerCase() === accountEmail.trim().toLowerCase())
+    : settings.googleAccounts.length === 1
+    ? settings.googleAccounts[0]
+    : null;
+  if (!account) {
+    throw new Error("Select a Google account before fetching Google data.",);
+  }
+
   const result = await invoke<GoogleAccessTokenResult>("ensure_google_access_token", {
     input: {
+      accountEmail: account.email,
       clientId,
-      grantedScopes: [...settings.googleGrantedScopes,],
-      legacySession: buildLegacySessionInput(settings,),
+      grantedScopes: [...account.grantedScopes,],
+      legacyAccountEmail: settings.googleAccountEmail.trim(),
+      legacySession: buildLegacySessionInput(settings, account.email,),
     },
   },);
+  const updatedAccount = buildGoogleAccount(
+    result.accessTokenExpiresAtMs,
+    result.accountEmail,
+    result.grantedScopes,
+  );
   await saveGoogleFields(
     settings,
-    buildConnectionPatch(
-      clientId,
-      result.accessTokenExpiresAtMs,
-      settings.googleAccountEmail.trim(),
-      result.grantedScopes,
-    ),
+    {
+      googleOAuthClientId: clientId,
+      googleAccounts: upsertGoogleAccount(settings.googleAccounts, updatedAccount,),
+    },
   );
   return result.accessToken;
 }

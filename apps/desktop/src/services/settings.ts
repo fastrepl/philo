@@ -9,6 +9,7 @@ export interface Settings {
   googleApiKey: string;
   openrouterApiKey: string;
   googleOAuthClientId: string;
+  googleAccounts: GoogleAccount[];
   googleAccountEmail: string;
   googleAccessToken: string;
   googleRefreshToken: string;
@@ -34,6 +35,12 @@ export interface ActiveAiConfig {
   apiKey: string;
 }
 
+export interface GoogleAccount {
+  email: string;
+  accessTokenExpiresAt: string;
+  grantedScopes: string[];
+}
+
 export const DEFAULT_FILENAME_PATTERN = "{YYYY}-{MM}-{DD}";
 const BUNDLED_GOOGLE_OAUTH_CLIENT_ID = "426453142223-dnbr4440defc5ms857fhmd715v4fe68n.apps.googleusercontent.com";
 export const DEFAULT_GOOGLE_OAUTH_CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID?.trim()
@@ -46,6 +53,7 @@ const DEFAULT_SETTINGS: Settings = {
   googleApiKey: "",
   openrouterApiKey: "",
   googleOAuthClientId: DEFAULT_GOOGLE_OAUTH_CLIENT_ID,
+  googleAccounts: [],
   googleAccountEmail: "",
   googleAccessToken: "",
   googleRefreshToken: "",
@@ -69,6 +77,44 @@ function normalizeAiProvider(value: unknown,): AiProvider {
 function normalizeGoogleGrantedScopes(value: unknown,) {
   if (!Array.isArray(value,)) return [];
   return value.filter((entry,): entry is string => typeof entry === "string" && entry.trim().length > 0);
+}
+
+function normalizeGoogleAccounts(value: unknown, legacy?: {
+  email?: unknown;
+  accessTokenExpiresAt?: unknown;
+  grantedScopes?: unknown;
+},) {
+  const normalized = Array.isArray(value,)
+    ? value
+      .map((entry,) => {
+        if (!entry || typeof entry !== "object") return null;
+        const email = typeof entry.email === "string" ? entry.email.trim() : "";
+        if (!email) return null;
+        return {
+          email,
+          accessTokenExpiresAt: typeof entry.accessTokenExpiresAt === "string"
+            ? entry.accessTokenExpiresAt
+            : "",
+          grantedScopes: normalizeGoogleGrantedScopes(entry.grantedScopes,),
+        } satisfies GoogleAccount;
+      },)
+      .filter((entry,): entry is GoogleAccount => entry !== null)
+    : [];
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  const legacyEmail = typeof legacy?.email === "string" ? legacy.email.trim() : "";
+  if (!legacyEmail) return [];
+
+  return [{
+    email: legacyEmail,
+    accessTokenExpiresAt: typeof legacy?.accessTokenExpiresAt === "string"
+      ? legacy.accessTokenExpiresAt
+      : "",
+    grantedScopes: normalizeGoogleGrantedScopes(legacy?.grantedScopes,),
+  },];
 }
 
 function normalizeGoogleOAuthClientId(_value: unknown,) {
@@ -129,6 +175,11 @@ export async function loadSettings(): Promise<Settings> {
       ...DEFAULT_SETTINGS,
       ...parsed,
       aiProvider: normalizeAiProvider(parsed.aiProvider,),
+      googleAccounts: normalizeGoogleAccounts(parsed.googleAccounts, {
+        email: parsed.googleAccountEmail,
+        accessTokenExpiresAt: parsed.googleAccessTokenExpiresAt,
+        grantedScopes: parsed.googleGrantedScopes,
+      },),
       googleOAuthClientId: normalizeGoogleOAuthClientId(parsed.googleOAuthClientId,),
       googleGrantedScopes: normalizeGoogleGrantedScopes(parsed.googleGrantedScopes,),
     };
@@ -149,6 +200,7 @@ export async function saveSettings(settings: Settings,): Promise<void> {
     JSON.stringify(
       {
         ...settings,
+        googleAccounts: normalizeGoogleAccounts(settings.googleAccounts,),
         googleOAuthClientId: DEFAULT_GOOGLE_OAUTH_CLIENT_ID,
       },
       null,

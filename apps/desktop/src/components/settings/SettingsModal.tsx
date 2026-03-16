@@ -158,7 +158,12 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const [validationErrors, setValidationErrors,] = useState<Partial<Record<ValidationField, string>>>({},);
   const [isFilenamePatternFocused, setIsFilenamePatternFocused,] = useState(false,);
   const [defaultJournalDir, setDefaultJournalDir,] = useState("",);
-  const [googleBusy, setGoogleBusy,] = useState(false,);
+  const [googleAction, setGoogleAction,] = useState<
+    null | {
+      type: "connecting" | "refreshing" | "disconnecting";
+      email?: string;
+    }
+  >(null,);
   const [googleError, setGoogleError,] = useState("",);
   const [isObsidianVault, setIsObsidianVault,] = useState(false,);
   const inputRef = useRef<HTMLInputElement>(null,);
@@ -178,7 +183,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
         setSaveState("idle",);
         setValidationErrors({},);
         setIsFilenamePatternFocused(false,);
-        setGoogleBusy(false,);
+        setGoogleAction(null,);
         setGoogleError("",);
       },);
       // Resolve the default journal dir for display
@@ -219,6 +224,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const effectivePattern = settings.filenamePattern || DEFAULT_FILENAME_PATTERN;
   const filenamePreview = applyFilenamePattern(effectivePattern, getToday(),) + ".md";
   const googleConnected = isGoogleAccountConnected(settings,);
+  const googleAccounts = settings.googleAccounts;
 
   const buildPersistedSettings = async (current: Settings,) => {
     const normalizedVault = current.vaultDir.trim();
@@ -230,6 +236,11 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       googleApiKey: current.googleApiKey.trim(),
       openrouterApiKey: current.openrouterApiKey.trim(),
       googleOAuthClientId: current.googleOAuthClientId.trim(),
+      googleAccounts: current.googleAccounts.map((account,) => ({
+        email: account.email.trim(),
+        accessTokenExpiresAt: account.accessTokenExpiresAt,
+        grantedScopes: [...account.grantedScopes,],
+      })),
       googleAccountEmail: current.googleAccountEmail.trim(),
       googleAccessToken: current.googleAccessToken.trim(),
       googleRefreshToken: current.googleRefreshToken.trim(),
@@ -247,11 +258,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
 
   const buildGooglePatch = (current: Settings, partial: Partial<Settings>,) => ({
     googleOAuthClientId: (partial.googleOAuthClientId ?? current.googleOAuthClientId).trim(),
-    googleAccountEmail: partial.googleAccountEmail ?? current.googleAccountEmail,
-    googleAccessToken: partial.googleAccessToken ?? current.googleAccessToken,
-    googleRefreshToken: partial.googleRefreshToken ?? current.googleRefreshToken,
-    googleAccessTokenExpiresAt: partial.googleAccessTokenExpiresAt ?? current.googleAccessTokenExpiresAt,
-    googleGrantedScopes: partial.googleGrantedScopes ?? current.googleGrantedScopes,
+    googleAccounts: partial.googleAccounts ?? current.googleAccounts,
   });
 
   const persistSettingsNow = async (nextSettings: Settings,) => {
@@ -355,7 +362,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   };
 
   const handleConnectGoogle = async () => {
-    setGoogleBusy(true,);
+    setGoogleAction({ type: "connecting", },);
     setGoogleError("",);
     try {
       const currentSettings = settingsRef.current;
@@ -366,22 +373,38 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       const message = getErrorMessage(err, "Failed to connect Google account.",);
       setGoogleError(message,);
     } finally {
-      setGoogleBusy(false,);
+      setGoogleAction(null,);
     }
   };
 
-  const handleDisconnectGoogle = async () => {
-    setGoogleBusy(true,);
+  const handleRefreshGoogle = async (accountEmail: string,) => {
+    setGoogleAction({ type: "refreshing", email: accountEmail, },);
     setGoogleError("",);
     try {
       const currentSettings = settingsRef.current;
       if (!currentSettings) return;
-      const nextSettings = await disconnectGoogleAccount(currentSettings,);
+      const googlePatch = await connectGoogleAccount(currentSettings, { expectedAccountEmail: accountEmail, },);
+      await persistGooglePatch(googlePatch,);
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to refresh Google account.",);
+      setGoogleError(message,);
+    } finally {
+      setGoogleAction(null,);
+    }
+  };
+
+  const handleDisconnectGoogle = async (accountEmail: string,) => {
+    setGoogleAction({ type: "disconnecting", email: accountEmail, },);
+    setGoogleError("",);
+    try {
+      const currentSettings = settingsRef.current;
+      if (!currentSettings) return;
+      const nextSettings = await disconnectGoogleAccount(currentSettings, accountEmail,);
       settingsRef.current = nextSettings;
       lastSavedSettingsRef.current = nextSettings;
       setSettings(nextSettings,);
     } finally {
-      setGoogleBusy(false,);
+      setGoogleAction(null,);
     }
   };
 
@@ -615,28 +638,37 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             </div>
             {googleConnected
               ? (
-                <div className="mt-2 flex items-center gap-2">
-                  <p className="min-w-0 flex-1 text-sm text-gray-700 break-all" style={mono}>
-                    {settings.googleAccountEmail}
-                  </p>
-                  <button
-                    onClick={handleConnectGoogle}
-                    disabled={googleBusy}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
-                    title="Refresh Google connection"
-                    aria-label="Refresh Google connection"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${googleBusy ? "animate-spin" : ""}`} strokeWidth={2} />
-                  </button>
-                  <button
-                    onClick={handleDisconnectGoogle}
-                    disabled={googleBusy}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
-                    title="Disconnect Google"
-                    aria-label="Disconnect Google"
-                  >
-                    <X className="h-4 w-4" strokeWidth={2} />
-                  </button>
+                <div className="mt-2 space-y-2">
+                  {googleAccounts.map((account,) => {
+                    const isRefreshing = googleAction?.type === "refreshing" && googleAction.email === account.email;
+                    const isDisconnecting = googleAction?.type === "disconnecting"
+                      && googleAction.email === account.email;
+                    return (
+                      <div key={account.email} className="flex items-start gap-2">
+                        <p className="min-w-0 flex-1 text-sm text-gray-700 break-all" style={mono}>
+                          {account.email}
+                        </p>
+                        <button
+                          onClick={() => handleRefreshGoogle(account.email,)}
+                          disabled={googleAction !== null}
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
+                          title={`Refresh ${account.email}`}
+                          aria-label={`Refresh ${account.email}`}
+                        >
+                          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} strokeWidth={2} />
+                        </button>
+                        <button
+                          onClick={() => handleDisconnectGoogle(account.email,)}
+                          disabled={googleAction !== null}
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
+                          title={`Disconnect ${account.email}`}
+                          aria-label={`Disconnect ${account.email}`}
+                        >
+                          <X className={`h-4 w-4 ${isDisconnecting ? "opacity-60" : ""}`} strokeWidth={2} />
+                        </button>
+                      </div>
+                    );
+                  },)}
                 </div>
               )
               : (
@@ -653,7 +685,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleConnectGoogle}
-              disabled={googleBusy}
+              disabled={googleAction !== null}
               className="inline-flex min-h-10 items-center gap-3 rounded-full border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
               style={{
                 ...googleButtonText,
@@ -663,7 +695,11 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             >
               <GoogleMark />
               <span>
-                {googleBusy ? "Waiting for Google..." : googleConnected ? "Connect more" : "Continue with Google"}
+                {googleAction?.type === "connecting"
+                  ? "Waiting for Google..."
+                  : googleConnected
+                  ? "Connect more"
+                  : "Continue with Google"}
               </span>
             </button>
           </div>

@@ -68,6 +68,10 @@ struct GoogleCompleteOAuthInput {
     code: String,
     code_verifier: String,
     #[serde(default)]
+    expected_account_email: Option<String>,
+    #[serde(default)]
+    legacy_account_email: Option<String>,
+    #[serde(default)]
     legacy_session: Option<GoogleOAuthLegacySessionInput>,
     redirect_uri: String,
 }
@@ -76,11 +80,16 @@ struct GoogleCompleteOAuthInput {
 #[serde(rename_all = "camelCase")]
 struct GoogleEnsureAccessTokenInput {
     client_id: String,
+    account_email: String,
+    #[serde(default)]
+    legacy_account_email: Option<String>,
     #[serde(default)]
     granted_scopes: Vec<String>,
     #[serde(default)]
     legacy_session: Option<GoogleOAuthLegacySessionInput>,
 }
+
+type GoogleStoredSessions = HashMap<String, GoogleStoredSession>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -114,6 +123,7 @@ struct GoogleOAuthConnectionResult {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct GoogleAccessTokenResult {
+    account_email: String,
     access_token: String,
     access_token_expires_at_ms: u64,
     granted_scopes: Vec<String>,
@@ -658,22 +668,60 @@ fn google_oauth_keyring_entry() -> Result<KeyringEntry, String> {
         .map_err(|e| format!("Could not access secure Google session storage: {e}"))
 }
 
-fn load_google_stored_session() -> Result<Option<GoogleStoredSession>, String> {
+fn normalize_google_account_email(email: &str) -> Option<String> {
+    let normalized = email.trim().to_lowercase();
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+fn build_google_stored_session(
+    legacy_session: Option<GoogleOAuthLegacySessionInput>,
+) -> Option<GoogleStoredSession> {
+    let legacy = legacy_session?;
+    let refresh_token = legacy.refresh_token.trim().to_string();
+    if refresh_token.is_empty() {
+        return None;
+    }
+
+    Some(GoogleStoredSession {
+        access_token: legacy.access_token.trim().to_string(),
+        access_token_expires_at_ms: legacy.access_token_expires_at_ms,
+        refresh_token,
+    })
+}
+
+fn load_google_stored_sessions(
+) -> Result<(GoogleStoredSessions, Option<GoogleStoredSession>), String> {
     let entry = google_oauth_keyring_entry()?;
     match entry.get_password() {
-        Ok(raw) => serde_json::from_str::<GoogleStoredSession>(&raw)
-            .map(Some)
-            .map_err(|e| format!("Could not read secure Google session storage: {e}")),
-        Err(KeyringError::NoEntry) => Ok(None),
+        Ok(raw) => {
+            if raw.trim().is_empty() {
+                return Ok((HashMap::new(), None));
+            }
+
+            if let Ok(sessions) = serde_json::from_str::<GoogleStoredSessions>(&raw) {
+                return Ok((sessions, None));
+            }
+
+            if let Ok(session) = serde_json::from_str::<GoogleStoredSession>(&raw) {
+                return Ok((HashMap::new(), Some(session)));
+            }
+
+            Err("Could not read secure Google session storage.".to_string())
+        }
+        Err(KeyringError::NoEntry) => Ok((HashMap::new(), None)),
         Err(e) => Err(format!(
             "Could not access secure Google session storage: {e}"
         )),
     }
 }
 
-fn store_google_stored_session(session: &GoogleStoredSession) -> Result<(), String> {
+fn store_google_stored_sessions(sessions: &GoogleStoredSessions) -> Result<(), String> {
     let entry = google_oauth_keyring_entry()?;
-    let payload = serde_json::to_string(session)
+    let payload = serde_json::to_string(sessions)
         .map_err(|e| format!("Could not serialize Google session: {e}"))?;
     entry
         .set_password(&payload)
@@ -690,28 +738,51 @@ fn clear_google_stored_session() -> Result<(), String> {
     }
 }
 
-fn resolve_google_stored_session(
+fn migrate_legacy_google_stored_session(
+    sessions: &mut GoogleStoredSessions,
+    legacy_keyring_session: Option<GoogleStoredSession>,
+    legacy_account_email: Option<&str>,
     legacy_session: Option<GoogleOAuthLegacySessionInput>,
+) -> bool {
+    let Some(legacy_account_email) = legacy_account_email.and_then(normalize_google_account_email)
+    else {
+        return false;
+    };
+    if sessions.contains_key(&legacy_account_email) {
+        return false;
+    }
+
+    let legacy_session =
+        legacy_keyring_session.or_else(|| build_google_stored_session(legacy_session));
+    let Some(legacy_session) = legacy_session else {
+        return false;
+    };
+    sessions.insert(legacy_account_email, legacy_session);
+    true
+}
+
+fn resolve_google_stored_session(
+    sessions: &GoogleStoredSessions,
+    account_email: &str,
+    legacy_session: Option<GoogleOAuthLegacySessionInput>,
+    legacy_account_email: Option<&str>,
 ) -> Result<Option<GoogleStoredSession>, String> {
-    if let Some(stored) = load_google_stored_session()? {
-        return Ok(Some(stored));
-    }
-
-    let Some(legacy) = legacy_session else {
+    let Some(normalized_account_email) = normalize_google_account_email(account_email) else {
         return Ok(None);
     };
-    let refresh_token = legacy.refresh_token.trim().to_string();
-    if refresh_token.is_empty() {
-        return Ok(None);
+
+    if let Some(stored) = sessions.get(&normalized_account_email) {
+        return Ok(Some(stored.clone()));
     }
 
-    let stored = GoogleStoredSession {
-        access_token: legacy.access_token.trim().to_string(),
-        access_token_expires_at_ms: legacy.access_token_expires_at_ms,
-        refresh_token,
-    };
-    store_google_stored_session(&stored)?;
-    Ok(Some(stored))
+    let legacy_account_email = legacy_account_email
+        .and_then(normalize_google_account_email)
+        .unwrap_or_default();
+    if legacy_account_email == normalized_account_email {
+        return Ok(build_google_stored_session(legacy_session));
+    }
+
+    Ok(None)
 }
 
 fn google_http_client() -> Result<HttpClient, String> {
@@ -823,7 +894,6 @@ fn complete_google_oauth(
         return Err("Google sign-in is not configured yet.".to_string());
     }
 
-    let existing_session = resolve_google_stored_session(input.legacy_session)?;
     let mut body = vec![
         ("client_id".to_string(), client_id.to_string()),
         ("code".to_string(), input.code),
@@ -844,6 +914,33 @@ fn complete_google_oauth(
     let expires_in = token
         .expires_in
         .ok_or("Google did not return an access token expiry.".to_string())?;
+    let granted_scopes = build_google_granted_scopes(token.scope, &[]);
+    let account_email = fetch_google_user_email(&client, &access_token)?;
+    if let Some(expected_account_email) = input
+        .expected_account_email
+        .as_deref()
+        .and_then(normalize_google_account_email)
+    {
+        let normalized_account_email = normalize_google_account_email(&account_email)
+            .ok_or("Google did not return an email address.".to_string())?;
+        if normalized_account_email != expected_account_email {
+            return Err("Google connected a different account than expected.".to_string());
+        }
+    }
+
+    let (mut sessions, legacy_keyring_session) = load_google_stored_sessions()?;
+    let migrated_legacy = migrate_legacy_google_stored_session(
+        &mut sessions,
+        legacy_keyring_session,
+        input.legacy_account_email.as_deref(),
+        input.legacy_session,
+    );
+    let existing_session = resolve_google_stored_session(
+        &sessions,
+        &account_email,
+        None,
+        input.legacy_account_email.as_deref(),
+    )?;
     let refresh_token = token
         .refresh_token
         .filter(|value| !value.trim().is_empty())
@@ -855,15 +952,22 @@ fn complete_google_oauth(
         .ok_or(
             "Google did not return a refresh token. Reconnect Google and try again.".to_string(),
         )?;
-    let granted_scopes = build_google_granted_scopes(token.scope, &[]);
-    let account_email = fetch_google_user_email(&client, &access_token)?;
     let access_token_expires_at_ms = access_token_expires_at_ms(expires_in)?;
 
-    store_google_stored_session(&GoogleStoredSession {
-        access_token,
-        access_token_expires_at_ms,
-        refresh_token,
-    })?;
+    let Some(normalized_account_email) = normalize_google_account_email(&account_email) else {
+        return Err("Google did not return an email address.".to_string());
+    };
+    sessions.insert(
+        normalized_account_email,
+        GoogleStoredSession {
+            access_token,
+            access_token_expires_at_ms,
+            refresh_token,
+        },
+    );
+    if migrated_legacy || !sessions.is_empty() {
+        store_google_stored_sessions(&sessions)?;
+    }
 
     Ok(GoogleOAuthConnectionResult {
         access_token_expires_at_ms,
@@ -880,14 +984,35 @@ fn ensure_google_access_token(
     if client_id.is_empty() {
         return Err("Reconnect Google to refresh access.".to_string());
     }
+    let account_email = input.account_email.trim();
+    if account_email.is_empty() {
+        return Err("Select a Google account to refresh access.".to_string());
+    }
 
-    let mut session = resolve_google_stored_session(input.legacy_session)?
-        .ok_or("Reconnect Google to refresh access.".to_string())?;
+    let (mut sessions, legacy_keyring_session) = load_google_stored_sessions()?;
+    let migrated_legacy = migrate_legacy_google_stored_session(
+        &mut sessions,
+        legacy_keyring_session,
+        input.legacy_account_email.as_deref(),
+        input.legacy_session,
+    );
+    if migrated_legacy {
+        store_google_stored_sessions(&sessions)?;
+    }
+
+    let mut session = resolve_google_stored_session(
+        &sessions,
+        account_email,
+        None,
+        input.legacy_account_email.as_deref(),
+    )?
+    .ok_or("Reconnect Google to refresh access.".to_string())?;
     let now_ms = current_time_ms()?;
     if !session.access_token.trim().is_empty()
         && session.access_token_expires_at_ms > (now_ms + GOOGLE_OAUTH_ACCESS_TOKEN_BUFFER_MS)
     {
         return Ok(GoogleAccessTokenResult {
+            account_email: account_email.to_string(),
             access_token: session.access_token,
             access_token_expires_at_ms: session.access_token_expires_at_ms,
             granted_scopes: input.granted_scopes,
@@ -917,9 +1042,13 @@ fn ensure_google_access_token(
     if let Some(refresh_token) = token.refresh_token.filter(|value| !value.trim().is_empty()) {
         session.refresh_token = refresh_token;
     }
-    store_google_stored_session(&session)?;
+    let normalized_account_email = normalize_google_account_email(account_email)
+        .ok_or("Select a Google account to refresh access.".to_string())?;
+    sessions.insert(normalized_account_email, session.clone());
+    store_google_stored_sessions(&sessions)?;
 
     Ok(GoogleAccessTokenResult {
+        account_email: account_email.to_string(),
         access_token: session.access_token,
         access_token_expires_at_ms: session.access_token_expires_at_ms,
         granted_scopes: build_google_granted_scopes(token.scope, &input.granted_scopes),
@@ -927,8 +1056,20 @@ fn ensure_google_access_token(
 }
 
 #[tauri::command]
-fn clear_google_oauth_session() -> Result<(), String> {
-    clear_google_stored_session()
+fn clear_google_oauth_session(account_email: String) -> Result<(), String> {
+    let (mut sessions, legacy_keyring_session) = load_google_stored_sessions()?;
+    let normalized_account_email = normalize_google_account_email(&account_email)
+        .ok_or("Select a Google account to disconnect.".to_string())?;
+    if sessions.remove(&normalized_account_email).is_some() {
+        if sessions.is_empty() {
+            return clear_google_stored_session();
+        }
+        return store_google_stored_sessions(&sessions);
+    }
+    if legacy_keyring_session.is_some() {
+        return clear_google_stored_session();
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -2616,6 +2757,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_geolocation::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
