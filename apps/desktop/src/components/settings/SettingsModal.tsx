@@ -612,9 +612,27 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                 {googleConnected ? "Connected" : "Not connected"}
               </span>
             </div>
-            <p className="mt-2 text-sm text-gray-700 break-all" style={mono}>
-              {googleConnected ? settings.googleAccountEmail : "No Google account connected yet."}
-            </p>
+            {googleConnected
+              ? (
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="min-w-0 flex-1 text-sm text-gray-700 break-all" style={mono}>
+                    {settings.googleAccountEmail}
+                  </p>
+                  <button
+                    onClick={handleConnectGoogle}
+                    disabled={googleBusy}
+                    className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-600 transition-colors cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
+                    style={mono}
+                  >
+                    {googleBusy ? "Waiting..." : "Connect more"}
+                  </button>
+                </div>
+              )
+              : (
+                <p className="mt-2 text-sm text-gray-700 break-all" style={mono}>
+                  No Google account connected yet.
+                </p>
+              )}
           </div>
           {googleError && (
             <p className="text-xs text-red-600" style={mono}>
@@ -622,25 +640,21 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             </p>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleConnectGoogle}
-              disabled={googleBusy}
-              className="inline-flex min-h-10 items-center gap-3 rounded-full border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
-              style={{
-                ...googleButtonText,
-                backgroundColor: "#f2f2f2",
-                borderColor: "#d2d2d2",
-              }}
-            >
-              <GoogleMark />
-              <span>
-                {googleBusy
-                  ? "Waiting for Google..."
-                  : googleConnected
-                  ? "Reconnect Google"
-                  : "Continue with Google"}
-              </span>
-            </button>
+            {!googleConnected && (
+              <button
+                onClick={handleConnectGoogle}
+                disabled={googleBusy}
+                className="inline-flex min-h-10 items-center gap-3 rounded-full border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
+                style={{
+                  ...googleButtonText,
+                  backgroundColor: "#f2f2f2",
+                  borderColor: "#d2d2d2",
+                }}
+              >
+                <GoogleMark />
+                <span>{googleBusy ? "Waiting for Google..." : "Continue with Google"}</span>
+              </button>
+            )}
             {googleConnected && (
               <button
                 onClick={handleDisconnectGoogle}
