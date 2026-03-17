@@ -414,7 +414,7 @@ const heroMetaDescription =
 
   .page-layout {
     position: relative;
-    width: min(100%, 1380px);
+    width: min(100%, 1480px);
     margin: 0 auto;
     padding: 0 24px;
     min-height: 100vh;
@@ -1119,10 +1119,10 @@ const heroMetaDescription =
 
   .video-column {
     position: sticky;
-    top: 68px;
+    top: clamp(108px, 14vh, 150px);
     align-self: flex-start;
-    flex: 0 0 clamp(360px, 31vw, 440px);
-    width: clamp(360px, 31vw, 440px);
+    flex: 0 0 clamp(400px, 34vw, 500px);
+    width: clamp(400px, 34vw, 500px);
     padding-top: 0;
   }
 
