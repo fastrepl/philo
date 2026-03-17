@@ -96,16 +96,18 @@ export function AiResultPanel({
           </div>
 
           {historyOpen && chatHistory.length > 0 && (
-            <div className="space-y-2 rounded-2xl border border-gray-200 bg-gray-50/80 p-2">
-              {chatHistory.map((chat,) => (
+            <div className="border-t border-gray-100 pt-1">
+              {chatHistory.map((chat, index,) => (
                 <button
                   key={chat.id}
                   type="button"
                   onClick={() => onSelectChat(chat.id,)}
-                  className={`w-full rounded-xl px-3 py-2 text-left transition-colors ${
+                  className={`w-full px-0 py-3 text-left transition-colors ${
+                    index > 0 ? "border-t border-gray-100" : ""
+                  } ${
                     chat.id === activeChatId
-                      ? "bg-white text-gray-900"
-                      : "text-gray-600 hover:bg-white hover:text-gray-900"
+                      ? "bg-gray-50 text-gray-900"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   }`}
                 >
                   <p className="truncate text-sm font-medium">{chat.title}</p>
