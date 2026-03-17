@@ -194,8 +194,8 @@ const heroMetaDescription =
                               <span class="mini-today-pill mini-today-pill-source">Today</span>
                               <p>Mar 16</p>
                               <div class="mini-task-row">
-                                <span class="mini-checkbox is-checked"></span>
-                                <span class="mini-task-bar mini-task-bar-wide"></span>
+                                <span class="mini-checkbox mini-checkbox-completing"></span>
+                                <span class="mini-task-bar mini-task-bar-wide mini-task-bar-completing"></span>
                               </div>
                               <div class="mini-task-row mini-task-row-fading">
                                 <span class="mini-checkbox"></span>
@@ -931,11 +931,43 @@ const heroMetaDescription =
     transform: rotate(40deg);
   }
 
+  .mini-checkbox-completing {
+    animation: mini-checkbox-complete-fill 5s ease-in-out infinite;
+  }
+
+  .mini-checkbox-completing::after {
+    content: "";
+    position: absolute;
+    left: 1px;
+    top: -2px;
+    width: 3px;
+    height: 6px;
+    border-right: 1.5px solid var(--accent);
+    border-bottom: 1.5px solid var(--accent);
+    transform: rotate(40deg);
+    opacity: 0;
+    animation: mini-checkbox-complete-check 5s ease-in-out infinite;
+  }
+
   .mini-task-bar {
     display: block;
     height: 6px;
     border: 1px solid color-mix(in srgb, var(--line) 80%, #d1d4de);
     background: #f6f6f3;
+    position: relative;
+  }
+
+  .mini-task-bar-completing::after {
+    content: "";
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    top: 50%;
+    height: 1px;
+    background: color-mix(in srgb, var(--accent) 50%, var(--line));
+    transform: translateY(-50%) scaleX(0);
+    transform-origin: left center;
+    animation: mini-task-strike 5s ease-in-out infinite;
   }
 
   .mini-task-bar-wide {
@@ -1087,11 +1119,11 @@ const heroMetaDescription =
 
   @keyframes mini-rollover-source-focus {
     0%,
-    34% {
+    40% {
       box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 34%, var(--line));
     }
 
-    42%,
+    50%,
     100% {
       box-shadow: inset 0 0 0 1px transparent;
     }
@@ -1099,11 +1131,11 @@ const heroMetaDescription =
 
   @keyframes mini-rollover-target-focus {
     0%,
-    34% {
+    40% {
       box-shadow: inset 0 0 0 1px transparent;
     }
 
-    42%,
+    50%,
     100% {
       box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 34%, var(--line));
     }
@@ -1111,11 +1143,11 @@ const heroMetaDescription =
 
   @keyframes mini-today-source-fade {
     0%,
-    32% {
+    40% {
       opacity: 1;
     }
 
-    42%,
+    50%,
     100% {
       opacity: 0;
     }
@@ -1123,11 +1155,11 @@ const heroMetaDescription =
 
   @keyframes mini-today-target-fade {
     0%,
-    32% {
+    40% {
       opacity: 0;
     }
 
-    42%,
+    50%,
     100% {
       opacity: 1;
     }
@@ -1135,11 +1167,11 @@ const heroMetaDescription =
 
   @keyframes mini-source-task-fade {
     0%,
-    56% {
+    62% {
       opacity: 1;
     }
 
-    64%,
+    70%,
     100% {
       opacity: 0;
     }
@@ -1147,11 +1179,11 @@ const heroMetaDescription =
 
   @keyframes mini-target-task-reveal {
     0%,
-    56% {
+    62% {
       opacity: 0;
     }
 
-    64%,
+    70%,
     100% {
       opacity: 1;
     }
@@ -1159,12 +1191,52 @@ const heroMetaDescription =
 
   @keyframes mini-target-task-reveal-delayed {
     0%,
-    64% {
+    70% {
       opacity: 0;
     }
 
-    72%,
+    78%,
     100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mini-checkbox-complete-fill {
+    0%,
+    16% {
+      background: #ffffff;
+      border-color: color-mix(in srgb, var(--line) 80%, #bfc2ce);
+    }
+
+    24%,
+    100% {
+      background: color-mix(in srgb, var(--accent) 16%, #ffffff);
+      border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+    }
+  }
+
+  @keyframes mini-checkbox-complete-check {
+    0%,
+    18% {
+      opacity: 0;
+    }
+
+    26%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mini-task-strike {
+    0%,
+    20% {
+      transform: translateY(-50%) scaleX(0);
+      opacity: 0;
+    }
+
+    30%,
+    100% {
+      transform: translateY(-50%) scaleX(1);
       opacity: 1;
     }
   }
