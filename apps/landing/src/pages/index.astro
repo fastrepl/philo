@@ -65,17 +65,23 @@ const examples = [
 
 const posts = await getCollection("blog");
 posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime());
+
+const heroMetaTitle = "Philo: Vibe coding notetaking [beta]";
+const heroMetaDescription =
+  "Build widgets directly inside your notes — your notetaking app is your IDE.";
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Philo | Your daily notes are your IDE</title>
-    <meta
-      name="description"
-      content="Build disposable or reusable widgets directly inside your daily notes."
-    />
+    <title>{heroMetaTitle}</title>
+    <meta name="description" content={heroMetaDescription} />
+    <meta property="og:title" content={heroMetaTitle} />
+    <meta property="og:description" content={heroMetaDescription} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={heroMetaTitle} />
+    <meta name="twitter:description" content={heroMetaDescription} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -89,9 +95,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
       <main class="shell">
         <section class="hero enter" style="--delay: 70ms;">
           <h1>Philo: Vibe <del>coding</del> notetaking <span class="hero-beta">[beta]</span></h1>
-          <p class="lede">
-            Build widgets directly inside your notes &mdash; your notetaking app is your IDE.
-          </p>
+          <p class="lede">{heroMetaDescription}</p>
           <div class="download-split" data-download>
             <a class="download-button" data-download-primary href="https://github.com/ComputelessComputer/philo/releases/latest">
               <span class="platform-icon-set" aria-hidden="true">
