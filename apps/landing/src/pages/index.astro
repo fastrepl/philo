@@ -106,12 +106,46 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
           </p>
           <div class="download-split" data-download>
             <a class="download-button" data-download-primary href="https://github.com/ComputelessComputer/philo/releases/latest">
-              Download for macOS
+              <span class="platform-icon-set" aria-hidden="true">
+                <svg class="platform-icon is-active" data-download-primary-icon="macos" viewBox="0 0 16 16">
+                  <rect x="2" y="2.5" width="12" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+                  <path d="M6 13.25h4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+                  <path d="M8 10.5v2.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+                </svg>
+                <svg class="platform-icon" data-download-primary-icon="windows" viewBox="0 0 16 16">
+                  <path fill="currentColor" d="M2 2.75 7.1 2v5.1H2Zm6.1-.9L14 1v6.1H8.1ZM2 8.9h5.1V14L2 13.25Zm6.1 0H14V15l-5.9-.85Z"></path>
+                </svg>
+                <svg class="platform-icon" data-download-primary-icon="linux" viewBox="0 0 16 16">
+                  <rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+                  <path d="m5.25 6 2 2-2 2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+                  <path d="M9.5 10h1.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+                </svg>
+              </span>
+              <span data-download-primary-label>Download for macOS</span>
             </a><button type="button" class="download-chevron" data-download-toggle aria-label="Other platforms"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
             <div class="download-menu" data-download-menu>
-              <a data-download-macos href="https://github.com/ComputelessComputer/philo/releases/latest">macOS</a>
-              <a data-download-windows href="https://github.com/ComputelessComputer/philo/releases/latest">Windows</a>
-              <a data-download-linux href="https://github.com/ComputelessComputer/philo/releases/latest">Linux</a>
+              <a data-download-macos href="https://github.com/ComputelessComputer/philo/releases/latest">
+                <svg class="platform-icon" aria-hidden="true" viewBox="0 0 16 16">
+                  <rect x="2" y="2.5" width="12" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+                  <path d="M6 13.25h4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+                  <path d="M8 10.5v2.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+                </svg>
+                <span>macOS</span>
+              </a>
+              <a data-download-windows href="https://github.com/ComputelessComputer/philo/releases/latest">
+                <svg class="platform-icon" aria-hidden="true" viewBox="0 0 16 16">
+                  <path fill="currentColor" d="M2 2.75 7.1 2v5.1H2Zm6.1-.9L14 1v6.1H8.1ZM2 8.9h5.1V14L2 13.25Zm6.1 0H14V15l-5.9-.85Z"></path>
+                </svg>
+                <span>Windows</span>
+              </a>
+              <a data-download-linux href="https://github.com/ComputelessComputer/philo/releases/latest">
+                <svg class="platform-icon" aria-hidden="true" viewBox="0 0 16 16">
+                  <rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+                  <path d="m5.25 6 2 2-2 2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+                  <path d="M9.5 10h1.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+                </svg>
+                <span>Linux</span>
+              </a>
             </div>
           </div>
           <div class="hero-media-mobile">
@@ -539,6 +573,8 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     const REPO = "ComputelessComputer/philo";
     const FALLBACK = `https://github.com/${REPO}/releases/latest`;
     const primary = document.querySelector("[data-download-primary]",);
+    const primaryLabel = document.querySelector("[data-download-primary-label]",);
+    const primaryIcons = Array.from(document.querySelectorAll("[data-download-primary-icon]",),);
     const toggle = document.querySelector("[data-download-toggle]",);
     const menu = document.querySelector("[data-download-menu]",);
     const macLink = document.querySelector("[data-download-macos]",);
@@ -579,10 +615,19 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
       else if (ua.includes("linux",)) os = "linux";
 
       const labels = { macos: "Download for macOS", windows: "Download for Windows", linux: "Download for Linux" };
+      const setPrimaryPlatform = (platform,) => {
+        if (primaryLabel) {
+          primaryLabel.textContent = labels[platform];
+        }
+        for (const icon of primaryIcons) {
+          icon.classList.toggle("is-active", icon.dataset.downloadPrimaryIcon === platform,);
+        }
+      };
+
       if (primary) {
         primary.href = urls[os];
-primary.firstChild.textContent = labels[os];
       }
+      setPrimaryPlatform(os,);
 
       const currentLink = { macos: macLink, windows: winLink, linux: linuxLink }[os];
       if (currentLink) currentLink.classList.add("is-current",);
@@ -810,6 +855,30 @@ primary.firstChild.textContent = labels[os];
     gap: 8px;
   }
 
+  .platform-icon-set {
+    width: 14px;
+    height: 14px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+  }
+
+  .platform-icon {
+    width: 14px;
+    height: 14px;
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  .platform-icon-set .platform-icon {
+    grid-area: 1 / 1;
+    display: none;
+  }
+
+  .platform-icon-set .platform-icon.is-active {
+    display: block;
+  }
+
   .brand-beta {
     border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
     background: color-mix(in srgb, var(--accent) 12%, #ffffff);
@@ -874,6 +943,9 @@ primary.firstChild.textContent = labels[os];
     letter-spacing: 0.03em;
     text-transform: uppercase;
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .download-menu a:hover {
