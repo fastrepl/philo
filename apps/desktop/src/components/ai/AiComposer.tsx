@@ -68,7 +68,7 @@ export function AiComposer({
   const hasResult = Boolean(answer,) || citations.length > 0 || pendingChanges.length > 0;
   const visibleSelectedLabel = selectedLabel ?? (selectedText ? formatSelectedLabel(selectedText,) : null);
   const widgetEditLabel = parseWidgetEditLabel(visibleSelectedLabel,);
-  const hasPanel = !widgetEditLabel && (hasResult || Boolean(title,) || chatHistory.length > 0);
+  const hasPanel = !widgetEditLabel && (hasResult || Boolean(title,) || Boolean(activeChatId,));
 
   useEffect(() => {
     if (!open || !hasAiConfigured) return;
