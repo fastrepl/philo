@@ -80,6 +80,12 @@ function formatDate(dateStr: string,): string {
   return `${month} ${day}${ordinalSuffix(day,)}`;
 }
 
+function formatShortDate(dateStr: string,): string {
+  const date = new Date(`${dateStr}T00:00:00`,);
+  const month = date.toLocaleDateString("en-US", { month: "short", },);
+  return `${month} ${date.getDate()}`;
+}
+
 function buildLink(text: string,): JSONContent {
   return {
     type: "text",
@@ -138,7 +144,7 @@ function buildNoteDocument(dueDate: string,): JSONContent {
           {
             type: "text",
             text:
-              "distribution & development. after coming back from america, keep the work moving without rebuilding the list from scratch.",
+              "distribution & development. that's all i have to think about. after coming back from america. then let's give a shit about o-1 and 외국환거래신고.",
           },
         ],
       },
@@ -152,7 +158,7 @@ function buildNoteDocument(dueDate: string,): JSONContent {
               {
                 type: "paragraph",
                 content: [
-                  { type: "text", text: "study remotion skills ", },
+                  { type: "text", text: "remotion skills 공부하기 ", },
                   buildChip("Today", "today",),
                 ],
               },
@@ -165,7 +171,7 @@ function buildNoteDocument(dueDate: string,): JSONContent {
               {
                 type: "paragraph",
                 content: [
-                  { type: "text", text: "export the Hilton reservation ", },
+                  { type: "text", text: "힐튼 예약한거 출력하기 ", },
                   buildChip("Today", "today",),
                 ],
               },
@@ -184,7 +190,7 @@ function buildNoteDocument(dueDate: string,): JSONContent {
                     marks: [{ type: "bold", },],
                   },
                   { type: "text", text: " to prepare for the next quarter ", },
-                  buildChip(formatDate(dueDate,), "date",),
+                  buildChip(formatShortDate(dueDate,), "date",),
                 ],
               },
               {
@@ -199,7 +205,8 @@ function buildNoteDocument(dueDate: string,): JSONContent {
                         content: [
                           {
                             type: "text",
-                            text: "create the document and wire up a deterministic report script",
+                            text:
+                              "create a document for what we'll be tracking -> add SQL and python script to get deterministic results",
                           },
                         ],
                       },
@@ -243,42 +250,29 @@ export default function ReadOnlyHeroNote() {
   },);
 
   return (
-    <section className="hero-note-shell" aria-label="Read-only Philo macOS app demo">
+    <section className="hero-note-shell" aria-label="Read-only Philo note demo">
       <div className="hero-note-titlebar" aria-hidden="true">
-        <div className="hero-note-window-controls">
+        <div className="hero-note-dots">
           <span />
           <span />
           <span />
         </div>
-        <div className="hero-note-titlebar-meta">
-          <span className="hero-note-titlebar-chip">Daily notes</span>
-          <span className="hero-note-titlebar-label">Philo for macOS</span>
-        </div>
+        <svg className="hero-note-pin" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M13.8 3.2 20.8 10.2l-2.4.8-3.5 3.5.6 5.8-1 .9-3.8-5-5 3.8-.9-1 .6-5.8 3.5-3.5.8-2.4Z"
+            fill="currentColor"
+          />
+        </svg>
       </div>
 
-      <div className="hero-note-body">
-        <aside className="hero-note-sidebar" aria-hidden="true">
-          <div className="hero-note-sidebar-brand">
-            <span className="hero-note-sidebar-logo">Philo</span>
-            <span className="hero-note-sidebar-beta">beta</span>
-          </div>
-          <div className="hero-note-sidebar-list">
-            <span className="is-active">Mar 17</span>
-            <span>Mar 16</span>
-            <span>Mar 15</span>
-            <span>Mar 14</span>
-          </div>
-        </aside>
-
-        <div className="hero-note-surface">
-          <div className="hero-note-header">
-            <p className="hero-note-date">{formatDate(today,)}</p>
-            <span className="hero-note-pill">Today</span>
-            <span className="hero-note-city">Seoul</span>
-          </div>
-
-          <EditorContent editor={editor} />
+      <div className="hero-note-surface">
+        <div className="hero-note-header">
+          <p className="hero-note-date">{formatDate(today,)}</p>
+          <span className="hero-note-pill">Today</span>
+          <span className="hero-note-city">Seoul</span>
         </div>
+
+        <EditorContent editor={editor} />
       </div>
     </section>
   );

@@ -1,10 +1,10 @@
 .hero-note-shell {
-  min-height: 540px;
-  border: 1px solid color-mix(in srgb, #d8d7cf 82%, #c8ccd8);
-  border-radius: 24px;
+  min-height: 560px;
+  border: 1px solid rgba(220, 221, 225, 0.75);
+  border-radius: 26px;
   background:
-    radial-gradient(circle at bottom right, rgba(201, 211, 255, 0.38), transparent 30%),
-    linear-gradient(180deg, rgba(252, 252, 250, 0.98) 0%, rgba(243, 243, 238, 0.96) 100%);
+    radial-gradient(circle at bottom right, rgba(201, 211, 255, 0.42), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(250, 250, 247, 0.98) 100%);
   overflow: hidden;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.94) inset,
@@ -14,143 +14,57 @@
 .hero-note-titlebar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  border-bottom: 1px solid color-mix(in srgb, #d8d7cf 86%, #d3d8e5);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 244, 240, 0.94) 100%);
+  justify-content: space-between;
+  padding: 16px 18px 0;
 }
 
-.hero-note-window-controls {
+.hero-note-dots {
   display: flex;
-  gap: 8px;
-  flex: 0 0 auto;
+  gap: 10px;
 }
 
-.hero-note-window-controls span {
-  width: 12px;
-  height: 12px;
+.hero-note-dots span {
+  width: 13px;
+  height: 13px;
   border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.hero-note-window-controls span:nth-child(1) {
-  background: #ff5f57;
+.hero-note-dots span:nth-child(1) {
+  background: #ff6259;
 }
 
-.hero-note-window-controls span:nth-child(2) {
-  background: #febc2e;
+.hero-note-dots span:nth-child(2) {
+  background: #ffbd44;
 }
 
-.hero-note-window-controls span:nth-child(3) {
+.hero-note-dots span:nth-child(3) {
   background: #28c840;
 }
 
-.hero-note-titlebar-meta {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.hero-note-titlebar-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px 3px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, #5f70d8 28%, #d8d7cf);
-  background: color-mix(in srgb, #5f70d8 10%, #ffffff);
-  color: #5f70d8;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.hero-note-titlebar-label {
-  color: #73747b;
-  font-size: 12px;
-  font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
-}
-
-.hero-note-body {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  min-height: 484px;
-}
-
-.hero-note-sidebar {
-  padding: 18px 10px 20px;
-  border-right: 1px solid color-mix(in srgb, #d8d7cf 84%, #d3d8e5);
-  background:
-    linear-gradient(180deg, rgba(246, 246, 243, 0.94) 0%, rgba(239, 239, 234, 0.9) 100%);
-}
-
-.hero-note-sidebar-brand {
-  display: grid;
-  gap: 4px;
-  margin-bottom: 18px;
-}
-
-.hero-note-sidebar-logo {
-  color: #252525;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.hero-note-sidebar-beta {
-  width: fit-content;
-  padding: 3px 6px 2px;
-  border: 1px solid color-mix(in srgb, #5f70d8 28%, #d8d7cf);
-  background: color-mix(in srgb, #5f70d8 10%, #ffffff);
-  color: #5f70d8;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.hero-note-sidebar-list {
-  display: grid;
-  gap: 8px;
-}
-
-.hero-note-sidebar-list span {
-  display: block;
-  padding: 7px 8px;
-  color: #7a7b80;
-  font-size: 11px;
-  font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
-  border-radius: 12px;
-}
-
-.hero-note-sidebar-list .is-active {
-  background: rgba(255, 255, 255, 0.92);
-  color: #1f2937;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.94) inset;
+.hero-note-pin {
+  width: 18px;
+  height: 18px;
+  color: #a0a7b2;
+  flex: 0 0 auto;
 }
 
 .hero-note-surface {
-  padding: 26px 28px 30px;
-  background:
-    radial-gradient(circle at bottom right, rgba(201, 211, 255, 0.24), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(251, 251, 248, 0.96) 100%);
+  padding: 26px 18px 24px;
 }
 
 .hero-note-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 24px;
 }
 
 .hero-note-date {
   margin: 0;
   font-family: "Instrument Serif", Georgia, serif;
-  font-size: 22px;
+  font-size: 25px;
   font-style: italic;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -178,7 +92,7 @@
 }
 
 .hero-note-editor {
-  --editor-line-height: 28px;
+  --editor-line-height: 31px;
   padding: 0;
   color: #1f2937;
   font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
@@ -191,7 +105,7 @@
 }
 
 .hero-note-editor p {
-  margin: 0;
+  margin: 0 0 16px;
   min-height: var(--editor-line-height);
 }
 
@@ -204,28 +118,26 @@
 }
 
 .hero-note-editor ul[data-type="taskList"] {
-  margin-top: 20px;
+  margin-top: 26px;
   padding: 0;
 }
 
 .hero-note-editor ul[data-type="taskList"] li {
+  margin: 0 0 10px;
   min-height: var(--editor-line-height);
-  margin: 0 0 6px;
 }
 
 .hero-note-editor ul[data-type="taskList"] li > label {
   align-self: start;
-  height: var(--editor-line-height);
+  margin-top: 2px;
 }
 
 .hero-note-editor ul[data-type="taskList"] li > div {
   min-width: 0;
-  line-height: inherit;
-  min-height: var(--editor-line-height);
 }
 
 .hero-note-editor ul[data-type="taskList"] input[type="checkbox"] {
-  margin-top: 0;
+  margin-top: 2px;
 }
 
 .hero-note-editor .hero-chip {
@@ -265,28 +177,20 @@
 }
 
 @media (max-width: 720px) {
-  .hero-note-body {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-note-sidebar {
-    display: none;
+  .hero-note-titlebar {
+    padding: 14px 16px 0;
   }
 
   .hero-note-surface {
-    padding: 18px;
+    padding: 22px 16px 20px;
+  }
+
+  .hero-note-date {
+    font-size: 23px;
   }
 
   .hero-note-editor {
-    --editor-line-height: 24px;
+    --editor-line-height: 26px;
     font-size: 14px;
-  }
-
-  .hero-note-titlebar {
-    padding: 12px 14px;
-  }
-
-  .hero-note-titlebar-label {
-    font-size: 11px;
   }
 }
