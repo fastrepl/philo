@@ -451,10 +451,11 @@ const heroMetaDescription =
   .lede {
     margin-top: 18px;
     max-width: none;
-    white-space: nowrap;
+    white-space: normal;
     font-size: 15px;
     line-height: 1.72;
     color: #3f3f3d;
+    text-wrap: pretty;
   }
 
   .download-split {
@@ -1235,6 +1236,7 @@ const heroMetaDescription =
 
     .hero-copy {
       grid-column: 1;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -1246,7 +1248,7 @@ const heroMetaDescription =
     .hero-copy .lede {
       margin-top: 0;
       white-space: normal;
-      max-width: 34ch;
+      max-width: 100%;
     }
 
     .hero-copy .download-split {
