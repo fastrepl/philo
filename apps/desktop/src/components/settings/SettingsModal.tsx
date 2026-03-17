@@ -57,6 +57,16 @@ const GOOGLE_CALENDAR_OPEN_CLIENT_LABELS: Record<GoogleCalendarOpenClient, strin
   apple_calendar: "Apple Calendar",
 };
 
+const GOOGLE_EMAIL_OPEN_CLIENT_HINTS: Record<GoogleEmailOpenClient, string> = {
+  gmail: "Web",
+  apple_mail: "macOS",
+};
+
+const GOOGLE_CALENDAR_OPEN_CLIENT_HINTS: Record<GoogleCalendarOpenClient, string> = {
+  google_calendar: "Web",
+  apple_calendar: "macOS",
+};
+
 const mono = { fontFamily: "'IBM Plex Mono', monospace", };
 const googleButtonText = { fontFamily: "'Roboto', 'IBM Plex Sans', sans-serif", };
 const filenameTokenChip =
@@ -162,6 +172,59 @@ function FilenamePatternFieldValue({ value, muted = false, }: { value: string; m
           </span>
         );
       },)}
+    </div>
+  );
+}
+
+function SharpChoiceField<T extends string,>(
+  {
+    label,
+    options,
+    value,
+    onChange,
+  }: {
+    label: string;
+    options: Array<{ hint: string; label: string; value: T; }>;
+    value: T;
+    onChange: (value: T,) => void;
+  },
+) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-xs text-gray-500" style={mono}>
+        {label}
+      </label>
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className="grid grid-cols-2 overflow-hidden rounded-none border border-gray-200 bg-white"
+      >
+        {options.map((option, index,) => {
+          const selected = option.value === value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(option.value,)}
+              className={`relative flex min-h-16 flex-col items-start justify-between px-3 py-2 text-left transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500/30 ${
+                selected
+                  ? "bg-gray-900 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              } ${index > 0 ? "border-l border-gray-200" : ""}`}
+              style={mono}
+            >
+              <span
+                className={`text-[10px] uppercase tracking-[0.18em] ${selected ? "text-gray-300" : "text-gray-400"}`}
+              >
+                {option.hint}
+              </span>
+              <span className="text-sm leading-5">{option.label}</span>
+            </button>
+          );
+        },)}
+      </div>
     </div>
   );
 }
@@ -718,41 +781,26 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             </button>
           </div>
           <div className="grid gap-3 pt-2 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="block text-xs text-gray-500" style={mono}>
-                Email opens in
-              </label>
-              <select
-                value={settings.googleEmailOpenClient}
-                onChange={(event,) => update({ googleEmailOpenClient: event.target.value as GoogleEmailOpenClient, },)}
-                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400"
-                style={mono}
-              >
-                {GOOGLE_EMAIL_OPEN_CLIENTS.map((client,) => (
-                  <option key={client} value={client}>
-                    {GOOGLE_EMAIL_OPEN_CLIENT_LABELS[client]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-xs text-gray-500" style={mono}>
-                Calendar opens in
-              </label>
-              <select
-                value={settings.googleCalendarOpenClient}
-                onChange={(event,) =>
-                  update({ googleCalendarOpenClient: event.target.value as GoogleCalendarOpenClient, },)}
-                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400"
-                style={mono}
-              >
-                {GOOGLE_CALENDAR_OPEN_CLIENTS.map((client,) => (
-                  <option key={client} value={client}>
-                    {GOOGLE_CALENDAR_OPEN_CLIENT_LABELS[client]}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SharpChoiceField
+              label="Email opens in"
+              options={GOOGLE_EMAIL_OPEN_CLIENTS.map((client,) => ({
+                hint: GOOGLE_EMAIL_OPEN_CLIENT_HINTS[client],
+                label: GOOGLE_EMAIL_OPEN_CLIENT_LABELS[client],
+                value: client,
+              }))}
+              value={settings.googleEmailOpenClient}
+              onChange={(value,) => update({ googleEmailOpenClient: value, },)}
+            />
+            <SharpChoiceField
+              label="Calendar opens in"
+              options={GOOGLE_CALENDAR_OPEN_CLIENTS.map((client,) => ({
+                hint: GOOGLE_CALENDAR_OPEN_CLIENT_HINTS[client],
+                label: GOOGLE_CALENDAR_OPEN_CLIENT_LABELS[client],
+                value: client,
+              }))}
+              value={settings.googleCalendarOpenClient}
+              onChange={(value,) => update({ googleCalendarOpenClient: value, },)}
+            />
           </div>
         </div>
 
