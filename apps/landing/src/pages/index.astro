@@ -157,7 +157,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
         <section class="panel enter" style="--delay: 140ms;">
           <h2>Why Philo exists</h2>
           <div class="why-layout">
-            <div class="why-demo" aria-label="Animated overview of how Philo works" role="img">
+            <div class="why-demo" data-why-demo aria-label="Animated overview of how Philo works" role="img">
               <div class="why-demo-header">
                 <span>Generated explainer</span>
                 <span>5 scenes / 20 seconds</span>
@@ -165,7 +165,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
               <div class="why-demo-screen">
                 {
                   explainerScenes.map((scene, index,) => (
-                    <article class="why-scene" style={`--scene-index: ${index};`}>
+                    <article class={`why-scene ${index === 0 ? "is-active" : ""}`} data-why-scene>
                       <p class="why-scene-label">{scene.label}</p>
                       <p class="why-scene-title">{scene.title}</p>
                       <p class="why-scene-detail">{scene.detail}</p>
@@ -273,7 +273,9 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
                 <div class="why-scene-dots" aria-hidden="true">
                   {
                     explainerScenes.map((scene, index,) => (
-                      <span class="why-scene-dot" style={`--scene-index: ${index};`} title={scene.label}></span>
+                      <span class={`why-scene-dot ${index === 0 ? "is-active" : ""}`} data-why-dot title={scene.label}>
+                        <span class="why-scene-dot-fill" data-why-fill></span>
+                      </span>
                     ))
                   }
                 </div>
@@ -529,6 +531,85 @@ primary.firstChild.textContent = labels[os];
     setActiveDot();
     restartTimer();
     window.addEventListener("resize", setActiveDot,);
+  }
+
+  const whyDemo = document.querySelector("[data-why-demo]",);
+  if (whyDemo) {
+    const scenes = Array.from(whyDemo.querySelectorAll("[data-why-scene]",),);
+    const dots = Array.from(whyDemo.querySelectorAll("[data-why-dot]",),);
+    const fills = dots.map((dot,) => dot.querySelector("[data-why-fill]",),);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)",);
+    const DURATION = 4000;
+    let activeIndex = 0;
+    let start = 0;
+    let frame = 0;
+
+    const render = (progress,) => {
+      for (const [index, scene] of scenes.entries()) {
+        scene.classList.toggle("is-active", index === activeIndex,);
+      }
+
+      for (const [index, dot] of dots.entries()) {
+        dot.classList.toggle("is-active", index === activeIndex,);
+        const fill = fills[index];
+        if (!fill) continue;
+
+        const scale =
+          index < activeIndex
+            ? 1
+            : index === activeIndex
+              ? progress
+              : 0;
+
+        fill.style.transform = `scaleX(${scale})`;
+      }
+    };
+
+    const tick = (now,) => {
+      const elapsed = now - start;
+      if (elapsed >= DURATION) {
+        activeIndex = (activeIndex + 1) % scenes.length;
+        start = now;
+        render(0,);
+      } else {
+        render(elapsed / DURATION,);
+      }
+
+      frame = window.requestAnimationFrame(tick,);
+    };
+
+    const stop = () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame,);
+        frame = 0;
+      }
+    };
+
+    const startLoop = () => {
+      stop();
+
+      if (reducedMotion.matches || scenes.length === 0) {
+        activeIndex = 0;
+        render(1,);
+        return;
+      }
+
+      start = performance.now();
+      render(0,);
+      frame = window.requestAnimationFrame(tick,);
+    };
+
+    startLoop();
+    reducedMotion.addEventListener("change", startLoop,);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        stop();
+        return;
+      }
+
+      start = performance.now();
+      frame = window.requestAnimationFrame(tick,);
+    },);
   }
 </script>
 
@@ -810,8 +891,14 @@ primary.firstChild.textContent = labels[os];
     inset: 16px;
     opacity: 0;
     transform: translateY(8px) scale(0.985);
-    animation: why-scene-cycle 20s infinite;
-    animation-delay: calc((var(--scene-index) * 4s) - 20s);
+    transition:
+      opacity 220ms ease,
+      transform 220ms ease;
+  }
+
+  .why-scene.is-active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 
   .why-scene-label,
@@ -1030,16 +1117,13 @@ primary.firstChild.textContent = labels[os];
     overflow: hidden;
   }
 
-  .why-scene-dot::after {
-    content: "";
+  .why-scene-dot-fill {
     display: block;
     width: 100%;
     height: 100%;
     background: color-mix(in srgb, var(--accent) 90%, #7c8ae8);
     transform-origin: left;
     transform: scaleX(0);
-    animation: why-dot-cycle 20s infinite;
-    animation-delay: calc((var(--scene-index) * 4s) - 20s);
   }
 
   .detail-item {
@@ -1207,39 +1291,10 @@ primary.firstChild.textContent = labels[os];
     }
   }
 
-  @keyframes why-scene-cycle {
-    0%,
-    18% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-
-    20%,
-    100% {
-      opacity: 0;
-      transform: translateY(8px) scale(0.985);
-    }
-  }
-
-  @keyframes why-dot-cycle {
-    0% {
-      transform: scaleX(0);
-    }
-
-    18%,
-    20% {
-      transform: scaleX(1);
-    }
-
-    100% {
-      transform: scaleX(0);
-    }
-  }
-
   .video-column {
     position: relative;
-    flex: 0 0 418px;
-    width: 418px;
+    flex: 0 0 320px;
+    width: 320px;
     padding-top: 0;
   }
 
@@ -1260,11 +1315,7 @@ primary.firstChild.textContent = labels[os];
   }
 
   .video-column .product-video {
-    width: 400px;
-    max-width: none;
-    height: 600px;
-    aspect-ratio: auto;
-    object-fit: cover;
+    aspect-ratio: 9 / 16;
   }
 
   .video-note {
@@ -1391,25 +1442,9 @@ primary.firstChild.textContent = labels[os];
 
   @media (prefers-reduced-motion: reduce) {
     .enter,
-    .why-scene,
-    .why-scene-dot::after,
     .carousel-dot.is-active .carousel-dot-fill {
       animation: none;
       transition: none;
-    }
-
-    .why-scene {
-      display: none;
-      opacity: 1;
-      transform: none;
-    }
-
-    .why-scene:first-of-type {
-      display: block;
-    }
-
-    .why-scene-dot::after {
-      transform: scaleX(0);
     }
   }
 </style>
