@@ -107,7 +107,12 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
   return (
     <BubbleMenu
       editor={editor}
-      options={{ placement: "top", offset: 8, }}
+      options={{
+        placement: "top",
+        offset: 8,
+        flip: { padding: 12, },
+        shift: { padding: 12, },
+      }}
       shouldShow={({ from, to, }: { from: number; to: number; },) => from !== to}
     >
       <div className="bubble-menu">
