@@ -57,8 +57,8 @@ export function AiResultPanel({
   }
 
   return (
-    <div ref={scrollRef} className="hide-scrollbar max-h-[52vh] overflow-y-auto px-4 pt-4 pb-3">
-      <div className="space-y-4">
+    <div ref={scrollRef} className="hide-scrollbar max-h-[52vh] overflow-y-auto">
+      <div className="sticky top-0 z-10 border-b border-gray-100 bg-white/95 px-4 pt-4 pb-3 backdrop-blur-sm">
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <p className="min-w-0 truncate text-sm font-medium text-gray-900">
@@ -101,7 +101,9 @@ export function AiResultPanel({
             </div>
           )}
         </div>
+      </div>
 
+      <div className="space-y-4 px-4 pt-4 pb-3">
         {answer && (
           <div className="space-y-2">
             <p className="whitespace-pre-wrap text-sm leading-6 text-gray-900">
