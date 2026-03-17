@@ -228,12 +228,18 @@ const heroMetaDescription =
                           <div class="mini-recurring-task">
                             <span class="mini-checkbox"></span>
                             <span class="mini-task-bar mini-task-bar-wide"></span>
-                            <span class="mini-frequency-chip">Daily</span>
+                            <span class="mini-recurring-token">
+                              <span class="mini-recurring-mention">@daily</span>
+                              <span class="mini-frequency-chip">Daily</span>
+                            </span>
                           </div>
-                          <div class="mini-recurring-task">
+                          <div class="mini-recurring-task mini-recurring-task-delayed">
                             <span class="mini-checkbox"></span>
                             <span class="mini-task-bar mini-task-bar-short"></span>
-                            <span class="mini-frequency-chip">Weekly</span>
+                            <span class="mini-recurring-token">
+                              <span class="mini-recurring-mention">@weekly</span>
+                              <span class="mini-frequency-chip">Weekly</span>
+                            </span>
                           </div>
                         </div>
                       )
@@ -1001,6 +1007,27 @@ const heroMetaDescription =
     padding: 5px;
   }
 
+  .mini-recurring-token {
+    position: relative;
+    display: grid;
+    place-items: center end;
+    min-width: 50px;
+    min-height: 16px;
+  }
+
+  .mini-recurring-mention,
+  .mini-recurring-token .mini-frequency-chip {
+    grid-area: 1 / 1;
+  }
+
+  .mini-recurring-mention {
+    color: color-mix(in srgb, var(--text) 72%, var(--accent));
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    animation: mini-recurring-mention-fade 3.2s ease-in-out infinite;
+  }
+
   .mini-frequency-chip {
     padding: 1px 5px;
     border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
@@ -1010,6 +1037,13 @@ const heroMetaDescription =
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    opacity: 0;
+    animation: mini-recurring-chip-fade 3.2s ease-in-out infinite;
+  }
+
+  .mini-recurring-task-delayed .mini-recurring-mention,
+  .mini-recurring-task-delayed .mini-frequency-chip {
+    animation-delay: 1.1s;
   }
 
   .mini-markdown-apps {
@@ -1211,6 +1245,30 @@ const heroMetaDescription =
 
     70% {
       transform: translateY(1px);
+    }
+  }
+
+  @keyframes mini-recurring-mention-fade {
+    0%,
+    18% {
+      opacity: 1;
+    }
+
+    28%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes mini-recurring-chip-fade {
+    0%,
+    22% {
+      opacity: 0;
+    }
+
+    32%,
+    100% {
+      opacity: 1;
     }
   }
 
@@ -1496,9 +1554,19 @@ const heroMetaDescription =
   @media (prefers-reduced-motion: reduce) {
     .enter,
     .carousel-dot.is-active .carousel-dot-fill,
-    .mini-markdown-arrow {
+    .mini-markdown-arrow,
+    .mini-recurring-mention,
+    .mini-recurring-token .mini-frequency-chip {
       animation: none;
       transition: none;
+    }
+
+    .mini-recurring-mention {
+      opacity: 0;
+    }
+
+    .mini-recurring-token .mini-frequency-chip {
+      opacity: 1;
     }
   }
 </style>
