@@ -414,7 +414,7 @@ const heroMetaDescription =
 
   .page-layout {
     position: relative;
-    width: min(100%, 1240px);
+    width: min(100%, 1380px);
     margin: 0 auto;
     padding: 0 24px;
     min-height: 100vh;
@@ -1121,8 +1121,8 @@ const heroMetaDescription =
     position: sticky;
     top: 68px;
     align-self: flex-start;
-    flex: 0 0 320px;
-    width: 320px;
+    flex: 0 0 clamp(360px, 31vw, 440px);
+    width: clamp(360px, 31vw, 440px);
     padding-top: 0;
   }
 
