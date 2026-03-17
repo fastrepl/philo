@@ -24,6 +24,7 @@ import {
   type MentionSuggestion,
   renderMentionMarkdown,
 } from "../../../../services/mentions";
+import { getToday, } from "../../../../types/note";
 
 function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (date: string,) => void; },) {
   const todayStr = (() => {
@@ -100,7 +101,7 @@ const MentionMenu = forwardRef<
 >(function MentionMenu({ items, command, referenceDate, }, ref,) {
   const [selectedIndex, setSelectedIndex,] = useState(0,);
   const [showDatePicker, setShowDatePicker,] = useState(false,);
-  const [selectedDate, setSelectedDate,] = useState(referenceDate ?? "",);
+  const [selectedDate, setSelectedDate,] = useState(getToday(),);
   const [recurrence, setRecurrence,] = useState("",);
 
   useEffect(() => {
@@ -108,7 +109,7 @@ const MentionMenu = forwardRef<
   }, [items,],);
 
   useEffect(() => {
-    setSelectedDate(referenceDate ?? "",);
+    setSelectedDate(getToday(),);
   }, [referenceDate,],);
 
   const applyCustomDate = () => {

@@ -102,6 +102,10 @@ function parseReferenceDate(referenceDate: string | undefined,): Date {
   return new Date();
 }
 
+function getRelativeDateReference(): Date {
+  return fromIsoDate(getToday(),);
+}
+
 function formatDisplayDate(date: string,): string {
   return fromIsoDate(date,).toLocaleDateString("en-US", {
     month: "short",
@@ -490,22 +494,23 @@ export function renderMentionMarkdown(
 
 export function getMentionSuggestions(query: string, referenceDate?: string,): MentionSuggestion[] {
   const reference = parseReferenceDate(referenceDate,);
+  const relativeReference = getRelativeDateReference();
   const today = toIsoDate(reference,);
   const normalized = normalizeToken(query,);
 
   if (!normalized) {
     return [
       buildDatePickerSuggestion(),
-      ...buildDefaultDateSuggestions(reference,),
+      ...buildDefaultDateSuggestions(relativeReference,),
       ...buildRecurringSuggestions("", today,),
     ];
   }
 
   const items: MentionSuggestion[] = [];
-  const resolvedDate = resolveDateQuery(normalized, reference,);
+  const resolvedDate = resolveDateQuery(normalized, relativeReference,);
   if (resolvedDate) items.push(resolvedDate,);
 
-  for (const preset of buildDefaultDateSuggestions(reference,)) {
+  for (const preset of buildDefaultDateSuggestions(relativeReference,)) {
     if (preset.label.toLowerCase().startsWith(normalized,)) {
       items.push(preset,);
     }
@@ -534,6 +539,7 @@ export function createRecurringMention(
 
 export function convertAtMentionsToWikiLinks(markdown: string, referenceDate?: string,): string {
   const reference = parseReferenceDate(referenceDate,);
+  const relativeReference = getRelativeDateReference();
   const referenceIso = toIsoDate(reference,);
   const parts = markdown.split(/(```[\s\S]*?```|`[^`\n]+`)/g,);
 
@@ -542,7 +548,7 @@ export function convertAtMentionsToWikiLinks(markdown: string, referenceDate?: s
       if (i % 2 === 1) return part;
       return part.replace(AT_MENTION_RE, (full, prefix: string, token: string,) => {
         const normalized = normalizeToken(token,);
-        const date = resolveDateQuery(normalized, reference,);
+        const date = resolveDateQuery(normalized, relativeReference,);
         if (date) return `${prefix}[[${formatDueTarget(date.id.slice("date_".length,),)}]]`;
 
         if (RECURRENCE_TOKEN_RE.test(normalized,)) {
