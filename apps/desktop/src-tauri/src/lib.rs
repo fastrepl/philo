@@ -129,6 +129,20 @@ struct GoogleAccessTokenResult {
     granted_scopes: Vec<String>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AnthropicRequestInput {
+    api_key: String,
+    body: Value,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HttpJsonResponse {
+    status: u16,
+    body: String,
+}
+
 #[tauri::command]
 fn set_window_opacity(_app: AppHandle, _opacity: f64) -> Result<(), String> {
     #[cfg(target_os = "macos")]
@@ -789,6 +803,35 @@ fn google_http_client() -> Result<HttpClient, String> {
     HttpClient::builder()
         .build()
         .map_err(|e| format!("Could not start Google OAuth client: {e}"))
+}
+
+fn anthropic_http_client() -> Result<HttpClient, String> {
+    HttpClient::builder()
+        .build()
+        .map_err(|e| format!("Could not start Anthropic client: {e}"))
+}
+
+#[tauri::command]
+fn post_anthropic_message(input: AnthropicRequestInput) -> Result<HttpJsonResponse, String> {
+    let api_key = input.api_key.trim();
+    if api_key.is_empty() {
+        return Err("Anthropic API key is missing.".to_string());
+    }
+
+    let response = anthropic_http_client()?
+        .post("https://api.anthropic.com/v1/messages")
+        .header("content-type", "application/json")
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .json(&input.body)
+        .send()
+        .map_err(|e| format!("Anthropic request failed: {e}"))?;
+    let status = response.status().as_u16();
+    let body = response
+        .text()
+        .map_err(|e| format!("Could not read Anthropic response: {e}"))?;
+
+    Ok(HttpJsonResponse { status, body })
 }
 
 fn parse_google_error(response: HttpResponse) -> String {
@@ -2770,6 +2813,7 @@ pub fn run() {
             find_obsidian_vaults,
             detect_obsidian_settings,
             bootstrap_obsidian_vault,
+            post_anthropic_message,
             read_markdown_file,
             write_markdown_file,
             start_google_oauth_callback,

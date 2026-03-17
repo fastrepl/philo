@@ -1,3 +1,4 @@
+import { invoke, } from "@tauri-apps/api/core";
 import { type ActiveAiConfig, type AiProvider, getAiProviderLabel, } from "./settings";
 
 export const API_KEY_MISSING = "API_KEY_MISSING";
@@ -49,6 +50,11 @@ type GeminiContent = {
   role: "user" | "model";
   parts: GeminiPart[];
 };
+
+interface NativeHttpResponse {
+  status: number;
+  body: string;
+}
 
 function getModel(provider: AiProvider, purpose: "assistant" | "widget",) {
   switch (provider) {
@@ -252,28 +258,25 @@ function toGeminiContents(messages: AiMessage[],): GeminiContent[] {
 }
 
 async function callAnthropicText(config: ActiveAiConfig, system: string, prompt: string, signal?: AbortSignal,) {
-  const response = await fetch(getProviderUrl("anthropic",)!, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": config.apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
+  signal?.throwIfAborted();
+  const response = await invoke<NativeHttpResponse>("post_anthropic_message", {
+    input: {
+      apiKey: config.apiKey,
+      body: {
+        model: getModel("anthropic", "widget",),
+        max_tokens: 8192,
+        system,
+        messages: [{ role: "user", content: prompt, },],
+      },
     },
-    body: JSON.stringify({
-      model: getModel("anthropic", "widget",),
-      max_tokens: 8192,
-      system,
-      messages: [{ role: "user", content: prompt, },],
-    },),
-    signal,
   },);
+  signal?.throwIfAborted();
 
-  if (!response.ok) {
-    throw new Error(`Sophia failed (${response.status}): ${await response.text()}`,);
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`Sophia failed (${response.status}): ${response.body}`,);
   }
 
-  const data = await response.json();
+  const data = JSON.parse(response.body,) as { content?: Array<{ type?: string; text?: string; }>; };
   const content = Array.isArray(data.content,) ? data.content as Array<{ type?: string; text?: string; }> : [];
   return content
     .filter((block,) => block.type === "text" && typeof block.text === "string")
@@ -384,30 +387,29 @@ async function callAnthropicTools(
   tools: readonly AiToolDefinition[],
   signal?: AbortSignal,
 ): Promise<AiContentBlock[]> {
-  const response = await fetch(getProviderUrl("anthropic",)!, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": config.apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
+  signal?.throwIfAborted();
+  const response = await invoke<NativeHttpResponse>("post_anthropic_message", {
+    input: {
+      apiKey: config.apiKey,
+      body: {
+        model: getModel("anthropic", "assistant",),
+        max_tokens: 8192,
+        system,
+        tool_choice: { type: "auto", },
+        tools,
+        messages,
+      },
     },
-    body: JSON.stringify({
-      model: getModel("anthropic", "assistant",),
-      max_tokens: 8192,
-      system,
-      tool_choice: { type: "auto", },
-      tools,
-      messages,
-    },),
-    signal,
   },);
+  signal?.throwIfAborted();
 
-  if (!response.ok) {
-    throw new Error(`Sophia failed (${response.status}): ${await response.text()}`,);
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`Sophia failed (${response.status}): ${response.body}`,);
   }
 
-  const data = await response.json();
+  const data = JSON.parse(response.body,) as {
+    content?: Array<{ type?: string; text?: string; id?: string; name?: string; input?: unknown; }>;
+  };
   const content = Array.isArray(data.content,)
     ? data.content as Array<{ type?: string; text?: string; id?: string; name?: string; input?: unknown; }>
     : [];
