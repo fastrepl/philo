@@ -30,6 +30,10 @@ If you are making product changes, most of the time you will be working inside `
   - `landing` is the Astro site.
 - `docs/`
   - Internal documentation like architecture notes.
+  - Notable references include:
+    - `data-storage-and-configuration.md`
+    - `markdown-sync.md`
+    - `widget-persistence-and-lifecycle.md`
 - `scripts/`
   - Repo-level utility scripts, including release verification.
 - `vendor/`
@@ -77,6 +81,7 @@ UI components, grouped by feature area.
   - Daily note editing and note-specific UI.
 - `components/editor/`
   - Shared editor UI and custom TipTap extensions.
+  - Widget-specific editor files live under `components/editor/extensions/widget/`.
 - `components/library/`
   - Widget library UI.
 - `components/settings/`
@@ -108,6 +113,10 @@ Non-UI application logic. This is where most filesystem and domain behavior live
   - Rollover and recurring-task behavior.
 - `library.ts`
   - Widget library persistence.
+- `chats.ts`
+  - File-backed AI chat history persistence.
+- `widget-files.ts`
+  - File-backed widget persistence, widget markdown parsing, widget embed resolution, and widget revision history.
 - `generate.ts`, `assistant.ts`
   - AI/widget generation logic.
 - `settings.ts`
@@ -209,6 +218,21 @@ In practice:
 - Native desktop command or OS integration: `apps/desktop/src-tauri/src/lib.rs`
 - Marketing site content or pages: `apps/landing`
 - Internal explanations: `docs`
+
+## Widget-Specific Pointers
+
+If you are changing widgets, these are the highest-signal files:
+
+- `apps/desktop/src/components/editor/extensions/widget/WidgetExtension.ts`
+  - TipTap node definition and markdown/HTML serialization entrypoint.
+- `apps/desktop/src/components/editor/extensions/widget/WidgetView.tsx`
+  - Widget toolbar behavior, rebuild flow, save-to-library flow, and runtime rendering.
+- `apps/desktop/src/services/widget-files.ts`
+  - `.widget.md` file format, disk persistence, widget embed resolution, and revision snapshots.
+- `apps/desktop/src/services/library.ts`
+  - Library item persistence and shared component storage.
+- `docs/widget-persistence-and-lifecycle.md`
+  - The implementation reference for widget schema and lifecycle behavior.
 
 ## Folders You Usually Ignore While Editing
 

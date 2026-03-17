@@ -12,7 +12,7 @@ Philo persists data in two places:
 The important distinction is:
 
 - Configuration always lives under the app data directory.
-- Notes, images, Excalidraw files, and widget-library files live under the resolved content directory.
+- Notes, images, Excalidraw files, widget files, widget-library files, and chat-history files live under the resolved content directory.
 - Google OAuth secrets and tokens live in the OS credential store for new sessions.
 
 ## Base App Data Directory
@@ -119,7 +119,7 @@ After saving, Philo also:
 - resets the cached journal path with `resetJournalDir()`
 - re-extends Tauri filesystem scope with `initJournalScope()`
 
-That makes path changes take effect immediately without a restart.
+That makes path changes take effect immediately without a restart. The scope refresh covers the current journal root, vault root, assets directory, Excalidraw directory, and widgets directory.
 
 ## How The Active Note Root Is Chosen
 
@@ -137,7 +137,9 @@ If no vault is configured:
 
 - notes live under `<baseDir>/journal/`
 - assets live under `<baseDir>/journal/assets/`
+- widget files live under `<baseDir>/journal/widgets/`
 - widget library lives under `<baseDir>/journal/library/`
+- chat history lives under `<baseDir>/journal/chats/`
 
 ### Mode 2: Obsidian-backed storage
 
@@ -146,7 +148,9 @@ If a vault is configured:
 - notes live under `<vaultDir>/<dailyLogsFolder>/`
 - assets live under `<vaultDir>/<assetsFolder>/` unless `assetsFolder` is absolute
 - Excalidraw embeds resolve from `<vaultDir>/<excalidrawFolder>/` unless `excalidrawFolder` is absolute
+- widget files live under `<vaultDir>/widgets/`
 - widget library lives under `<vaultDir>/library/`
+- chat history lives under `<vaultDir>/chats/`
 
 Settings still remain in `<baseDir>/settings.json` even when content is stored in the vault.
 
@@ -225,6 +229,19 @@ Resolution rules come from `services/excalidraw.ts`:
 
 The setting only changes where Philo looks. It does not migrate Excalidraw files.
 
+## Widget Files
+
+Widget instances are stored as individual markdown files under the resolved widgets directory.
+
+Current location:
+
+- vault mode: `<vaultDir>/widgets/`
+- default mode: `<journalDir>/widgets/`
+
+Each widget becomes a `.widget.md` file that stores the current widget metadata, the current spec snapshot, and revision history. Daily notes do not inline the full widget payload. They store widget placeholder blocks that point back to the widget file.
+
+For the full file schema and update lifecycle, see [Widget persistence and lifecycle](widget-persistence-and-lifecycle.md).
+
 ## Widget Library
 
 The widget library is stored as individual markdown files, not in a database.
@@ -255,6 +272,23 @@ If that legacy file exists and the new library directory is empty, Philo migrate
 
 For the full widget lifecycle, including `.widget.md` files, editor placeholders, save/update procedures, and revision tracking, see [Widget persistence and lifecycle](widget-persistence-and-lifecycle.md).
 
+## AI Chat History
+
+AI chat history is stored as individual JSON files under the resolved chats directory.
+
+Current location:
+
+- vault mode: `<vaultDir>/chats/`
+- default mode: `<journalDir>/chats/`
+
+Each saved chat becomes:
+
+```text
+<id>.json
+```
+
+These files back the recent chat history shown in the app. They are separate from widget files and separate from the widget library.
+
 ## Obsidian Detection And Bootstrap
 
 When the user points Philo at a vault, `services/obsidian.ts` and the Tauri backend inspect `.obsidian` files to detect:
@@ -278,6 +312,7 @@ Specifically:
 - changing `assetsFolder` does not move old images
 - changing `filenamePattern` does not rename existing note files
 - changing `excalidrawFolder` does not relocate drawings
+- changing `vaultDir` does not migrate existing widget files, library items, or chat-history files into the new root
 
 The settings UI already warns about the filename and folder cases. The code applies the new paths immediately, but it treats migration as a manual task.
 
@@ -289,7 +324,9 @@ If you want to know where something is stored:
 - Google OAuth access and refresh tokens: OS credential store (Keychain on macOS, equivalent secure store on other platforms)
 - daily notes: resolved `journalDir` plus `filenamePattern`
 - pasted images: resolved assets folder
-- widget library: `library/` under the vault or journal root
+- widget files: `widgets/` under the vault root, or under the resolved journal root in default mode
+- widget library: `library/` under the vault root or resolved journal root
+- AI chat history: `chats/` under the vault root or resolved journal root
 - Excalidraw content: wherever the configured Excalidraw path points, or the vault/journal fallback locations
 
 The clean mental model is:
