@@ -32,6 +32,7 @@ import {
   type WidgetEditStateDetail,
   type WidgetEditSubmitDetail,
 } from "./events";
+import { buildLoadingWidgetSpec, waitForNextPaint, } from "./loading";
 import {
   type SharedWidgetRuntimeApi,
   WidgetCardDepthProvider,
@@ -222,6 +223,11 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     () => (isShared ? sharedSpec ?? inlineSpec : inlineSpec),
     [inlineSpec, isShared, sharedSpec,],
   );
+  const renderSpec = useMemo(() => {
+    if (currentSpec) return currentSpec;
+    if (!loading && !sharedLoading) return null;
+    return buildLoadingWidgetSpec(prompt, "building",);
+  }, [currentSpec, loading, prompt, sharedLoading,],);
 
   const loadManifest = useCallback(async () => {
     if (!componentId) {
@@ -377,6 +383,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       },),
     );
     updateAttributes({ prompt: persistedPrompt, loading: true, error: "", },);
+    await waitForNextPaint();
     try {
       if (isShared && manifest) {
         const generated = await generateSharedWidget(generationPrompt, manifest.storageSchema,);
@@ -450,6 +457,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     if (isShared || !specStr || !inlineSpec || !prompt) return;
 
     updateAttributes({ loading: true, },);
+    await waitForNextPaint();
     try {
       const uiSpec = inlineSpec;
       const generated = await generateSharedWidget(prompt, undefined,);
@@ -516,7 +524,6 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const rebuildTitle = loading || sharedLoading ? "Refreshing widget" : "Refresh widget";
   const showSaveAction = !isShared && !saved;
   const showRenderOverlay = (loading || sharedLoading) && Boolean(currentSpec,);
-  const showLoadingScreen = (loading || sharedLoading) && !currentSpec;
   const overlayText = isEditingInChat ? "Building new version..." : "Refreshing widget...";
   const overlayPrompt = isEditingInChat ? "Updating this widget with your latest edit." : prompt;
 
@@ -582,17 +589,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
           </div>
         </div>
 
-        {showLoadingScreen
-          ? (
-            <div className="widget-loading">
-              <div className="widget-loading-inner">
-                <div className="widget-spinner" />
-                <span className="widget-loading-text">Sophia is building...</span>
-                <span className="widget-loading-prompt">{prompt}</span>
-              </div>
-            </div>
-          )
-          : missingComponent
+        {missingComponent
           ? (
             <div className="widget-error">
               <p className="widget-error-title">Shared component missing</p>
@@ -606,7 +603,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
               <p className="widget-error-message">{renderError}</p>
             </div>
           )
-          : currentSpec
+          : renderSpec
           ? (
             <div
               className="widget-render"
@@ -616,10 +613,10 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
               <RendererBoundary>
                 <JSONUIProvider registry={registry}>
                   <WidgetRuntimeProvider runtime={runtimeApi}>
-                    <WidgetStateProvider key={componentId ?? specStr}>
+                    <WidgetStateProvider key={componentId ?? specStr ?? id}>
                       <WidgetCardDepthProvider>
                         <WidgetTemporalProvider>
-                          <Renderer spec={currentSpec} registry={registry} />
+                          <Renderer spec={renderSpec} registry={registry} />
                         </WidgetTemporalProvider>
                       </WidgetCardDepthProvider>
                     </WidgetStateProvider>

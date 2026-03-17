@@ -4,6 +4,7 @@ import { useState, } from "react";
 import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../services/ai";
 import { generateWidget, } from "../../services/generate";
 import { createWidgetFile, } from "../../services/widget-files";
+import { waitForNextPaint, } from "./extensions/widget/loading";
 import { getEditorSelectionText, } from "./selectionText";
 
 interface EditorBubbleMenuProps {
@@ -60,6 +61,8 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
         attrs: { id: widgetId, prompt: selectedText, spec: "", loading: true, saved: false, error: "", },
       },)
       .run();
+
+    await waitForNextPaint();
 
     try {
       const spec = await generateWidget(selectedText,);
