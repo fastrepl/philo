@@ -661,7 +661,7 @@ primary.firstChild.textContent = labels[os];
     padding: 0 24px;
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 34px;
   }
 
@@ -670,18 +670,7 @@ primary.firstChild.textContent = labels[os];
     width: 100%;
     max-width: 720px;
     flex: 1 1 auto;
-    height: 100vh;
-    overflow-y: auto;
     padding: 68px 0 88px;
-    scrollbar-gutter: stable;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .shell::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
   }
 
   .brand-row {
@@ -1292,7 +1281,9 @@ primary.firstChild.textContent = labels[os];
   }
 
   .video-column {
-    position: relative;
+    position: sticky;
+    top: 68px;
+    align-self: flex-start;
     flex: 0 0 320px;
     width: 320px;
     padding-top: 0;
@@ -1360,12 +1351,6 @@ primary.firstChild.textContent = labels[os];
     to {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  @media (min-width: 981px) {
-    body {
-      overflow: hidden;
     }
   }
 
