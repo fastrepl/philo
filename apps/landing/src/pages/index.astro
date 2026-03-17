@@ -177,9 +177,9 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
                     {
                       item.visual === "rollover" && (
                         <div class="mini-rollover">
-                          <span class="mini-today-pill">Today</span>
                           <div class="mini-rollover-columns">
                             <div class="mini-rollover-column mini-rollover-source">
+                              <span class="mini-today-pill mini-today-pill-source">Today</span>
                               <p>Mar 16</p>
                               <div class="mini-task-row">
                                 <span class="mini-checkbox is-checked"></span>
@@ -195,6 +195,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
                               </div>
                             </div>
                             <div class="mini-rollover-column mini-rollover-target">
+                              <span class="mini-today-pill mini-today-pill-target">Today</span>
                               <p>Mar 17</p>
                               <div class="mini-task-row">
                                 <span class="mini-checkbox"></span>
@@ -801,6 +802,7 @@ primary.firstChild.textContent = labels[os];
     padding: 4px;
     display: grid;
     gap: 4px;
+    position: relative;
   }
 
   .mini-timeline-day {
@@ -917,8 +919,8 @@ primary.firstChild.textContent = labels[os];
 
   .mini-today-pill {
     position: absolute;
-    top: 0;
-    left: 4px;
+    top: 4px;
+    right: 4px;
     padding: 0 4px;
     border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
     background: color-mix(in srgb, var(--accent) 10%, #ffffff);
@@ -927,7 +929,15 @@ primary.firstChild.textContent = labels[os];
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    animation: mini-today-shift 5s ease-in-out infinite;
+  }
+
+  .mini-today-pill-source {
+    animation: mini-today-source-fade 5s ease-in-out infinite;
+  }
+
+  .mini-today-pill-target {
+    opacity: 0;
+    animation: mini-today-target-fade 5s ease-in-out infinite;
   }
 
   .mini-moving-task {
@@ -1089,15 +1099,27 @@ primary.firstChild.textContent = labels[os];
     }
   }
 
-  @keyframes mini-today-shift {
+  @keyframes mini-today-source-fade {
     0%,
     45% {
-      transform: translateX(0);
+      opacity: 1;
     }
 
     55%,
     100% {
-      transform: translateX(72px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes mini-today-target-fade {
+    0%,
+    45% {
+      opacity: 0;
+    }
+
+    55%,
+    100% {
+      opacity: 1;
     }
   }
 
