@@ -862,6 +862,11 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     flex: 0 0 auto;
   }
 
+  .platform-icon[data-download-primary-icon="macos"],
+  .download-menu [data-download-macos] .platform-icon {
+    transform: translateY(-1px);
+  }
+
   .platform-icon-set .platform-icon {
     grid-area: 1 / 1;
     display: none;
