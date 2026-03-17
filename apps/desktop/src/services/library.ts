@@ -267,8 +267,7 @@ async function listLegacyItems(): Promise<LibraryItem[]> {
 
 async function migrateLegacyLibraryJson(): Promise<LibraryItem[]> {
   const dir = await getLibraryDir();
-  const base = await getAppBaseDirectory();
-  const path = await join(base, LIBRARY_FILE,);
+  const path = await getLegacyLibraryPath();
   if (!(await exists(path,))) return [];
 
   try {
@@ -312,6 +311,7 @@ async function migrateLegacyLibraryJson(): Promise<LibraryItem[]> {
         await writeTextFile(fullPath, serializeComponentMarkdown(item,),);
       }
     }
+    await remove(path,);
     return normalized;
   } catch {
     return [];
@@ -322,6 +322,41 @@ async function getAppBaseDirectory(): Promise<string> {
   const base = await getAppBaseDir();
   if (base.trim()) return base;
   return "/";
+}
+
+async function getLegacyLibraryPath(): Promise<string> {
+  const base = await getAppBaseDirectory();
+  return await join(base, LIBRARY_FILE,);
+}
+
+async function removeLegacyLibraryItem(id: string,): Promise<void> {
+  const path = await getLegacyLibraryPath();
+  if (!(await exists(path,))) return;
+
+  try {
+    const raw = await readTextFile(path,);
+    const parsed = JSON.parse(raw,) as Array<{
+      id?: string;
+      title?: string;
+      description?: string;
+      prompt?: string;
+      html?: string;
+      savedAt?: string;
+    }>;
+    if (!Array.isArray(parsed,)) return;
+
+    const filtered = parsed.filter((item,) => item?.id !== id);
+    if (filtered.length === parsed.length) return;
+
+    if (filtered.length === 0) {
+      await remove(path,);
+      return;
+    }
+
+    await writeTextFile(path, `${JSON.stringify(filtered, null, 2,)}\n`,);
+  } catch {
+    return;
+  }
 }
 
 function libraryDirArgs(baseDir: string, overrides: Record<string, unknown> = {},): Record<string, unknown> {
@@ -515,6 +550,7 @@ export async function removeFromLibrary(id: string,): Promise<void> {
         }
       },),
   );
+  await removeLegacyLibraryItem(id,);
   await markWidgetLibraryReferenceRemoved(id,);
 }
 
