@@ -18,6 +18,7 @@ const WidgetStateContext = createContext<
     setValue: (key: string, value: unknown,) => void;
   } | null
 >(null,);
+const WidgetCardDepthContext = createContext(0,);
 const WidgetTemporalContext = createContext<
   {
     now: Date;
@@ -67,6 +68,10 @@ export function WidgetStateProvider({ children, }: { children: ReactNode; },) {
   return <WidgetStateContext.Provider value={api}>{children}</WidgetStateContext.Provider>;
 }
 
+export function WidgetCardDepthProvider({ children, }: { children: ReactNode; },) {
+  return <WidgetCardDepthContext.Provider value={0}>{children}</WidgetCardDepthContext.Provider>;
+}
+
 function useWidgetRuntime(): SharedWidgetRuntimeApi | null {
   return useContext(WidgetRuntimeContext,);
 }
@@ -77,6 +82,10 @@ function useWidgetState() {
 
 function useWidgetTemporal() {
   return useContext(WidgetTemporalContext,);
+}
+
+function useWidgetCardDepth() {
+  return useContext(WidgetCardDepthContext,);
 }
 
 type RowMap = Record<string, unknown>;
@@ -307,31 +316,35 @@ export const { registry, } = defineRegistry(widgetCatalog, {
     Card: ({ props, children, },) => {
       const temporal = useWidgetTemporal();
       const widgetState = useWidgetState();
+      const cardDepth = useWidgetCardDepth();
+      const isRootCard = cardDepth === 0;
       const title = resolveTemplateString(props.title, temporal, widgetState,);
 
       return (
-        <div
-          style={{
-            borderRadius: "12px",
-            border: "1px solid #e5e7eb",
-            background: "#fff",
-            padding: props.padding === "none"
-              ? 0
-              : props.padding === "sm"
-              ? "8px"
-              : props.padding === "lg"
-              ? "24px"
-              : "16px",
-            fontFamily: "'IBM Plex Sans', sans-serif",
-          }}
-        >
-          {title && (
-            <div style={{ fontWeight: 600, fontSize: "14px", color: "#1f2937", marginBottom: "12px", }}>
-              {title}
-            </div>
-          )}
-          {children}
-        </div>
+        <WidgetCardDepthContext.Provider value={cardDepth + 1}>
+          <div
+            style={{
+              borderRadius: isRootCard ? 0 : "12px",
+              border: isRootCard ? "none" : "1px solid #e5e7eb",
+              background: isRootCard ? "transparent" : "#fff",
+              padding: props.padding === "none"
+                ? 0
+                : props.padding === "sm"
+                ? "8px"
+                : props.padding === "lg"
+                ? "24px"
+                : "16px",
+              fontFamily: "'IBM Plex Sans', sans-serif",
+            }}
+          >
+            {title && (
+              <div style={{ fontWeight: 600, fontSize: "14px", color: "#1f2937", marginBottom: "12px", }}>
+                {title}
+              </div>
+            )}
+            {children}
+          </div>
+        </WidgetCardDepthContext.Provider>
       );
     },
 
