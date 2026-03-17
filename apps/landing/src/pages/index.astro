@@ -627,7 +627,8 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
 
   .lede {
     margin-top: 18px;
-    max-width: 72ch;
+    max-width: none;
+    white-space: nowrap;
     font-size: 15px;
     line-height: 1.72;
     color: #3f3f3d;
@@ -1462,6 +1463,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     }
 
     .lede {
+      white-space: normal;
       max-width: none;
     }
 
