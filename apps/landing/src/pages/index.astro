@@ -1226,8 +1226,8 @@ const heroMetaDescription =
 
     .hero {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(300px, 42vw);
-      column-gap: clamp(24px, 4vw, 40px);
+      grid-template-columns: minmax(0, 1fr) clamp(220px, 38vw, 360px);
+      column-gap: clamp(18px, 3vw, 32px);
       align-items: center;
     }
 
@@ -1252,7 +1252,7 @@ const heroMetaDescription =
     }
   }
 
-  @media (max-width: 720px) {
+  @media (max-width: 520px) {
     .hero {
       display: block;
     }
