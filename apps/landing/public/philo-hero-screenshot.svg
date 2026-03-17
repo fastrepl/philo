@@ -1,49 +1,62 @@
-<svg width="1200" height="780" viewBox="0 0 1200 780" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="1200" height="1120" viewBox="0 0 1200 1120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="shell" x1="130" y1="96" x2="1070" y2="684" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F7F7F2"/>
-      <stop offset="1" stop-color="#EFEFE8"/>
+    <linearGradient id="bg" x1="100" y1="70" x2="1080" y2="710" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6F5EF"/>
+      <stop offset="1" stop-color="#ECEBE4"/>
     </linearGradient>
-    <linearGradient id="sidebar" x1="174" y1="148" x2="418" y2="632" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F3F3EC"/>
-      <stop offset="1" stop-color="#ECECE3"/>
-    </linearGradient>
-    <linearGradient id="today" x1="540" y1="346" x2="1020" y2="566" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FAFAF6"/>
-      <stop offset="1" stop-color="#F2F2EB"/>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(932 640) rotate(148.412) scale(332.505 237.827)">
+      <stop stop-color="#CBD5FF" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#CBD5FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="today-pill" x1="446" y1="210" x2="446" y2="260" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4B5563"/>
+      <stop offset="1" stop-color="#1F2937"/>
     </linearGradient>
   </defs>
-  <rect width="1200" height="780" fill="#EEEDE6"/>
-  <rect x="64" y="56" width="1072" height="668" rx="24" fill="url(#shell)" stroke="#D8D7CF"/>
-  <rect x="96" y="96" width="1008" height="588" rx="18" fill="#FCFCF8" stroke="#E1E0D7"/>
-  <rect x="130" y="130" width="278" height="520" rx="14" fill="url(#sidebar)" stroke="#E1E0D7"/>
-  <rect x="174" y="174" width="94" height="14" rx="4" fill="#61605B"/>
-  <rect x="174" y="214" width="110" height="10" rx="3" fill="#A2A099"/>
-  <rect x="174" y="254" width="190" height="52" rx="10" fill="#FBFBF7" stroke="#E1E0D7"/>
-  <rect x="192" y="272" width="54" height="8" rx="3" fill="#5F70D8"/>
-  <rect x="192" y="288" width="146" height="8" rx="3" fill="#D8D7CF"/>
-  <rect x="174" y="324" width="190" height="52" rx="10" fill="#F3F2EB" stroke="#E1E0D7"/>
-  <rect x="192" y="342" width="62" height="8" rx="3" fill="#6D6A61"/>
-  <rect x="192" y="358" width="128" height="8" rx="3" fill="#D8D7CF"/>
-  <rect x="174" y="394" width="190" height="52" rx="10" fill="#F3F2EB" stroke="#E1E0D7"/>
-  <rect x="192" y="412" width="72" height="8" rx="3" fill="#6D6A61"/>
-  <rect x="192" y="428" width="136" height="8" rx="3" fill="#D8D7CF"/>
-  <rect x="444" y="130" width="626" height="78" rx="14" fill="#F7F7F2" stroke="#E1E0D7"/>
-  <rect x="484" y="160" width="186" height="14" rx="4" fill="#34332F"/>
-  <rect x="484" y="186" width="314" height="10" rx="3" fill="#A2A099"/>
-  <rect x="444" y="238" width="626" height="382" rx="18" fill="#F6F5EE" stroke="#E1E0D7"/>
-  <rect x="484" y="278" width="170" height="12" rx="4" fill="#44433E"/>
-  <rect x="484" y="304" width="218" height="10" rx="3" fill="#AAA8A0"/>
-  <rect x="484" y="346" width="546" height="240" rx="16" fill="url(#today)" stroke="#DDDCD3"/>
-  <rect x="516" y="380" width="98" height="20" rx="10" fill="#E3E7FF"/>
-  <rect x="532" y="386" width="66" height="8" rx="4" fill="#5F70D8"/>
-  <rect x="516" y="430" width="438" height="58" rx="14" fill="#FCFCF8" stroke="#E1E0D7"/>
-  <rect x="542" y="450" width="164" height="8" rx="3" fill="#34332F"/>
-  <rect x="542" y="466" width="302" height="8" rx="3" fill="#B0AEA7"/>
-  <path d="M972 459H1012" stroke="#5F70D8" stroke-width="10" stroke-linecap="round"/>
-  <rect x="516" y="504" width="438" height="58" rx="14" fill="#FCFCF8" stroke="#E1E0D7"/>
-  <rect x="542" y="524" width="138" height="8" rx="3" fill="#34332F"/>
-  <rect x="542" y="540" width="286" height="8" rx="3" fill="#B0AEA7"/>
-  <path d="M914 533L948 533" stroke="#5F70D8" stroke-width="10" stroke-linecap="round"/>
-  <path d="M988 533L1020 533" stroke="#D9D7CE" stroke-width="10" stroke-linecap="round"/>
+  <rect width="1200" height="1120" fill="url(#bg)"/>
+  <rect width="1200" height="1120" fill="url(#glow)"/>
+  <rect x="188" y="64" width="824" height="992" rx="34" fill="#FCFCF9"/>
+  <rect x="188.75" y="64.75" width="822.5" height="990.5" rx="33.25" stroke="#DDDCD3" stroke-width="1.5"/>
+  <circle cx="232" cy="112" r="15" fill="#FF6259"/>
+  <circle cx="280" cy="112" r="15" fill="#FFBD44"/>
+  <circle cx="328" cy="112" r="15" fill="#28C840"/>
+  <path d="M952.503 120.304 971.696 139.497l-6.576 2.188-9.496 9.496 1.655 15.89-2.519 2.481-10.55-13.716-13.715 10.55-2.482-2.519 1.655-15.89 9.496-9.496 2.188-6.576Z" fill="#A0A7B2"/>
+
+  <text x="250" y="222" fill="#1F2937" font-size="54" font-style="italic" font-family="Instrument Serif, Georgia, serif">March 17th</text>
+  <rect x="448" y="172" width="150" height="48" rx="24" fill="url(#today-pill)"/>
+  <text x="523" y="205" fill="white" font-size="22" font-weight="700" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" letter-spacing="2">TODAY</text>
+  <text x="638" y="204" fill="#9CA3AF" font-size="26" font-family="Arial, Helvetica, sans-serif">Seoul</text>
+
+  <text x="252" y="300" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif">couldn’t agree more</text>
+  <text x="252" y="344" fill="#3B82F6" font-size="24" font-family="Arial, Helvetica, sans-serif" text-decoration="underline">https://www.youtube.com/watch?v=ZJEnQ0sMt-sU</text>
+
+  <text x="252" y="430" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif">might be a good idea for marketing website</text>
+  <text x="252" y="474" fill="#3B82F6" font-size="24" font-family="Arial, Helvetica, sans-serif" text-decoration="underline">https://x.com/RomaTesla/status/2033528717155373390</text>
+  <text x="252" y="506" fill="#3B82F6" font-size="24" font-family="Arial, Helvetica, sans-serif" text-decoration="underline">?s=20</text>
+
+  <text x="252" y="586" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif">nice tool</text>
+  <text x="382" y="586" fill="#3B82F6" font-size="24" font-family="Arial, Helvetica, sans-serif" text-decoration="underline">https://dither.neato.fun</text>
+
+  <text x="252" y="662" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif">distribution &amp; development. after coming back from america,</text>
+  <text x="252" y="700" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif">keep the work moving without rebuilding the list from scratch.</text>
+
+  <rect x="252" y="774" width="34" height="34" stroke="#1F2937" stroke-width="4"/>
+  <text x="306" y="801" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif">study remotion skills</text>
+  <rect x="664" y="769" width="118" height="40" rx="20" fill="#FEF3C7" stroke="#FDE68A" stroke-width="2"/>
+  <text x="723" y="796" fill="#92400E" font-size="21" font-weight="700" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Today</text>
+
+  <rect x="252" y="834" width="34" height="34" stroke="#1F2937" stroke-width="4"/>
+  <text x="306" y="861" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif">export the Hilton reservation</text>
+  <rect x="700" y="829" width="118" height="40" rx="20" fill="#FEF3C7" stroke="#FDE68A" stroke-width="2"/>
+  <text x="759" y="856" fill="#92400E" font-size="21" font-weight="700" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Today</text>
+
+  <rect x="252" y="894" width="34" height="34" stroke="#1F2937" stroke-width="4"/>
+  <text x="306" y="921" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif" font-weight="700">finish q2 planning</text>
+  <text x="585" y="921" fill="#1F2937" font-size="29" font-family="Arial, Helvetica, sans-serif">to prepare for the next quarter</text>
+  <rect x="646" y="940" width="124" height="42" rx="21" fill="#DBEAFE" stroke="#BFDBFE" stroke-width="2"/>
+  <text x="708" y="968" fill="#1D4ED8" font-size="22" font-weight="700" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Mar 20</text>
+
+  <rect x="306" y="1004" width="34" height="34" stroke="#1F2937" stroke-width="4"/>
+  <text x="362" y="1029" fill="#1F2937" font-size="26" font-family="Arial, Helvetica, sans-serif">create the document and wire up</text>
+  <text x="362" y="1060" fill="#1F2937" font-size="26" font-family="Arial, Helvetica, sans-serif">a deterministic report script</text>
 </svg>

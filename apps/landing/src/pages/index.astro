@@ -78,7 +78,7 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -351,19 +351,184 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
 
       <aside class="video-column enter" style="--delay: 120ms;">
         <div class="video-frame">
-          <video
-            class="product-video"
-            controls
-            muted
-            loop
-            playsinline
-            preload="metadata"
-            poster="/philo-video-poster.svg"
-          >
-            <source src="/philo-demo.mp4" type="video/mp4" />
-          </video>
+          <div class="product-demo">
+            <input
+              class="product-demo-input"
+              type="radio"
+              name="product-demo"
+              id="product-demo-capture"
+              checked
+            />
+            <input
+              class="product-demo-input"
+              type="radio"
+              name="product-demo"
+              id="product-demo-rollover"
+            />
+            <input
+              class="product-demo-input"
+              type="radio"
+              name="product-demo"
+              id="product-demo-recurring"
+            />
+
+            <div class="product-demo-tabs" role="tablist" aria-label="Philo demo views">
+              <label for="product-demo-capture">Capture</label>
+              <label for="product-demo-rollover">Rollover</label>
+              <label for="product-demo-recurring">Recurring</label>
+            </div>
+
+            <div class="product-demo-window">
+              <div class="product-demo-titlebar" aria-hidden="true">
+                <div class="product-demo-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <svg class="product-demo-pin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M13.8 3.2 20.8 10.2l-2.4.8-3.5 3.5.6 5.8-1 .9-3.8-5-5 3.8-.9-1 .6-5.8 3.5-3.5.8-2.4Z"
+                    fill="currentColor"
+                  ></path>
+                </svg>
+              </div>
+
+              <div class="product-demo-panel product-demo-panel-capture">
+                <div class="product-demo-note">
+                  <div class="product-demo-header">
+                    <p class="product-demo-date">March 17th</p>
+                    <span class="product-demo-pill product-demo-pill-today">Today</span>
+                    <span class="product-demo-city">Seoul</span>
+                  </div>
+
+                  <div class="product-demo-body">
+                    <p>couldn&apos;t agree more</p>
+                    <a href="https://www.youtube.com/watch?v=ZJEnQ0sMt-sU">https://www.youtube.com/watch?v=ZJEnQ0sMt-sU</a>
+
+                    <p>might be a good idea for marketing website</p>
+                    <a href="https://x.com/RomaTesla/status/2033528717155373390?s=20">https://x.com/RomaTesla/status/2033528717155373390?s=20</a>
+
+                    <p>nice tool <a href="https://dither.neato.fun">https://dither.neato.fun</a></p>
+
+                    <p>
+                      distribution &amp; development. after coming back from america, keep the work
+                      moving without rebuilding the list from scratch.
+                    </p>
+                  </div>
+
+                  <ul class="product-demo-tasks" aria-label="Example Philo tasks">
+                    <li>
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">study remotion skills</span>
+                      <span class="product-demo-chip product-demo-chip-today">Today</span>
+                    </li>
+                    <li>
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">export the Hilton reservation</span>
+                      <span class="product-demo-chip product-demo-chip-today">Today</span>
+                    </li>
+                    <li>
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">
+                        <strong>finish q2 planning</strong> to prepare for the next quarter
+                      </span>
+                      <span class="product-demo-chip product-demo-chip-date">Mar 20</span>
+                    </li>
+                    <li class="product-demo-subtask">
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">
+                        create the document and wire up a deterministic report script
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="product-demo-panel product-demo-panel-rollover">
+                <div class="product-demo-note">
+                  <div class="product-demo-header">
+                    <p class="product-demo-date">March 17th</p>
+                    <span class="product-demo-pill product-demo-pill-today">Today</span>
+                    <span class="product-demo-city">Seoul</span>
+                  </div>
+
+                  <div class="product-demo-status">
+                    <span>2 open tasks rolled in from yesterday</span>
+                  </div>
+
+                  <div class="product-demo-rollover-cards" aria-hidden="true">
+                    <div class="product-demo-rollover-card product-demo-rollover-card-old">
+                      <p>Mar 16</p>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <div class="product-demo-rollover-arrow"></div>
+                    <div class="product-demo-rollover-card product-demo-rollover-card-new">
+                      <p>Mar 17</p>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+
+                  <ul class="product-demo-tasks" aria-label="Rolled over Philo tasks">
+                    <li class="product-demo-task-highlight">
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">send revised landing copy to design</span>
+                      <span class="product-demo-chip product-demo-chip-origin">From Mar 16</span>
+                    </li>
+                    <li class="product-demo-task-highlight product-demo-task-highlight-delay">
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">capture the release notes changes</span>
+                      <span class="product-demo-chip product-demo-chip-origin">From Mar 16</span>
+                    </li>
+                    <li>
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">review tonight&apos;s recurring tasks</span>
+                      <span class="product-demo-chip product-demo-chip-today">Today</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="product-demo-panel product-demo-panel-recurring">
+                <div class="product-demo-note">
+                  <div class="product-demo-header">
+                    <p class="product-demo-date">March 17th</p>
+                    <span class="product-demo-pill product-demo-pill-today">Today</span>
+                    <span class="product-demo-city">Seoul</span>
+                  </div>
+
+                  <div class="product-demo-body">
+                    <p>daily note, but without the friction of rebuilding the same checklist.</p>
+                  </div>
+
+                  <ul class="product-demo-tasks" aria-label="Recurring Philo tasks">
+                    <li>
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">close the day with one clear next step</span>
+                      <span class="product-demo-chip product-demo-chip-recurring">Daily</span>
+                    </li>
+                    <li>
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">check launch blockers before noon</span>
+                      <span class="product-demo-chip product-demo-chip-recurring">Weekdays</span>
+                    </li>
+                    <li>
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">pull unfinished tasks back into focus</span>
+                      <span class="product-demo-chip product-demo-chip-today">Today</span>
+                    </li>
+                    <li class="product-demo-subtask">
+                      <span class="product-demo-checkbox"></span>
+                      <span class="product-demo-task-copy">leave the rest inside markdown</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <p class="video-note">Place `philo-demo.mp4` in `apps/landing/public/` to use your own demo.</p>
+        <p class="video-note">Click through a live mockup of how Philo captures notes, rolls tasks, and keeps recurring work visible.</p>
       </aside>
     </div>
   </body>
@@ -1331,18 +1496,332 @@ primary.firstChild.textContent = labels[os];
     padding: 8px;
   }
 
-  .product-video {
+  .product-demo {
+    position: relative;
+  }
+
+  .product-demo-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .product-demo-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .product-demo-tabs label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 9px;
+    border: 1px solid color-mix(in srgb, var(--line) 84%, #c8cad4);
+    background: rgba(255, 255, 255, 0.88);
+    color: #66665f;
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      border-color 160ms ease,
+      background 160ms ease,
+      color 160ms ease;
+  }
+
+  #product-demo-capture:checked ~ .product-demo-tabs label[for="product-demo-capture"],
+  #product-demo-rollover:checked ~ .product-demo-tabs label[for="product-demo-rollover"],
+  #product-demo-recurring:checked ~ .product-demo-tabs label[for="product-demo-recurring"] {
+    border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+    background: color-mix(in srgb, var(--accent) 10%, #ffffff);
+    color: var(--accent);
+  }
+
+  .product-demo-window {
+    position: relative;
     display: block;
     width: 100%;
     max-width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 9 / 16;
     border: 1px dashed color-mix(in srgb, var(--line) 82%, #bfc2ce);
-    background: #efefe9;
+    background:
+      radial-gradient(circle at bottom right, rgba(201, 211, 255, 0.65), transparent 28%),
+      linear-gradient(180deg, #f7f7f2 0%, #efeee7 100%);
+    overflow: hidden;
   }
 
-  .video-column .product-video {
-    aspect-ratio: 9 / 16;
+  .product-demo-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 10px;
+  }
+
+  .product-demo-dots {
+    display: flex;
+    gap: 7px;
+  }
+
+  .product-demo-dots span {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .product-demo-dots span:nth-child(1) {
+    background: #ff6259;
+  }
+
+  .product-demo-dots span:nth-child(2) {
+    background: #ffbd44;
+  }
+
+  .product-demo-dots span:nth-child(3) {
+    background: #28c840;
+  }
+
+  .product-demo-pin {
+    width: 16px;
+    height: 16px;
+    color: #a0a7b2;
+  }
+
+  .product-demo-panel {
+    position: absolute;
+    inset: 44px 14px 14px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  #product-demo-capture:checked ~ .product-demo-window .product-demo-panel-capture,
+  #product-demo-rollover:checked ~ .product-demo-window .product-demo-panel-rollover,
+  #product-demo-recurring:checked ~ .product-demo-window .product-demo-panel-recurring {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .product-demo-note {
+    height: 100%;
+    padding: 18px 18px 20px;
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 24px 48px rgba(44, 49, 63, 0.08);
+    backdrop-filter: blur(8px);
+  }
+
+  .product-demo-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .product-demo-date {
+    margin: 0;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px;
+    font-style: italic;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: #1f2937;
+  }
+
+  .product-demo-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 11px 3px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .product-demo-pill-today {
+    background: linear-gradient(to bottom, #4b5563, #1f2937);
+    color: #ffffff;
+  }
+
+  .product-demo-city {
+    color: #9ca3af;
+    font-size: 13px;
+  }
+
+  .product-demo-body {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 18px;
+    color: #1f2937;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .product-demo-body p {
+    margin: 0;
+  }
+
+  .product-demo-body a {
+    color: #3b82f6;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.12em;
+    overflow-wrap: anywhere;
+  }
+
+  .product-demo-status {
+    margin-bottom: 14px;
+    padding: 9px 11px;
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+    background: color-mix(in srgb, var(--accent) 8%, #ffffff);
+    color: #334155;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .product-demo-rollover-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .product-demo-rollover-card {
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #d3d6df);
+    background: rgba(255, 255, 255, 0.82);
+    padding: 8px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .product-demo-rollover-card p {
+    margin: 0;
+    color: #4b5563;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .product-demo-rollover-card span {
+    display: block;
+    height: 7px;
+    background: rgba(148, 163, 184, 0.18);
+  }
+
+  .product-demo-rollover-card-old {
+    opacity: 0.68;
+  }
+
+  .product-demo-rollover-card-new {
+    border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  }
+
+  .product-demo-rollover-arrow {
+    height: 2px;
+    background: var(--accent);
+    position: relative;
+  }
+
+  .product-demo-rollover-arrow::after {
+    content: "";
+    position: absolute;
+    right: -1px;
+    top: -4px;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 7px solid var(--accent);
+  }
+
+  .product-demo-tasks {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 8px;
+  }
+
+  .product-demo-tasks li {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: start;
+    color: #1f2937;
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .product-demo-subtask {
+    margin-left: 22px;
+    grid-template-columns: 14px minmax(0, 1fr);
+  }
+
+  .product-demo-checkbox {
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid #1f2937;
+    background: rgba(255, 255, 255, 0.92);
+    box-sizing: border-box;
+  }
+
+  .product-demo-task-copy strong {
+    font-weight: 600;
+  }
+
+  .product-demo-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .product-demo-chip-today {
+    border-color: #fde68a;
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .product-demo-chip-date {
+    border-color: #bfdbfe;
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .product-demo-chip-origin {
+    border-color: color-mix(in srgb, var(--accent) 28%, #c7d2fe);
+    background: color-mix(in srgb, var(--accent) 10%, #ffffff);
+    color: var(--accent);
+  }
+
+  .product-demo-chip-recurring {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .product-demo-task-highlight {
+    animation: product-demo-task-highlight 3.8s ease-in-out infinite;
+  }
+
+  .product-demo-task-highlight-delay {
+    animation-delay: 0.22s;
   }
 
   .hero-screenshot {
@@ -1358,6 +1837,24 @@ primary.firstChild.textContent = labels[os];
     margin: 10px 0 0;
     color: #676762;
     font-size: var(--fs-xs);
+  }
+
+  @keyframes product-demo-task-highlight {
+    0%,
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    35% {
+      transform: translateX(2px);
+      opacity: 1;
+    }
+
+    55% {
+      transform: translateX(-1px);
+      opacity: 0.86;
+    }
   }
 
   footer {
