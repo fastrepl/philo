@@ -2,6 +2,7 @@ import { dirname, join, } from "@tauri-apps/api/path";
 import { exists, mkdir, readDir, readTextFile, writeTextFile, } from "@tauri-apps/plugin-fs";
 import { getJournalDir, getWidgetsDir, } from "./paths";
 import { getVaultDirSetting, } from "./settings";
+import { compactWidgetSpec, encodeWidgetDataAttr, escapeWidgetHtmlAttr, } from "./widget-attrs";
 
 const OBSIDIAN_EMBED_RE = /!\[\[([^[\]]+)\]\]/g;
 const WIDGET_SUFFIX = ".widget.md";
@@ -25,14 +26,6 @@ interface WidgetFileInput {
   saved?: boolean;
   libraryItemId?: string | null;
   componentId?: string | null;
-}
-
-function escapeAttr(s: string,): string {
-  return s
-    .replace(/&/g, "&amp;",)
-    .replace(/"/g, "&quot;",)
-    .replace(/</g, "&lt;",)
-    .replace(/>/g, "&gt;",);
 }
 
 function frontmatterValue(raw: string,): string {
@@ -128,17 +121,17 @@ function serializeWidgetMarkdown(record: WidgetFileRecord,): string {
 
 function toWidgetHtml(record: WidgetFileRecord,): string {
   const attrs = ['data-widget=""',];
-  attrs.push(`data-id="${escapeAttr(record.id,)}"`,);
-  attrs.push(`data-file="${escapeAttr(record.file,)}"`,);
-  attrs.push(`data-path="${escapeAttr(record.path,)}"`,);
-  attrs.push(`data-prompt="${escapeAttr(record.prompt,)}"`,);
-  attrs.push(`data-spec="${escapeAttr(record.spec,)}"`,);
+  attrs.push(`data-id="${escapeWidgetHtmlAttr(record.id,)}"`,);
+  attrs.push(`data-file="${escapeWidgetHtmlAttr(record.file,)}"`,);
+  attrs.push(`data-path="${escapeWidgetHtmlAttr(record.path,)}"`,);
+  attrs.push(`data-prompt="${encodeWidgetDataAttr(record.prompt,)}"`,);
+  attrs.push(`data-spec="${encodeWidgetDataAttr(compactWidgetSpec(record.spec,),)}"`,);
   if (record.saved) attrs.push('data-saved="true"',);
   if (record.libraryItemId) {
-    attrs.push(`data-library-item-id="${escapeAttr(record.libraryItemId,)}"`,);
+    attrs.push(`data-library-item-id="${escapeWidgetHtmlAttr(record.libraryItemId,)}"`,);
   }
   if (record.componentId) {
-    attrs.push(`data-component-id="${escapeAttr(record.componentId,)}"`,);
+    attrs.push(`data-component-id="${escapeWidgetHtmlAttr(record.componentId,)}"`,);
   }
   return `<div ${attrs.join(" ",)}></div>`;
 }

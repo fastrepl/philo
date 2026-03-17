@@ -3,17 +3,15 @@ import type { JSONContent, } from "@tiptap/core";
 import { ReactNodeViewRenderer, } from "@tiptap/react";
 import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../../../services/ai";
 import { generateWidget, } from "../../../../services/generate";
+import {
+  compactWidgetSpec,
+  decodeWidgetDataAttr,
+  encodeWidgetDataAttr,
+  escapeWidgetHtmlAttr,
+} from "../../../../services/widget-attrs";
 import { createWidgetFile, } from "../../../../services/widget-files";
 import { getEditorSelectionText, } from "../../selectionText";
 import { WidgetView, } from "./WidgetView";
-
-function escapeAttr(s: string,): string {
-  return s
-    .replace(/&/g, "&amp;",)
-    .replace(/"/g, "&quot;",)
-    .replace(/</g, "&lt;",)
-    .replace(/>/g, "&gt;",);
-}
 
 function deriveTitle(prompt: string,): string {
   const firstSentence = prompt.split(/[.!?\n]/,)[0].trim();
@@ -76,16 +74,16 @@ export const WidgetExtension = Node.create({
     }
 
     const parts = ['<div data-widget=""',];
-    if (attrs.id) parts.push(` data-id="${escapeAttr(String(attrs.id,),)}"`,);
+    if (attrs.id) parts.push(` data-id="${escapeWidgetHtmlAttr(String(attrs.id,),)}"`,);
     if (attrs.componentId) {
-      parts.push(` data-component-id="${escapeAttr(String(attrs.componentId,),)}"`,);
+      parts.push(` data-component-id="${escapeWidgetHtmlAttr(String(attrs.componentId,),)}"`,);
     } else if (attrs.spec) {
-      parts.push(` data-spec="${escapeAttr(String(attrs.spec,),)}"`,);
+      parts.push(` data-spec="${encodeWidgetDataAttr(compactWidgetSpec(String(attrs.spec,),),)}"`,);
     }
     if (attrs.libraryItemId) {
-      parts.push(` data-library-item-id="${escapeAttr(String(attrs.libraryItemId,),)}"`,);
+      parts.push(` data-library-item-id="${escapeWidgetHtmlAttr(String(attrs.libraryItemId,),)}"`,);
     }
-    if (attrs.prompt) parts.push(` data-prompt="${escapeAttr(String(attrs.prompt,),)}"`,);
+    if (attrs.prompt) parts.push(` data-prompt="${encodeWidgetDataAttr(String(attrs.prompt,),)}"`,);
     if (attrs.saved) parts.push(' data-saved="true"',);
     parts.push("></div>",);
     return parts.join("",) + "\n\n";
@@ -99,7 +97,7 @@ export const WidgetExtension = Node.create({
       },
       spec: {
         default: "",
-        parseHTML: (el: HTMLElement,) => el.getAttribute("data-spec",) || "",
+        parseHTML: (el: HTMLElement,) => decodeWidgetDataAttr(el.getAttribute("data-spec",),),
       },
       file: {
         default: "",
@@ -125,7 +123,7 @@ export const WidgetExtension = Node.create({
       },
       prompt: {
         default: "",
-        parseHTML: (el: HTMLElement,) => el.getAttribute("data-prompt",) || "",
+        parseHTML: (el: HTMLElement,) => decodeWidgetDataAttr(el.getAttribute("data-prompt",),),
       },
       saved: {
         default: false,
@@ -146,8 +144,8 @@ export const WidgetExtension = Node.create({
       mergeAttributes(HTMLAttributes, {
         "data-widget": "",
         "data-id": String(HTMLAttributes.id ?? "",),
-        "data-spec": String(HTMLAttributes.spec ?? "",),
-        "data-prompt": String(HTMLAttributes.prompt ?? "",),
+        "data-spec": encodeWidgetDataAttr(compactWidgetSpec(String(HTMLAttributes.spec ?? "",),),),
+        "data-prompt": encodeWidgetDataAttr(String(HTMLAttributes.prompt ?? "",),),
         "data-file": String(HTMLAttributes.file ?? "",),
         "data-path": String(HTMLAttributes.path ?? "",),
         ...(HTMLAttributes.libraryItemId

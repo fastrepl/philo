@@ -99,6 +99,36 @@ function stringifySpec(candidate: unknown, fallback = "",): string {
   return JSON.stringify(candidate,);
 }
 
+function buildWidgetGenerationPrompt(
+  prompt: string,
+  spec: Spec | null,
+  instruction?: string,
+): string {
+  const basePrompt = prompt.trim();
+
+  if (!spec) {
+    return instruction ? `${basePrompt}\n\nChange request: ${instruction}` : basePrompt;
+  }
+
+  const parts = [
+    basePrompt,
+    "",
+    "Current widget JSON:",
+    JSON.stringify(spec, null, 2,),
+  ];
+
+  if (instruction) {
+    parts.push("", `Apply this change to the current widget: ${instruction}`,);
+  } else {
+    parts.push(
+      "",
+      "Rebuild this widget from the current JSON. Preserve its current behavior and layout unless a small fix is clearly needed.",
+    );
+  }
+
+  return parts.join("\n",);
+}
+
 class RendererBoundary extends Component<{ children: ReactNode; }, { error: string | null; }> {
   state = { error: null as string | null, };
 
@@ -181,6 +211,12 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const effectiveLibraryItemId = libraryItemId ?? componentId ?? null;
 
   const inlineSpec = useMemo(() => parseSpec(specStr,), [specStr,],);
+  const isShared = Boolean(componentId,);
+  const sharedSpec = manifest?.uiSpec ? parseSpec(manifest.uiSpec,) : null;
+  const currentSpec = useMemo(
+    () => (isShared ? sharedSpec ?? inlineSpec : inlineSpec),
+    [inlineSpec, isShared, sharedSpec,],
+  );
 
   const loadManifest = useCallback(async () => {
     if (!componentId) {
@@ -245,8 +281,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       if (detail?.widgetId !== id) return;
       const instruction = detail.instruction.trim();
       if (!instruction) return;
-      const nextPrompt = `${prompt.trim()}\n\nChange request: ${instruction}`;
-      void runGeneration(nextPrompt,);
+      void runGeneration(buildWidgetGenerationPrompt(prompt, currentSpec, instruction,), prompt,);
     };
 
     window.addEventListener(WIDGET_EDIT_STATE_EVENT, handleWidgetEditState,);
@@ -255,9 +290,8 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       window.removeEventListener(WIDGET_EDIT_STATE_EVENT, handleWidgetEditState,);
       window.removeEventListener(WIDGET_EDIT_SUBMIT_EVENT, handleWidgetEditSubmit,);
     };
-  }, [id, prompt,],);
+  }, [currentSpec, id, prompt,],);
 
-  const isShared = Boolean(componentId,);
   const runtimeApi: SharedWidgetRuntimeApi = useMemo(() => {
     if (!isShared || !componentId || missingComponent || !manifest) {
       return {
@@ -285,12 +319,6 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       refreshToken: runtimeRefreshToken,
     };
   }, [componentId, isShared, manifest, missingComponent, runtimeRefreshToken,],);
-
-  const sharedSpec = manifest?.uiSpec ? parseSpec(manifest.uiSpec,) : null;
-  const currentSpec = useMemo(
-    () => (isShared ? sharedSpec ?? inlineSpec : inlineSpec),
-    [inlineSpec, isShared, sharedSpec,],
-  );
 
   const persistWidgetRecord = useCallback(async (
     nextPrompt: string,
@@ -322,23 +350,23 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     },);
   }, [file, id, path,],);
 
-  const runGeneration = async (nextPrompt: string,) => {
+  const runGeneration = async (generationPrompt: string, persistedPrompt = prompt,) => {
     window.dispatchEvent(
       new CustomEvent<WidgetBuildStateDetail>(WIDGET_BUILD_STATE_EVENT, {
         detail: { widgetId: id, isBuilding: true, },
       },),
     );
-    updateAttributes({ prompt: nextPrompt, loading: true, error: "", },);
+    updateAttributes({ prompt: persistedPrompt, loading: true, error: "", },);
     try {
       if (isShared && manifest) {
-        const generated = await generateSharedWidget(nextPrompt, manifest.storageSchema,);
+        const generated = await generateSharedWidget(generationPrompt, manifest.storageSchema,);
         if (!storageSchemaMatch(generated.storageSchema, manifest.storageSchema,)) {
           throw new Error("Storage schema changed. Save as a new component to rebuild with a new DB schema.",);
         }
-        const next = await updateSharedComponent(manifest.id, generated.uiSpec, nextPrompt,);
+        const next = await updateSharedComponent(manifest.id, generated.uiSpec, persistedPrompt,);
         setManifest(next,);
         const record = await persistWidgetRecord(
-          nextPrompt,
+          persistedPrompt,
           stringifySpec(next.uiSpec,),
           true,
           effectiveLibraryItemId,
@@ -349,7 +377,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
           file: record.file,
           path: record.path,
           libraryItemId: record.libraryItemId,
-          prompt: nextPrompt,
+          prompt: persistedPrompt,
           loading: false,
           spec: record.spec,
           saved: true,
@@ -358,9 +386,9 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         return;
       }
 
-      const nextSpec = await generateWidget(nextPrompt,);
+      const nextSpec = await generateWidget(generationPrompt,);
       const record = await persistWidgetRecord(
-        nextPrompt,
+        persistedPrompt,
         JSON.stringify(nextSpec,),
         saved,
         effectiveLibraryItemId,
@@ -371,7 +399,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         file: record.file,
         path: record.path,
         libraryItemId: record.libraryItemId,
-        prompt: nextPrompt,
+        prompt: persistedPrompt,
         spec: record.spec,
         loading: false,
         error: "",
@@ -379,7 +407,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : typeof err === "string" ? err : "Something went wrong.";
       updateAttributes({
-        prompt: nextPrompt,
+        prompt: persistedPrompt,
         loading: false,
         error: isAiKeyMissingError(errMsg,) ? getAiConfigurationMessage(errMsg,) : errMsg,
       },);
@@ -393,7 +421,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   };
 
   const handleRebuild = async () => {
-    await runGeneration(prompt,);
+    await runGeneration(buildWidgetGenerationPrompt(prompt, currentSpec,), prompt,);
   };
 
   const handleSave = async () => {
