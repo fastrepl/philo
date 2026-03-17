@@ -8,6 +8,7 @@ import {
   size,
   type VirtualElement,
 } from "@floating-ui/dom";
+import { mergeAttributes, } from "@tiptap/core";
 import Mention from "@tiptap/extension-mention";
 import { PluginKey, } from "@tiptap/pm/state";
 import { ReactRenderer, } from "@tiptap/react";
@@ -384,7 +385,7 @@ export const MentionChipExtension = Mention.extend({
           label: String(node.attrs.label ?? "",),
         },),
       deleteTriggerWithBackspace: true,
-      renderHTML: ({ node, },) => {
+      renderHTML: ({ node, options, },) => {
         const chip = {
           id: String(node.attrs.id ?? "",),
           kind: String(node.attrs.kind ?? "tag",) as "date" | "recurring" | "tag",
@@ -395,7 +396,7 @@ export const MentionChipExtension = Mention.extend({
 
         return [
           "span",
-          {
+          mergeAttributes(options.HTMLAttributes, {
             "data-mention-chip": "",
             class: [
               "mention-chip",
@@ -405,7 +406,7 @@ export const MentionChipExtension = Mention.extend({
             ]
               .filter(Boolean,)
               .join(" ",),
-          },
+          },),
           label,
         ];
       },
