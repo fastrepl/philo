@@ -28,6 +28,7 @@ export interface WidgetAttributes {
   spec: string;
   file?: string;
   path?: string;
+  libraryItemId?: string | null;
   componentId?: string | null;
   prompt: string;
   saved: boolean;
@@ -81,6 +82,9 @@ export const WidgetExtension = Node.create({
     } else if (attrs.spec) {
       parts.push(` data-spec="${escapeAttr(String(attrs.spec,),)}"`,);
     }
+    if (attrs.libraryItemId) {
+      parts.push(` data-library-item-id="${escapeAttr(String(attrs.libraryItemId,),)}"`,);
+    }
     if (attrs.prompt) parts.push(` data-prompt="${escapeAttr(String(attrs.prompt,),)}"`,);
     if (attrs.saved) parts.push(' data-saved="true"',);
     parts.push("></div>",);
@@ -112,6 +116,13 @@ export const WidgetExtension = Node.create({
           return raw || null;
         },
       },
+      libraryItemId: {
+        default: null,
+        parseHTML: (el: HTMLElement,) => {
+          const raw = el.getAttribute("data-library-item-id",) || el.getAttribute("data-component-id",);
+          return raw || null;
+        },
+      },
       prompt: {
         default: "",
         parseHTML: (el: HTMLElement,) => el.getAttribute("data-prompt",) || "",
@@ -139,6 +150,9 @@ export const WidgetExtension = Node.create({
         "data-prompt": String(HTMLAttributes.prompt ?? "",),
         "data-file": String(HTMLAttributes.file ?? "",),
         "data-path": String(HTMLAttributes.path ?? "",),
+        ...(HTMLAttributes.libraryItemId
+          ? { "data-library-item-id": String(HTMLAttributes.libraryItemId,), }
+          : {}),
         ...(HTMLAttributes.componentId ? { "data-component-id": String(HTMLAttributes.componentId,), } : {}),
         ...(HTMLAttributes.saved ? { "data-saved": "true", } : {}),
       },),

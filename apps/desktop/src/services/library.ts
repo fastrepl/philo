@@ -3,6 +3,7 @@ import { join, } from "@tauri-apps/api/path";
 import { exists, mkdir, readDir, readTextFile, remove, writeTextFile, } from "@tauri-apps/plugin-fs";
 import { getBaseDir as getAppBaseDir, getJournalDir, } from "./paths";
 import { getVaultDirSetting, } from "./settings";
+import { markWidgetLibraryReferenceRemoved, } from "./widget-files";
 
 export interface SharedStorageColumn {
   name: string;
@@ -514,6 +515,7 @@ export async function removeFromLibrary(id: string,): Promise<void> {
         }
       },),
   );
+  await markWidgetLibraryReferenceRemoved(id,);
 }
 
 export async function addLegacyFallbackToLibrary(item: AddToLibraryInput,): Promise<LibraryItem> {

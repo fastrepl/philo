@@ -159,7 +159,7 @@ function specNeedsInlineRepair(spec: Spec | null,): boolean {
 }
 
 export function WidgetView({ node, updateAttributes, deleteNode, selected, }: NodeViewProps,) {
-  const { id, spec: specStr, saved, prompt, loading, error, componentId, file, path, } = node.attrs as {
+  const { id, spec: specStr, saved, prompt, loading, error, componentId, libraryItemId, file, path, } = node.attrs as {
     id: string;
     spec: string;
     saved: boolean;
@@ -167,6 +167,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     loading: boolean;
     error: string;
     componentId?: string | null;
+    libraryItemId?: string | null;
     file?: string;
     path?: string;
   };
@@ -177,6 +178,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const [runtimeRefreshToken, setRuntimeRefreshToken,] = useState(0,);
   const [isEditingInChat, setIsEditingInChat,] = useState(false,);
   const [autoRepairAttempted, setAutoRepairAttempted,] = useState(false,);
+  const effectiveLibraryItemId = libraryItemId ?? componentId ?? null;
 
   const inlineSpec = useMemo(() => parseSpec(specStr,), [specStr,],);
 
@@ -294,6 +296,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     nextPrompt: string,
     nextSpec: string,
     nextSaved: boolean,
+    nextLibraryItemId?: string | null,
     nextComponentId?: string | null,
   ) => {
     const title = deriveTitle(nextPrompt,);
@@ -304,6 +307,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         prompt: nextPrompt,
         saved: nextSaved,
         spec: nextSpec,
+        libraryItemId: nextLibraryItemId ?? null,
         componentId: nextComponentId ?? null,
       },);
     }
@@ -313,6 +317,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       prompt: nextPrompt,
       spec: nextSpec,
       saved: nextSaved,
+      libraryItemId: nextLibraryItemId ?? null,
       componentId: nextComponentId ?? null,
     },);
   }, [file, id, path,],);
@@ -332,11 +337,18 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         }
         const next = await updateSharedComponent(manifest.id, generated.uiSpec, nextPrompt,);
         setManifest(next,);
-        const record = await persistWidgetRecord(nextPrompt, stringifySpec(next.uiSpec,), true, manifest.id,);
+        const record = await persistWidgetRecord(
+          nextPrompt,
+          stringifySpec(next.uiSpec,),
+          true,
+          effectiveLibraryItemId,
+          manifest.id,
+        );
         updateAttributes({
           id: record.id,
           file: record.file,
           path: record.path,
+          libraryItemId: record.libraryItemId,
           prompt: nextPrompt,
           loading: false,
           spec: record.spec,
@@ -347,11 +359,18 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       }
 
       const nextSpec = await generateWidget(nextPrompt,);
-      const record = await persistWidgetRecord(nextPrompt, JSON.stringify(nextSpec,), saved, componentId,);
+      const record = await persistWidgetRecord(
+        nextPrompt,
+        JSON.stringify(nextSpec,),
+        saved,
+        effectiveLibraryItemId,
+        componentId,
+      );
       updateAttributes({
         id: record.id,
         file: record.file,
         path: record.path,
+        libraryItemId: record.libraryItemId,
         prompt: nextPrompt,
         spec: record.spec,
         loading: false,
@@ -400,6 +419,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         prompt,
         stringifySpec(item.uiSpec, JSON.stringify(generated.uiSpec,),),
         true,
+        item.id,
         item.componentId,
       );
 
@@ -407,6 +427,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         id: record.id,
         file: record.file,
         path: record.path,
+        libraryItemId: item.id,
         componentId: item.componentId,
         spec: record.spec,
         saved: true,

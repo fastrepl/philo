@@ -1,5 +1,5 @@
 import { dirname, join, } from "@tauri-apps/api/path";
-import { exists, mkdir, readTextFile, writeTextFile, } from "@tauri-apps/plugin-fs";
+import { exists, mkdir, readDir, readTextFile, writeTextFile, } from "@tauri-apps/plugin-fs";
 import { getJournalDir, getWidgetsDir, } from "./paths";
 import { getVaultDirSetting, } from "./settings";
 
@@ -12,6 +12,7 @@ export interface WidgetFileRecord {
   prompt: string;
   saved: boolean;
   spec: string;
+  libraryItemId?: string | null;
   componentId?: string | null;
   file: string;
   path: string;
@@ -22,6 +23,7 @@ interface WidgetFileInput {
   prompt: string;
   spec: string;
   saved?: boolean;
+  libraryItemId?: string | null;
   componentId?: string | null;
 }
 
@@ -92,6 +94,7 @@ function parseWidgetMarkdown(raw: string, file: string, path: string,): WidgetFi
     title: meta.title || "Widget",
     prompt: meta.prompt,
     saved: meta.saved === "true",
+    libraryItemId: meta.libraryItemId || meta.componentId || null,
     spec,
     componentId: meta.componentId || null,
     file,
@@ -106,6 +109,7 @@ function serializeWidgetMarkdown(record: WidgetFileRecord,): string {
     `title: ${JSON.stringify(record.title,)}`,
     `prompt: ${JSON.stringify(record.prompt,)}`,
     `saved: ${record.saved ? "true" : "false"}`,
+    ...(record.libraryItemId ? [`libraryItemId: ${JSON.stringify(record.libraryItemId,)}`,] : []),
     ...(record.componentId ? [`componentId: ${JSON.stringify(record.componentId,)}`,] : []),
     "---",
     "",
@@ -130,6 +134,9 @@ function toWidgetHtml(record: WidgetFileRecord,): string {
   attrs.push(`data-prompt="${escapeAttr(record.prompt,)}"`,);
   attrs.push(`data-spec="${escapeAttr(record.spec,)}"`,);
   if (record.saved) attrs.push('data-saved="true"',);
+  if (record.libraryItemId) {
+    attrs.push(`data-library-item-id="${escapeAttr(record.libraryItemId,)}"`,);
+  }
   if (record.componentId) {
     attrs.push(`data-component-id="${escapeAttr(record.componentId,)}"`,);
   }
@@ -236,6 +243,7 @@ export async function createWidgetFile(input: WidgetFileInput,): Promise<WidgetF
     prompt: input.prompt,
     saved: input.saved ?? false,
     spec: input.spec,
+    libraryItemId: input.libraryItemId ?? null,
     componentId: input.componentId ?? null,
     file,
     path,
@@ -257,4 +265,48 @@ export async function updateWidgetFile(
   await ensureParentDir(path,);
   await writeTextFile(path, serializeWidgetMarkdown(record,),);
   return record;
+}
+
+async function listWidgetFilePaths(dir: string,): Promise<string[]> {
+  const entries = await readDir(dir,);
+  const nested = await Promise.all(
+    entries.map(async (entry: { isDirectory?: boolean; isFile?: boolean; name: string; },) => {
+      if (entry.isDirectory) {
+        const childDir = await join(dir, entry.name,);
+        return await listWidgetFilePaths(childDir,);
+      }
+
+      if (!entry.isFile || !entry.name.toLowerCase().endsWith(WIDGET_SUFFIX,)) {
+        return [];
+      }
+
+      return [await join(dir, entry.name,),];
+    },),
+  );
+
+  return nested.flat();
+}
+
+export async function markWidgetLibraryReferenceRemoved(libraryItemId: string,): Promise<void> {
+  const widgetsDir = await getWidgetsDir();
+  if (!(await exists(widgetsDir,))) {
+    return;
+  }
+
+  const paths = await listWidgetFilePaths(widgetsDir,);
+  await Promise.all(paths.map(async (path,) => {
+    const file = path.startsWith(`${widgetsDir}/`,) ? `widgets/${path.slice(widgetsDir.length + 1,)}` : path;
+    const record = await readWidgetFile(path, file,);
+    if (!record) return;
+    if (record.libraryItemId !== libraryItemId && record.componentId !== libraryItemId) {
+      return;
+    }
+
+    await updateWidgetFile(path, file, {
+      ...record,
+      saved: false,
+      libraryItemId: null,
+      componentId: record.componentId === libraryItemId ? null : record.componentId,
+    },);
+  },),);
 }

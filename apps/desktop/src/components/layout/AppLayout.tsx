@@ -1388,6 +1388,7 @@ export default function AppLayout() {
               prompt: item.prompt,
               spec,
               saved: true,
+              libraryItemId: item.id,
               componentId: isShared ? item.componentId : null,
             },);
             editor.chain().focus().insertContent({
@@ -1397,6 +1398,7 @@ export default function AppLayout() {
                 spec: record.spec,
                 file: record.file,
                 path: record.path,
+                libraryItemId: item.id,
                 componentId: isShared ? item.componentId : null,
                 prompt: item.prompt,
                 saved: true,
