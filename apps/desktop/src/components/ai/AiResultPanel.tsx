@@ -73,7 +73,7 @@ export function AiResultPanel({
                 <button
                   type="button"
                   onClick={() => setHistoryOpen((open,) => !open)}
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-900"
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-gray-500 transition-colors hover:text-gray-900"
                   aria-label={historyOpen ? "Hide chat history" : "Show chat history"}
                 >
                   <ChevronDown size={15} className={`transition-transform ${historyOpen ? "rotate-180" : ""}`} />
@@ -87,7 +87,7 @@ export function AiResultPanel({
                 onNewChat();
               }}
               disabled={!canStartNewChat}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-gray-500 transition-colors hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Start new chat"
               title="Start new chat"
             >
