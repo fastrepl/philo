@@ -1,7 +1,7 @@
 import { join, } from "@tauri-apps/api/path";
 import { open as openDialog, } from "@tauri-apps/plugin-dialog";
 import { exists, } from "@tauri-apps/plugin-fs";
-import { Check, RefreshCw, X, } from "lucide-react";
+import { Check, ChevronDown, RefreshCw, X, } from "lucide-react";
 import { useEffect, useRef, useState, } from "react";
 import claudeAiSymbol from "../../assets/claude-ai-symbol.svg";
 import googleGeminiIcon from "../../assets/google-gemini-icon.svg";
@@ -176,7 +176,7 @@ function FilenamePatternFieldValue({ value, muted = false, }: { value: string; m
   );
 }
 
-function SharpChoiceField<T extends string,>(
+function SharpSelectField<T extends string,>(
   {
     label,
     options,
@@ -189,42 +189,101 @@ function SharpChoiceField<T extends string,>(
     onChange: (value: T,) => void;
   },
 ) {
+  const [open, setOpen,] = useState(false,);
+  const rootRef = useRef<HTMLDivElement>(null,);
+  const selected = options.find((option,) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent,) => {
+      if (!rootRef.current?.contains(event.target as Node,)) {
+        setOpen(false,);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent,) => {
+      if (event.key === "Escape") {
+        setOpen(false,);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown,);
+    window.addEventListener("keydown", handleEscape,);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown,);
+      window.removeEventListener("keydown", handleEscape,);
+    };
+  }, [open,],);
+
   return (
-    <div className="space-y-2">
+    <div ref={rootRef} className="relative space-y-2">
       <label className="block text-xs text-gray-500" style={mono}>
         {label}
       </label>
-      <div
-        role="radiogroup"
-        aria-label={label}
-        className="grid grid-cols-2 overflow-hidden rounded-none border border-gray-200 bg-white"
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => setOpen((current,) => !current)}
+        className={`flex min-h-12 w-full items-center justify-between rounded-none border px-3 py-2 text-left transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/30 ${
+          open
+            ? "border-gray-900 bg-gray-50"
+            : "border-gray-200 bg-white hover:bg-gray-50"
+        }`}
+        style={mono}
       >
-        {options.map((option, index,) => {
-          const selected = option.value === value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => onChange(option.value,)}
-              className={`relative flex min-h-16 flex-col items-start justify-between px-3 py-2 text-left transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500/30 ${
-                selected
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
-              } ${index > 0 ? "border-l border-gray-200" : ""}`}
-              style={mono}
-            >
-              <span
-                className={`text-[10px] uppercase tracking-[0.18em] ${selected ? "text-gray-300" : "text-gray-400"}`}
+        <span className="min-w-0">
+          <span className="block text-[10px] uppercase tracking-[0.18em] text-gray-400">
+            {selected.hint}
+          </span>
+          <span className="block truncate text-sm leading-5 text-gray-700">
+            {selected.label}
+          </span>
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-label={label}
+          className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-none border border-gray-900 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.14)]"
+        >
+          {options.map((option,) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  onChange(option.value,);
+                  setOpen(false,);
+                }}
+                className={`flex w-full items-center justify-between border-t px-3 py-2 text-left transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500/30 first:border-t-0 ${
+                  isSelected
+                    ? "bg-gray-900 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+                style={mono}
               >
-                {option.hint}
-              </span>
-              <span className="text-sm leading-5">{option.label}</span>
-            </button>
-          );
-        },)}
-      </div>
+                <span className="min-w-0">
+                  <span
+                    className={`block text-[10px] uppercase tracking-[0.18em] ${
+                      isSelected ? "text-gray-300" : "text-gray-400"
+                    }`}
+                  >
+                    {option.hint}
+                  </span>
+                  <span className="block truncate text-sm leading-5">{option.label}</span>
+                </span>
+                <Check className={`h-4 w-4 shrink-0 ${isSelected ? "opacity-100" : "opacity-0"}`} strokeWidth={2.2} />
+              </button>
+            );
+          },)}
+        </div>
+      )}
     </div>
   );
 }
@@ -781,7 +840,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             </button>
           </div>
           <div className="grid gap-3 pt-2 md:grid-cols-2">
-            <SharpChoiceField
+            <SharpSelectField
               label="Email opens in"
               options={GOOGLE_EMAIL_OPEN_CLIENTS.map((client,) => ({
                 hint: GOOGLE_EMAIL_OPEN_CLIENT_HINTS[client],
@@ -791,7 +850,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               value={settings.googleEmailOpenClient}
               onChange={(value,) => update({ googleEmailOpenClient: value, },)}
             />
-            <SharpChoiceField
+            <SharpSelectField
               label="Calendar opens in"
               options={GOOGLE_CALENDAR_OPEN_CLIENTS.map((client,) => ({
                 hint: GOOGLE_CALENDAR_OPEN_CLIENT_HINTS[client],
