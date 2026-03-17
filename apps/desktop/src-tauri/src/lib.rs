@@ -129,18 +129,20 @@ struct GoogleAccessTokenResult {
     granted_scopes: Vec<String>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct AnthropicRequestInput {
-    api_key: String,
-    body: Value,
-}
-
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct HttpJsonResponse {
     status: u16,
     body: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HttpJsonRequestInput {
+    url: String,
+    #[serde(default)]
+    headers: HashMap<String, String>,
+    body: Value,
 }
 
 #[tauri::command]
@@ -805,31 +807,32 @@ fn google_http_client() -> Result<HttpClient, String> {
         .map_err(|e| format!("Could not start Google OAuth client: {e}"))
 }
 
-fn anthropic_http_client() -> Result<HttpClient, String> {
+fn http_json_client() -> Result<HttpClient, String> {
     HttpClient::builder()
         .build()
-        .map_err(|e| format!("Could not start Anthropic client: {e}"))
+        .map_err(|e| format!("Could not start HTTP client: {e}"))
 }
 
 #[tauri::command]
-fn post_anthropic_message(input: AnthropicRequestInput) -> Result<HttpJsonResponse, String> {
-    let api_key = input.api_key.trim();
-    if api_key.is_empty() {
-        return Err("Anthropic API key is missing.".to_string());
+fn post_json(input: HttpJsonRequestInput) -> Result<HttpJsonResponse, String> {
+    let url = input.url.trim();
+    if url.is_empty() {
+        return Err("Request URL is missing.".to_string());
     }
 
-    let response = anthropic_http_client()?
-        .post("https://api.anthropic.com/v1/messages")
-        .header("content-type", "application/json")
-        .header("x-api-key", api_key)
-        .header("anthropic-version", "2023-06-01")
+    let mut request = http_json_client()?.post(url);
+    for (key, value) in input.headers {
+        request = request.header(key, value);
+    }
+
+    let response = request
         .json(&input.body)
         .send()
-        .map_err(|e| format!("Anthropic request failed: {e}"))?;
+        .map_err(|e| format!("HTTP request failed: {e}"))?;
     let status = response.status().as_u16();
     let body = response
         .text()
-        .map_err(|e| format!("Could not read Anthropic response: {e}"))?;
+        .map_err(|e| format!("Could not read HTTP response: {e}"))?;
 
     Ok(HttpJsonResponse { status, body })
 }
@@ -2813,7 +2816,7 @@ pub fn run() {
             find_obsidian_vaults,
             detect_obsidian_settings,
             bootstrap_obsidian_vault,
-            post_anthropic_message,
+            post_json,
             read_markdown_file,
             write_markdown_file,
             start_google_oauth_callback,

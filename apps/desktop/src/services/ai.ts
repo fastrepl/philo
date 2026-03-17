@@ -56,6 +56,12 @@ interface NativeHttpResponse {
   body: string;
 }
 
+type NativeJsonRequest = {
+  url: string;
+  headers?: Record<string, string>;
+  body: unknown;
+};
+
 function getModel(provider: AiProvider, purpose: "assistant" | "widget",) {
   switch (provider) {
     case "anthropic":
@@ -257,26 +263,33 @@ function toGeminiContents(messages: AiMessage[],): GeminiContent[] {
   return contents;
 }
 
-async function callAnthropicText(config: ActiveAiConfig, system: string, prompt: string, signal?: AbortSignal,) {
+async function postJson(input: NativeJsonRequest, signal?: AbortSignal,) {
   signal?.throwIfAborted();
-  const response = await invoke<NativeHttpResponse>("post_anthropic_message", {
-    input: {
-      apiKey: config.apiKey,
-      body: {
-        model: getModel("anthropic", "widget",),
-        max_tokens: 8192,
-        system,
-        messages: [{ role: "user", content: prompt, },],
-      },
-    },
-  },);
+  const response = await invoke<NativeHttpResponse>("post_json", { input, },);
   signal?.throwIfAborted();
 
   if (response.status < 200 || response.status >= 300) {
     throw new Error(`Sophia failed (${response.status}): ${response.body}`,);
   }
 
-  const data = JSON.parse(response.body,) as { content?: Array<{ type?: string; text?: string; }>; };
+  return JSON.parse(response.body,) as Record<string, unknown>;
+}
+
+async function callAnthropicText(config: ActiveAiConfig, system: string, prompt: string, signal?: AbortSignal,) {
+  const data = await postJson({
+    url: getProviderUrl("anthropic",)!,
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": config.apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: {
+      model: getModel("anthropic", "widget",),
+      max_tokens: 8192,
+      system,
+      messages: [{ role: "user", content: prompt, },],
+    },
+  }, signal,) as { content?: Array<{ type?: string; text?: string; }>; };
   const content = Array.isArray(data.content,) ? data.content as Array<{ type?: string; text?: string; }> : [];
   return content
     .filter((block,) => block.type === "text" && typeof block.text === "string")
@@ -286,8 +299,8 @@ async function callAnthropicText(config: ActiveAiConfig, system: string, prompt:
 }
 
 async function callOpenAiCompatibleText(config: ActiveAiConfig, system: string, prompt: string, signal?: AbortSignal,) {
-  const response = await fetch(getProviderUrl(config.provider,)!, {
-    method: "POST",
+  const data = await postJson({
+    url: getProviderUrl(config.provider,)!,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.apiKey}`,
@@ -298,21 +311,16 @@ async function callOpenAiCompatibleText(config: ActiveAiConfig, system: string, 
         }
         : {}),
     },
-    body: JSON.stringify({
+    body: {
       model: getModel(config.provider, "widget",),
       messages: [
         { role: "system", content: system, },
         { role: "user", content: prompt, },
       ],
-    },),
-    signal,
-  },);
-
-  if (!response.ok) {
-    throw new Error(`Sophia failed (${response.status}): ${await response.text()}`,);
-  }
-
-  const data = await response.json();
+    },
+  }, signal,) as {
+    choices?: Array<{ message?: { content?: string | Array<{ text?: string; }>; }; }>;
+  };
   const content = data.choices?.[0]?.message?.content;
   if (typeof content === "string") return content.trim();
   if (Array.isArray(content,)) {
@@ -329,12 +337,12 @@ async function callGoogleText(config: ActiveAiConfig, system: string, prompt: st
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${
     getModel("google", "widget",)
   }:generateContent?key=${config.apiKey}`;
-  const response = await fetch(url, {
-    method: "POST",
+  const data = await postJson({
+    url,
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: {
       systemInstruction: {
         parts: [{ text: system, },],
       },
@@ -345,15 +353,10 @@ async function callGoogleText(config: ActiveAiConfig, system: string, prompt: st
       generationConfig: {
         responseMimeType: "application/json",
       },
-    },),
-    signal,
-  },);
-
-  if (!response.ok) {
-    throw new Error(`Sophia failed (${response.status}): ${await response.text()}`,);
-  }
-
-  const data = await response.json();
+    },
+  }, signal,) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string; }>; }; }>;
+  };
   const parts = data.candidates?.[0]?.content?.parts;
   if (!Array.isArray(parts,)) return "";
   return parts
@@ -387,27 +390,22 @@ async function callAnthropicTools(
   tools: readonly AiToolDefinition[],
   signal?: AbortSignal,
 ): Promise<AiContentBlock[]> {
-  signal?.throwIfAborted();
-  const response = await invoke<NativeHttpResponse>("post_anthropic_message", {
-    input: {
-      apiKey: config.apiKey,
-      body: {
-        model: getModel("anthropic", "assistant",),
-        max_tokens: 8192,
-        system,
-        tool_choice: { type: "auto", },
-        tools,
-        messages,
-      },
+  const data = await postJson({
+    url: getProviderUrl("anthropic",)!,
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": config.apiKey,
+      "anthropic-version": "2023-06-01",
     },
-  },);
-  signal?.throwIfAborted();
-
-  if (response.status < 200 || response.status >= 300) {
-    throw new Error(`Sophia failed (${response.status}): ${response.body}`,);
-  }
-
-  const data = JSON.parse(response.body,) as {
+    body: {
+      model: getModel("anthropic", "assistant",),
+      max_tokens: 8192,
+      system,
+      tool_choice: { type: "auto", },
+      tools,
+      messages,
+    },
+  }, signal,) as {
     content?: Array<{ type?: string; text?: string; id?: string; name?: string; input?: unknown; }>;
   };
   const content = Array.isArray(data.content,)
@@ -440,8 +438,8 @@ async function callOpenAiCompatibleTools(
   tools: readonly AiToolDefinition[],
   signal?: AbortSignal,
 ): Promise<AiContentBlock[]> {
-  const response = await fetch(getProviderUrl(config.provider,)!, {
-    method: "POST",
+  const data = await postJson({
+    url: getProviderUrl(config.provider,)!,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.apiKey}`,
@@ -452,20 +450,24 @@ async function callOpenAiCompatibleTools(
         }
         : {}),
     },
-    body: JSON.stringify({
+    body: {
       model: getModel(config.provider, "assistant",),
       messages: toOpenAiMessages(system, messages,),
       tools: toOpenAiTools(tools,),
       tool_choice: "auto",
-    },),
-    signal,
-  },);
-
-  if (!response.ok) {
-    throw new Error(`Sophia failed (${response.status}): ${await response.text()}`,);
-  }
-
-  const data = await response.json();
+    },
+  }, signal,) as {
+    choices?: Array<{
+      message?: {
+        content?: string;
+        tool_calls?: Array<{
+          id?: string;
+          type?: string;
+          function?: { name?: string; arguments?: string; };
+        }>;
+      };
+    }>;
+  };
   const message = data.choices?.[0]?.message;
   if (!message) return [];
 
@@ -510,12 +512,12 @@ async function callGoogleTools(
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${
     getModel("google", "assistant",)
   }:generateContent?key=${config.apiKey}`;
-  const response = await fetch(url, {
-    method: "POST",
+  const data = await postJson({
+    url,
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: {
       systemInstruction: {
         parts: [{ text: system, },],
       },
@@ -532,15 +534,12 @@ async function callGoogleTools(
           mode: "AUTO",
         },
       },
-    },),
-    signal,
-  },);
-
-  if (!response.ok) {
-    throw new Error(`Sophia failed (${response.status}): ${await response.text()}`,);
-  }
-
-  const data = await response.json();
+    },
+  }, signal,) as {
+    candidates?: Array<{
+      content?: { parts?: Array<{ text?: string; functionCall?: { name?: string; args?: unknown; }; }>; };
+    }>;
+  };
   const parts = Array.isArray(data.candidates?.[0]?.content?.parts,)
     ? data.candidates[0].content.parts as Array<{ text?: string; functionCall?: { name?: string; args?: unknown; }; }>
     : [];
