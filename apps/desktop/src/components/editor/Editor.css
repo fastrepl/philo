@@ -463,38 +463,18 @@
 }
 
 .widget-toolbar {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  right: 12px;
-  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid rgba(229, 231, 235, 0.96);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(10px);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f3f4f6;
   cursor: grab;
-  opacity: 0;
-  transform: translateY(-4px);
-  pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .widget-toolbar:active {
   cursor: grabbing;
-}
-
-.widget-node:hover .widget-toolbar,
-.widget-node:focus-within .widget-toolbar,
-.widget-selected .widget-toolbar {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
 }
 
 .widget-prompt {
@@ -517,20 +497,20 @@
 }
 
 .widget-btn {
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.98);
+  padding: 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
   color: #6b7280;
   font-size: 12px;
   font-family: 'IBM Plex Sans', sans-serif;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .widget-btn-icon {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -543,55 +523,34 @@
 }
 
 .widget-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: #f3f4f6;
   color: #374151;
 }
 
 .widget-btn-iterate {
-  border-color: #e5e7eb;
   color: #4b5563;
-  background: #ffffff;
 }
 
 .widget-btn-iterate:hover {
-  border-color: #d1d5db;
   color: #111827;
 }
 
 .widget-btn-active {
-  border-color: #dbeafe;
   background: #eff6ff;
   color: #2563eb;
 }
 
 .widget-btn-rebuild {
-  border-color: #e0e7ff;
   color: #6366f1;
-  background: #eef2ff;
 }
 
 .widget-btn-rebuild:hover {
   background: #e0e7ff;
-  border-color: #c7d2fe;
   color: #4f46e5;
 }
 
-.widget-btn-saved {
-  background: #f0fdf4;
-  border-color: #86efac;
-  color: #16a34a;
-}
-
-.widget-btn-saved:hover {
-  background: #dcfce7;
-}
-
 .widget-btn-delete {
-  border-color: transparent;
-  background: transparent;
   color: #d1d5db;
-  padding: 4px 8px;
 }
 
 .widget-btn-delete:hover {

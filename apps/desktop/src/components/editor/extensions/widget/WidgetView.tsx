@@ -377,64 +377,11 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
   const toolbarTitle = formatToolbarTitle(prompt,);
   const saveTitle = isShared || saved ? "Archived in library" : "Archive in library";
   const rebuildTitle = loading || sharedLoading ? "Refreshing widget" : "Refresh widget";
+  const showSaveAction = !isShared && !saved;
 
   return (
     <NodeViewWrapper className="widget-node">
       <div className="widget-container">
-        <div className="widget-toolbar" data-drag-handle>
-          <span className="widget-prompt" title={prompt}>
-            {toolbarTitle}
-          </span>
-          <div className="widget-actions">
-            <button
-              className={`widget-btn widget-btn-icon widget-btn-iterate ${isIterating ? "widget-btn-active" : ""}`}
-              onClick={() => {
-                if (isIterating) {
-                  handleIterateCancel();
-                  return;
-                }
-                setPromptDraft(prompt,);
-                setIsIterating(true,);
-              }}
-              disabled={loading || sharedLoading}
-              title="Iterate widget"
-              aria-label="Iterate widget"
-            >
-              <PencilLine strokeWidth={2} />
-            </button>
-            <button
-              className="widget-btn widget-btn-icon widget-btn-rebuild"
-              onClick={() => {
-                void handleRebuild();
-              }}
-              disabled={loading || sharedLoading}
-              title={rebuildTitle}
-              aria-label={rebuildTitle}
-            >
-              <RefreshCw className={loading || sharedLoading ? "animate-spin" : undefined} strokeWidth={2} />
-            </button>
-            <button
-              className={`widget-btn widget-btn-icon ${isShared || saved ? "widget-btn-saved" : ""}`}
-              onClick={() => {
-                void handleSave();
-              }}
-              disabled={isShared || loading || missingComponent}
-              title={saveTitle}
-              aria-label={saveTitle}
-            >
-              <Archive strokeWidth={2} />
-            </button>
-            <button
-              className="widget-btn widget-btn-icon widget-btn-delete"
-              onClick={deleteNode}
-              title="Delete widget"
-              aria-label="Delete widget"
-            >
-              <Trash2 strokeWidth={2} />
-            </button>
-          </div>
-        </div>
-
         {isIterating && (
           <form className="widget-iterate-form" onSubmit={(event,) => void handleIterateSubmit(event,)}>
             <textarea
@@ -513,6 +460,62 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
               <p className="widget-error-title">No content yet.</p>
             </div>
           )}
+
+        <div className="widget-toolbar" data-drag-handle>
+          <span className="widget-prompt" title={prompt}>
+            {toolbarTitle}
+          </span>
+          <div className="widget-actions">
+            <button
+              className={`widget-btn widget-btn-icon widget-btn-iterate ${isIterating ? "widget-btn-active" : ""}`}
+              onClick={() => {
+                if (isIterating) {
+                  handleIterateCancel();
+                  return;
+                }
+                setPromptDraft(prompt,);
+                setIsIterating(true,);
+              }}
+              disabled={loading || sharedLoading}
+              title="Iterate widget"
+              aria-label="Iterate widget"
+            >
+              <PencilLine strokeWidth={2} />
+            </button>
+            <button
+              className="widget-btn widget-btn-icon widget-btn-rebuild"
+              onClick={() => {
+                void handleRebuild();
+              }}
+              disabled={loading || sharedLoading}
+              title={rebuildTitle}
+              aria-label={rebuildTitle}
+            >
+              <RefreshCw className={loading || sharedLoading ? "animate-spin" : undefined} strokeWidth={2} />
+            </button>
+            {showSaveAction && (
+              <button
+                className="widget-btn widget-btn-icon"
+                onClick={() => {
+                  void handleSave();
+                }}
+                disabled={loading || missingComponent}
+                title={saveTitle}
+                aria-label={saveTitle}
+              >
+                <Archive strokeWidth={2} />
+              </button>
+            )}
+            <button
+              className="widget-btn widget-btn-icon widget-btn-delete"
+              onClick={deleteNode}
+              title="Delete widget"
+              aria-label="Delete widget"
+            >
+              <Trash2 strokeWidth={2} />
+            </button>
+          </div>
+        </div>
       </div>
     </NodeViewWrapper>
   );
