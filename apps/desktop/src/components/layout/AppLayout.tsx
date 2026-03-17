@@ -16,8 +16,8 @@ import {
   runAssistant,
 } from "../../services/assistant";
 import type { LibraryItem, } from "../../services/library";
-import { getJournalDir, initJournalScope, } from "../../services/paths";
-import { hasActiveAiProvider, loadSettings, } from "../../services/settings";
+import { getJournalDir, initJournalScope, parseDateFromNoteLinkTarget, } from "../../services/paths";
+import { getFilenamePattern, hasActiveAiProvider, loadSettings, } from "../../services/settings";
 import { getOrCreateDailyNote, loadDailyNote, loadPastNotes, saveDailyNote, } from "../../services/storage";
 import { rolloverTasks, } from "../../services/tasks";
 import {
@@ -260,6 +260,8 @@ export default function AppLayout() {
   const [globalSearchSelectedIndex, setGlobalSearchSelectedIndex,] = useState(-1,);
   const [globalSearchLoading, setGlobalSearchLoading,] = useState(false,);
   const [globalSearchError, setGlobalSearchError,] = useState<string | null>(null,);
+  const [focusedDate, setFocusedDate,] = useState<string | null>(null,);
+  const [pendingScrollDate, setPendingScrollDate,] = useState<string | null>(null,);
   const [aiComposerOpen, setAiComposerOpen,] = useState(false,);
   const [aiPrompt, setAiPrompt,] = useState("",);
   const [aiSelectedText, setAiSelectedText,] = useState<string | null>(null,);
@@ -371,10 +373,29 @@ export default function AppLayout() {
     setLibraryOpen((prev,) => !prev);
   }, [],);
 
-  const openGlobalSearchResult = useCallback((result: GlobalSearchResult | undefined,) => {
+  const navigateToDate = useCallback((date: string,) => {
+    closeGlobalSearch();
+    const isVisibleInFeed = date === today || pastDates.includes(date,);
+    setFocusedDate(isVisibleInFeed ? null : date,);
+    setPendingScrollDate(date,);
+  }, [closeGlobalSearch, pastDates, today,],);
+
+  const openGlobalSearchResult = useCallback(async (result: GlobalSearchResult | undefined,) => {
     if (!result) return;
+
+    try {
+      const pattern = await getFilenamePattern();
+      const date = parseDateFromNoteLinkTarget(result.relativePath, pattern,);
+      if (date) {
+        navigateToDate(date,);
+        return;
+      }
+    } catch (error) {
+      console.error(error,);
+    }
+
     openPath(result.path,).catch(console.error,);
-  }, [],);
+  }, [navigateToDate,],);
 
   // Load configuration and extend FS scope on mount
   useEffect(() => {
@@ -832,6 +853,16 @@ export default function AppLayout() {
     scrollEl.scrollTo({ top: Math.max(0, top,), behavior: "smooth", },);
   }, [today,],);
 
+  useEffect(() => {
+    if (!pendingScrollDate || globalSearchOpen) return;
+    const target = pendingScrollDate === today
+      ? todayRef.current
+      : document.querySelector<HTMLElement>(`[data-note-date="${pendingScrollDate}"]`,);
+    if (!target) return;
+    scrollToDate(pendingScrollDate,);
+    setPendingScrollDate(null,);
+  }, [focusedDate, globalSearchOpen, pendingScrollDate, scrollToDate, today,],);
+
   return (
     <div
       ref={scrollRef}
@@ -976,6 +1007,22 @@ export default function AppLayout() {
               )
               : updateInfo && <UpdateBanner update={updateInfo} onDismiss={() => setUpdateInfo(null,)} />}
             <div className="w-full max-w-3xl">
+              {focusedDate && focusedDate !== today && !pastDates.includes(focusedDate,) && (
+                <div key={`${focusedDate}-${storageRevision}`} data-note-date={focusedDate}>
+                  <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />
+                  <LazyNote
+                    date={focusedDate}
+                    onOpenDate={scrollToDate}
+                    onChatSelection={openAiComposer}
+                    onSelectionChange={handleAiSelectionChange}
+                    onSelectionBlur={handleAiSelectionBlur}
+                    persistentSelectionRange={aiSelectionHighlight?.noteDate === focusedDate
+                      ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                      : null}
+                  />
+                </div>
+              )}
+
               <div
                 ref={todayRef}
                 data-note-date={today}
