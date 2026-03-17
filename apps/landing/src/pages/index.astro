@@ -766,25 +766,27 @@ primary.firstChild.textContent = labels[os];
 
   .hero h1 {
     margin: 0;
-    font-size: var(--fs-lg);
+    max-width: 24ch;
+    font-size: 18px;
     font-weight: 500;
-    line-height: 1.6;
+    line-height: 1.45;
     letter-spacing: 0.01em;
   }
 
   .lede {
     margin-top: 18px;
-    max-width: 56ch;
-    font-size: var(--fs-md);
-    line-height: 1.6;
+    max-width: 64ch;
+    font-size: 15px;
+    line-height: 1.72;
     color: #3f3f3d;
   }
 
   .hero-note {
-    margin: 12px 0 0;
-    max-width: 56ch;
+    margin: 16px 0 0;
+    max-width: 64ch;
     color: var(--muted);
-    font-size: var(--fs-sm);
+    font-size: 13px;
+    line-height: 1.72;
   }
 
   .download-split {
@@ -1930,7 +1932,13 @@ primary.firstChild.textContent = labels[os];
     }
 
     .hero h1 {
-      font-size: var(--fs-lg);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .lede,
+    .hero-note {
+      max-width: none;
     }
 
     .link-list li {
