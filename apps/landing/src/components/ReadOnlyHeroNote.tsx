@@ -105,7 +105,7 @@ function buildChip(label: string, tone: "today" | "date",): JSONContent {
   };
 }
 
-function buildNoteDocument(today: string, dueDate: string,): JSONContent {
+function buildNoteDocument(dueDate: string,): JSONContent {
   return {
     type: "doc",
     content: [
@@ -232,7 +232,7 @@ export default function ReadOnlyHeroNote() {
       TaskItem.configure({ nested: true, },),
       HeroChipExtension,
     ],
-    content: buildNoteDocument(today, dueDate,),
+    content: buildNoteDocument(dueDate,),
     editable: false,
     immediatelyRender: false,
     editorProps: {
@@ -243,21 +243,7 @@ export default function ReadOnlyHeroNote() {
   },);
 
   return (
-    <div className="hero-note-shell">
-      <div className="hero-note-titlebar" aria-hidden="true">
-        <div className="hero-note-dots">
-          <span />
-          <span />
-          <span />
-        </div>
-        <svg className="hero-note-pin" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M13.8 3.2 20.8 10.2l-2.4.8-3.5 3.5.6 5.8-1 .9-3.8-5-5 3.8-.9-1 .6-5.8 3.5-3.5.8-2.4Z"
-            fill="currentColor"
-          />
-        </svg>
-      </div>
-
+    <section className="hero-note-shell" aria-label="Read-only Philo note demo">
       <div className="hero-note-surface">
         <div className="hero-note-header">
           <p className="hero-note-date">{formatDate(today,)}</p>
@@ -267,6 +253,6 @@ export default function ReadOnlyHeroNote() {
 
         <EditorContent editor={editor} />
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,65 +1,24 @@
 .hero-note-shell {
-  min-height: 560px;
-  border: 1px dashed color-mix(in srgb, #d8d7cf 82%, #bfc2ce);
-  background:
-    radial-gradient(circle at bottom right, rgba(201, 211, 255, 0.65), transparent 28%),
-    linear-gradient(180deg, #f7f7f2 0%, #efeee7 100%);
+  border: 1px solid color-mix(in srgb, #d8d7cf 82%, #bfc2ce);
+  background: rgba(255, 255, 255, 0.82);
   overflow: hidden;
-}
-
-.hero-note-titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 10px;
-}
-
-.hero-note-dots {
-  display: flex;
-  gap: 7px;
-}
-
-.hero-note-dots span {
-  width: 11px;
-  height: 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.hero-note-dots span:nth-child(1) {
-  background: #ff6259;
-}
-
-.hero-note-dots span:nth-child(2) {
-  background: #ffbd44;
-}
-
-.hero-note-dots span:nth-child(3) {
-  background: #28c840;
-}
-
-.hero-note-pin {
-  width: 16px;
-  height: 16px;
-  color: #a0a7b2;
+  box-shadow: 0 24px 60px rgba(44, 49, 63, 0.08);
+  backdrop-filter: blur(10px);
 }
 
 .hero-note-surface {
-  min-height: calc(100% - 37px);
-  margin: 0 14px 14px;
-  padding: 18px 18px 20px;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95) inset,
-    0 24px 48px rgba(44, 49, 63, 0.08);
-  backdrop-filter: blur(8px);
+  padding: 24px 24px 28px;
+  background:
+    radial-gradient(circle at bottom right, rgba(201, 211, 255, 0.35), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(249, 249, 245, 0.96) 100%);
 }
 
 .hero-note-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .hero-note-date {
@@ -93,11 +52,12 @@
 }
 
 .hero-note-editor {
+  --editor-line-height: 28px;
   padding: 0;
   color: #1f2937;
   font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 16px;
+  line-height: var(--editor-line-height);
 }
 
 .hero-note-editor.ProseMirror {
@@ -105,7 +65,8 @@
 }
 
 .hero-note-editor p {
-  margin: 0 0 8px;
+  margin: 0;
+  min-height: var(--editor-line-height);
 }
 
 .hero-note-editor a {
@@ -117,19 +78,28 @@
 }
 
 .hero-note-editor ul[data-type="taskList"] {
-  margin-top: 18px;
+  margin-top: 20px;
+  padding: 0;
 }
 
 .hero-note-editor ul[data-type="taskList"] li {
-  margin: 0 0 8px;
+  min-height: var(--editor-line-height);
+  margin: 0 0 6px;
 }
 
 .hero-note-editor ul[data-type="taskList"] li > label {
   align-self: start;
+  height: var(--editor-line-height);
 }
 
 .hero-note-editor ul[data-type="taskList"] li > div {
   min-width: 0;
+  line-height: inherit;
+  min-height: var(--editor-line-height);
+}
+
+.hero-note-editor ul[data-type="taskList"] input[type="checkbox"] {
+  margin-top: 0;
 }
 
 .hero-note-editor .hero-chip {
@@ -161,17 +131,17 @@
 
 @media (max-width: 980px) {
   .hero-note-shell {
-    min-height: 620px;
+    box-shadow: 0 20px 48px rgba(44, 49, 63, 0.08);
   }
 }
 
 @media (max-width: 720px) {
-  .hero-note-shell {
-    min-height: 560px;
+  .hero-note-surface {
+    padding: 18px;
   }
 
-  .hero-note-surface {
-    margin: 0 10px 10px;
-    padding: 16px;
+  .hero-note-editor {
+    --editor-line-height: 24px;
+    font-size: 14px;
   }
 }
