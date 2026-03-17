@@ -17,18 +17,21 @@ This covers the desktop app widget flow implemented in:
 
 ## Storage Layers
 
-Philo widgets exist in three related layers:
+Philo widgets exist in four related layers:
 
 1. Note content
    The note stores a widget embed like `![[widgets/<slug>-<id>.widget.md]]`.
 2. Widget file
    The actual widget state lives in an individual `.widget.md` file under the resolved `widgets/` directory.
-3. Library entry
+3. Widget instance storage
+   If the widget has generated persistent storage, it also gets a sidecar SQLite database next to the widget file.
+4. Library entry
    If the widget is archived to the library, it also gets a stable library entry and may get a shared component record.
 
 The important rule is:
 
 - The widget file is the source of truth for the current widget prompt, spec, saved state, and revision history.
+- Widget instance data is instance-scoped by default, even when the widget is linked to a reusable library component.
 
 ## Files On Disk
 
@@ -82,6 +85,7 @@ interface WidgetFileRecord {
   revisions: WidgetRevisionRecord[];
   libraryItemId?: string | null;
   componentId?: string | null;
+  storageSchema?: SharedStorageSchema | null;
   file: string;
   path: string;
 }
@@ -106,7 +110,9 @@ Field meaning:
 - `libraryItemId`
   Stable link to the library item that owns this widget, when archived.
 - `componentId`
-  Stable link to the shared component manifest for shared widgets.
+  Stable link to the shared component manifest for reusable widget templates.
+- `storageSchema`
+  Generated storage contract for this widget instance. When non-empty, it powers the widget's sidecar SQLite database.
 - `file`
   Note embed target, usually `widgets/<filename>.widget.md`.
 - `path`
@@ -114,7 +120,7 @@ Field meaning:
 
 ## Widget Markdown Format
 
-Each widget file is plain markdown with frontmatter-style metadata, the current spec, and an internal history block.
+Each widget file is plain markdown with frontmatter-style metadata, the current spec, optional storage metadata, and an internal history block.
 
 Example:
 
@@ -133,6 +139,22 @@ componentId: "shared-component-uuid"
   "root": {
     "type": "Card"
   }
+}
+```
+
+```json widget-storage
+{
+  "tables": [
+    {
+      "name": "items",
+      "columns": [
+        { "name": "id", "type": "integer", "primaryKey": true },
+        { "name": "title", "type": "text", "notNull": true }
+      ]
+    }
+  ],
+  "namedQueries": [],
+  "namedMutations": []
 }
 ```
 
@@ -160,6 +182,7 @@ componentId: "shared-component-uuid"
 Notes:
 
 - The first fenced `json` block is the current render spec.
+- The optional `json widget-storage` block is the instance storage schema. If it contains tables, Philo creates a sibling `.widget.sqlite3` file for that widget instance.
 - The `json widget-history` block is the internal checkpoint log.
 - Older widget files without a history block are migrated lazily when rewritten.
 
@@ -180,6 +203,7 @@ That runtime placeholder carries:
 - `data-path`
 - `data-prompt`
 - `data-spec`
+- `data-storage-schema`
 - `data-saved`
 - `data-library-item-id`
 - `data-component-id`
@@ -197,10 +221,11 @@ Entry points:
 For a new AI-generated widget:
 
 1. Insert a temporary widget node in the editor with `loading: true`.
-2. Generate the JSON UI spec.
+2. Generate the JSON UI spec and storage schema together.
 3. Create a new `.widget.md` file through `createWidgetFile()`.
-4. Persist the first revision automatically.
-5. Replace the temporary node attrs with the real file-backed widget record.
+4. If the storage schema is non-empty, create the widget's sidecar SQLite file.
+5. Persist the first revision automatically.
+6. Replace the temporary node attrs with the real file-backed widget record.
 
 ### 2. Rebuild an existing widget
 
@@ -213,9 +238,10 @@ Flow:
 1. `WidgetView` builds a generation prompt from the saved widget prompt plus the current JSON spec.
 2. The existing widget stays visible in the note.
 3. The widget body gets an in-place build overlay.
-4. The new spec is generated.
-5. `persistWidgetRecord()` rewrites the widget file.
-6. A new revision is appended if the prompt/spec changed.
+4. The new spec and storage schema are generated together.
+5. Existing widgets with a storage schema must keep that schema unchanged.
+6. `persistWidgetRecord()` rewrites the widget file.
+7. A new revision is appended if the prompt/spec changed.
 
 ### 3. Edit a widget through chat
 
@@ -254,6 +280,7 @@ Flow:
    - `saved: true`
    - `libraryItemId`
    - `componentId`
+   - the widget instance's `storageSchema`
 4. The editor node is updated to match the rewritten widget file.
 
 ### 5. Insert a widget from the library
@@ -270,9 +297,11 @@ Flow:
    - `saved: true`
    - `libraryItemId: item.id`
    - `componentId` if the item is shared
-4. The note gets a normal file-backed widget node.
+   - `storageSchema` copied from the reusable template
+4. If the copied storage schema is non-empty, the inserted widget gets its own sidecar SQLite file.
+5. The note gets a normal file-backed widget node.
 
-This means library insertion creates a new widget file instance, not a pointer directly into the library.
+This means library insertion creates a new widget file instance with independent data storage, not a direct pointer into the library's runtime database.
 
 ### 6. Remove a library item
 
@@ -312,7 +341,8 @@ When changing widget code, preserve these invariants:
 
 - The widget file stays the canonical source of truth.
 - `saved` alone is not enough to identify library linkage. Use `libraryItemId`.
-- Shared widgets use `componentId` for shared runtime storage and queries.
+- `componentId` identifies the reusable template, not the widget instance's data rows.
+- Widget instance data should default to per-widget storage, not shared library storage.
 - Revisions are append-only snapshots of prompt/spec state.
 - Removing a library entry must clear saved/library references from widget files.
 - Note markdown should keep storing widget embeds, not inline giant JSON blobs.

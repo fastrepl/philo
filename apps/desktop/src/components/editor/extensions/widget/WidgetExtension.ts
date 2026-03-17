@@ -2,7 +2,7 @@ import { mergeAttributes, Node, } from "@tiptap/core";
 import type { JSONContent, } from "@tiptap/core";
 import { ReactNodeViewRenderer, } from "@tiptap/react";
 import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../../../services/ai";
-import { generateWidget, } from "../../../../services/generate";
+import { generateWidgetWithStorage, } from "../../../../services/generate";
 import {
   compactWidgetSpec,
   decodeWidgetDataAttr,
@@ -10,6 +10,7 @@ import {
   escapeWidgetHtmlAttr,
 } from "../../../../services/widget-attrs";
 import { createWidgetFile, } from "../../../../services/widget-files";
+import { stringifyStorageSchema, } from "../../../../services/widget-storage";
 import { getEditorSelectionText, } from "../../selectionText";
 import { WidgetView, } from "./WidgetView";
 
@@ -28,6 +29,7 @@ export interface WidgetAttributes {
   path?: string;
   libraryItemId?: string | null;
   componentId?: string | null;
+  storageSchema?: string;
   prompt: string;
   saved: boolean;
   loading: boolean;
@@ -83,6 +85,9 @@ export const WidgetExtension = Node.create({
     if (attrs.libraryItemId) {
       parts.push(` data-library-item-id="${escapeWidgetHtmlAttr(String(attrs.libraryItemId,),)}"`,);
     }
+    if (attrs.storageSchema) {
+      parts.push(` data-storage-schema="${encodeWidgetDataAttr(String(attrs.storageSchema,),)}"`,);
+    }
     if (attrs.prompt) parts.push(` data-prompt="${encodeWidgetDataAttr(String(attrs.prompt,),)}"`,);
     if (attrs.saved) parts.push(' data-saved="true"',);
     parts.push("></div>",);
@@ -121,6 +126,10 @@ export const WidgetExtension = Node.create({
           return raw || null;
         },
       },
+      storageSchema: {
+        default: "",
+        parseHTML: (el: HTMLElement,) => decodeWidgetDataAttr(el.getAttribute("data-storage-schema",),),
+      },
       prompt: {
         default: "",
         parseHTML: (el: HTMLElement,) => decodeWidgetDataAttr(el.getAttribute("data-prompt",),),
@@ -152,6 +161,9 @@ export const WidgetExtension = Node.create({
           ? { "data-library-item-id": String(HTMLAttributes.libraryItemId,), }
           : {}),
         ...(HTMLAttributes.componentId ? { "data-component-id": String(HTMLAttributes.componentId,), } : {}),
+        ...(HTMLAttributes.storageSchema
+          ? { "data-storage-schema": encodeWidgetDataAttr(String(HTMLAttributes.storageSchema,),), }
+          : {}),
         ...(HTMLAttributes.saved ? { "data-saved": "true", } : {}),
       },),
     ];
@@ -171,6 +183,7 @@ export const WidgetExtension = Node.create({
             spec: "",
             file: "",
             path: "",
+            storageSchema: "",
             saved: false,
             loading: false,
             error: "",
@@ -198,13 +211,14 @@ export const WidgetExtension = Node.create({
           },)
           .run();
 
-        generateWidget(selectedText,)
-          .then(async (spec,) => {
-            const specString = JSON.stringify(spec,);
+        generateWidgetWithStorage(selectedText,)
+          .then(async ({ uiSpec, storageSchema, },) => {
+            const specString = JSON.stringify(uiSpec,);
             const record = await createWidgetFile({
               title: deriveTitle(selectedText,),
               prompt: selectedText,
               spec: specString,
+              storageSchema,
               saved: false,
             },);
             updateWidgetById(this.editor, widgetId, {
@@ -212,6 +226,7 @@ export const WidgetExtension = Node.create({
               file: record.file,
               path: record.path,
               spec: record.spec,
+              storageSchema: stringifyStorageSchema(record.storageSchema,),
               loading: false,
             },);
           },)

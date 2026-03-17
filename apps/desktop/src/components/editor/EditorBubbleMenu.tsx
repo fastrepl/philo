@@ -2,8 +2,9 @@ import type { Editor, } from "@tiptap/core";
 import { BubbleMenu, } from "@tiptap/react/menus";
 import { useState, } from "react";
 import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../services/ai";
-import { generateWidget, } from "../../services/generate";
+import { generateWidgetWithStorage, } from "../../services/generate";
 import { createWidgetFile, } from "../../services/widget-files";
+import { stringifyStorageSchema, } from "../../services/widget-storage";
 import { waitForNextPaint, } from "./extensions/widget/loading";
 import { getEditorSelectionText, } from "./selectionText";
 
@@ -58,19 +59,28 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
       .deleteSelection()
       .insertContent({
         type: "widget",
-        attrs: { id: widgetId, prompt: selectedText, spec: "", loading: true, saved: false, error: "", },
+        attrs: {
+          id: widgetId,
+          prompt: selectedText,
+          spec: "",
+          storageSchema: "",
+          loading: true,
+          saved: false,
+          error: "",
+        },
       },)
       .run();
 
     await waitForNextPaint();
 
     try {
-      const spec = await generateWidget(selectedText,);
-      const specString = JSON.stringify(spec,);
+      const { uiSpec, storageSchema, } = await generateWidgetWithStorage(selectedText,);
+      const specString = JSON.stringify(uiSpec,);
       const record = await createWidgetFile({
         title: deriveTitle(selectedText,),
         prompt: selectedText,
         spec: specString,
+        storageSchema,
         saved: false,
       },);
       updateWidgetById(editor, widgetId, {
@@ -78,6 +88,7 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
         file: record.file,
         path: record.path,
         spec: record.spec,
+        storageSchema: stringifyStorageSchema(record.storageSchema,),
         loading: false,
       },);
     } catch (err) {

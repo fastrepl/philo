@@ -1,12 +1,15 @@
 import { dirname, join, } from "@tauri-apps/api/path";
 import { exists, mkdir, readDir, readTextFile, writeTextFile, } from "@tauri-apps/plugin-fs";
+import type { SharedStorageSchema, } from "./library";
 import { getJournalDir, getWidgetsDir, } from "./paths";
 import { getVaultDirSetting, } from "./settings";
 import { compactWidgetSpec, encodeWidgetDataAttr, escapeWidgetHtmlAttr, } from "./widget-attrs";
+import { ensureWidgetStorage, parseStorageSchema, stringifyStorageSchema, } from "./widget-storage";
 
 const OBSIDIAN_EMBED_RE = /!\[\[([^[\]]+)\]\]/g;
 const WIDGET_SUFFIX = ".widget.md";
 const WIDGET_HISTORY_INFO = "json widget-history";
+const WIDGET_STORAGE_INFO = "json widget-storage";
 const CODE_BLOCK_RE = /```([^\n]*)\n([\s\S]*?)```/g;
 
 export interface WidgetRevisionRecord {
@@ -26,6 +29,7 @@ export interface WidgetFileRecord {
   revisions: WidgetRevisionRecord[];
   libraryItemId?: string | null;
   componentId?: string | null;
+  storageSchema?: SharedStorageSchema | null;
   file: string;
   path: string;
 }
@@ -39,6 +43,7 @@ interface WidgetFileInput {
   revisions?: WidgetRevisionRecord[];
   libraryItemId?: string | null;
   componentId?: string | null;
+  storageSchema?: SharedStorageSchema | null;
 }
 
 function frontmatterValue(raw: string,): string {
@@ -141,6 +146,10 @@ function parseHistoryBlock(raw: string,): {
   }
 }
 
+function parseStorageBlock(raw: string,): SharedStorageSchema | null {
+  return parseStorageSchema(raw,);
+}
+
 function ensureWidgetHistory(record: Pick<WidgetFileRecord, "prompt" | "spec" | "currentRevisionId" | "revisions">,): {
   currentRevisionId: string;
   revisions: WidgetRevisionRecord[];
@@ -207,6 +216,7 @@ function parseWidgetMarkdown(raw: string, file: string, path: string,): WidgetFi
 
   let spec: string | null = null;
   let historyBlock: { currentRevisionId: string; revisions: WidgetRevisionRecord[]; } | null = null;
+  let storageSchema: SharedStorageSchema | null = null;
 
   for (const block of match[2].matchAll(CODE_BLOCK_RE,)) {
     const info = block[1].trim().toLowerCase();
@@ -215,6 +225,11 @@ function parseWidgetMarkdown(raw: string, file: string, path: string,): WidgetFi
 
     if (info === WIDGET_HISTORY_INFO) {
       historyBlock = parseHistoryBlock(content,);
+      continue;
+    }
+
+    if (info === WIDGET_STORAGE_INFO) {
+      storageSchema = parseStorageBlock(content,);
       continue;
     }
 
@@ -237,6 +252,7 @@ function parseWidgetMarkdown(raw: string, file: string, path: string,): WidgetFi
     libraryItemId: meta.libraryItemId || meta.componentId || null,
     spec,
     componentId: meta.componentId || null,
+    storageSchema,
     file,
     path,
   };
@@ -264,6 +280,14 @@ function serializeWidgetMarkdown(record: WidgetFileRecord,): string {
     })(),
     "```",
     "",
+    ...(record.storageSchema
+      ? [
+        `\`\`\`${WIDGET_STORAGE_INFO}`,
+        JSON.stringify(record.storageSchema, null, 2,),
+        "```",
+        "",
+      ]
+      : []),
     `\`\`\`${WIDGET_HISTORY_INFO}`,
     JSON.stringify(history, null, 2,),
     "```",
@@ -284,6 +308,9 @@ function toWidgetHtml(record: WidgetFileRecord,): string {
   }
   if (record.componentId) {
     attrs.push(`data-component-id="${escapeWidgetHtmlAttr(record.componentId,)}"`,);
+  }
+  if (record.storageSchema) {
+    attrs.push(`data-storage-schema="${encodeWidgetDataAttr(stringifyStorageSchema(record.storageSchema,),)}"`,);
   }
   return `<div ${attrs.join(" ",)}></div>`;
 }
@@ -399,6 +426,7 @@ export async function createWidgetFile(input: WidgetFileInput,): Promise<WidgetF
   record.currentRevisionId = history.currentRevisionId;
   record.revisions = history.revisions;
   await writeTextFile(path, serializeWidgetMarkdown(record,),);
+  await ensureWidgetStorage(path, id, record.storageSchema,);
   return record;
 }
 
@@ -417,6 +445,7 @@ export async function updateWidgetFile(
   record.revisions = history.revisions;
   await ensureParentDir(path,);
   await writeTextFile(path, serializeWidgetMarkdown(record,),);
+  await ensureWidgetStorage(path, record.id, record.storageSchema,);
   return record;
 }
 

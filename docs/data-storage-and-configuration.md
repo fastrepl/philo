@@ -238,13 +238,21 @@ Current location:
 - vault mode: `<vaultDir>/widgets/`
 - default mode: `<journalDir>/widgets/`
 
-Each widget becomes a `.widget.md` file that stores the current widget metadata, the current spec snapshot, and revision history. Daily notes do not inline the full widget payload. They store widget placeholder blocks that point back to the widget file.
+Each widget becomes a `.widget.md` file that stores the current widget metadata, the current spec snapshot, optional generated storage schema, and revision history.
+
+If the widget has generated persistent storage, it also gets a sidecar SQLite database next to the widget file:
+
+```text
+<slug>-<widget-id>.widget.sqlite3
+```
+
+The markdown file remains the canonical source of truth for widget identity, prompt, spec, and storage metadata. The SQLite sidecar stores the widget instance's queryable/mutable data rows. Daily notes do not inline the full widget payload. They store widget placeholder blocks that point back to the widget file.
 
 For the full file schema and update lifecycle, see [Widget persistence and lifecycle](widget-persistence-and-lifecycle.md).
 
 ## Widget Library
 
-The widget library is stored as individual markdown files, not in a database.
+The widget library stores reusable widget templates under the resolved library directory.
 
 Current location:
 
@@ -261,6 +269,8 @@ Each file contains:
 
 - frontmatter-like metadata fields such as `id`, `title`, `description`, `prompt`, `savedAt`
 - a fenced JSON block containing the widget spec
+
+Shared library entries also have a component manifest directory with a `manifest.json` file and, when needed, a `component.sqlite3` template database. Inserted widgets do not reuse that runtime database by default; they get their own widget-instance storage sidecar when the stored schema is non-empty.
 
 There is also legacy support for:
 

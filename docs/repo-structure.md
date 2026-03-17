@@ -117,6 +117,8 @@ Non-UI application logic. This is where most filesystem and domain behavior live
   - File-backed AI chat history persistence.
 - `widget-files.ts`
   - File-backed widget persistence, widget markdown parsing, widget embed resolution, and widget revision history.
+- `widget-storage.ts`
+  - Widget-instance storage helpers, schema normalization, and Tauri bridge for per-widget SQLite queries/mutations.
 - `generate.ts`, `assistant.ts`
   - AI/widget generation logic.
 - `settings.ts`
@@ -229,6 +231,8 @@ If you are changing widgets, these are the highest-signal files:
   - Widget toolbar behavior, rebuild flow, save-to-library flow, and runtime rendering.
 - `apps/desktop/src/services/widget-files.ts`
   - `.widget.md` file format, disk persistence, widget embed resolution, and revision snapshots.
+- `apps/desktop/src/services/widget-storage.ts`
+  - Instance-scoped widget SQLite storage and runtime query/mutation plumbing.
 - `apps/desktop/src/services/library.ts`
   - Library item persistence and shared component storage.
 - `docs/widget-persistence-and-lifecycle.md`

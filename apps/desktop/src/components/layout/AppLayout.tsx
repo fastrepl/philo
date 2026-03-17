@@ -34,6 +34,7 @@ import {
   type UpdateInfo,
 } from "../../services/updater";
 import { createWidgetFile, } from "../../services/widget-files";
+import { stringifyStorageSchema, } from "../../services/widget-storage";
 import { DailyNote, formatDate, getDaysAgo, isToday, } from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
 import {
@@ -1404,6 +1405,7 @@ export default function AppLayout() {
               saved: true,
               libraryItemId: item.id,
               componentId: isShared ? item.componentId : null,
+              storageSchema: item.storageSchema,
             },);
             editor.chain().focus().insertContent({
               type: "widget",
@@ -1414,6 +1416,7 @@ export default function AppLayout() {
                 path: record.path,
                 libraryItemId: item.id,
                 componentId: isShared ? item.componentId : null,
+                storageSchema: stringifyStorageSchema(record.storageSchema,),
                 prompt: item.prompt,
                 saved: true,
                 loading: false,

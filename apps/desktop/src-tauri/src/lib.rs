@@ -1338,6 +1338,8 @@ fn read_json_file(path: &PathBuf) -> Option<Value> {
 
 const SHARED_SCHEMA_VERSION: u32 = 1;
 const SHARED_METADATA_TABLE: &str = "philo_component_metadata";
+const WIDGET_STORAGE_SCHEMA_VERSION: u32 = 1;
+const WIDGET_METADATA_TABLE: &str = "philo_widget_metadata";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1477,6 +1479,39 @@ struct SharedQueryInput {
 struct SharedMutationInput {
     library_dir: String,
     component_id: String,
+    mutation_name: String,
+    #[serde(default)]
+    params: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WidgetStorageInput {
+    widget_path: String,
+    widget_id: String,
+    storage_schema: SharedStorageSchema,
+    schema_version: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WidgetQueryInput {
+    widget_path: String,
+    widget_id: String,
+    storage_schema: SharedStorageSchema,
+    schema_version: u32,
+    query_name: String,
+    #[serde(default)]
+    params: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WidgetMutationInput {
+    widget_path: String,
+    widget_id: String,
+    storage_schema: SharedStorageSchema,
+    schema_version: u32,
     mutation_name: String,
     #[serde(default)]
     params: Value,
@@ -1642,6 +1677,33 @@ fn storage_table_name() -> &'static str {
     SHARED_METADATA_TABLE
 }
 
+fn widget_storage_table_name() -> &'static str {
+    WIDGET_METADATA_TABLE
+}
+
+fn widget_db_path(widget_path: &str) -> Result<PathBuf, String> {
+    let trimmed = widget_path.trim();
+    if trimmed.is_empty() {
+        return Err("widgetPath is required.".to_string());
+    }
+
+    let path = PathBuf::from(trimmed);
+    if !path.is_absolute() {
+        return Err("widgetPath must be an absolute path.".to_string());
+    }
+
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "widgetPath must point to a file.".to_string())?;
+    let db_name = if let Some(stem) = file_name.strip_suffix(".widget.md") {
+        format!("{stem}.widget.sqlite3")
+    } else {
+        format!("{file_name}.sqlite3")
+    };
+    Ok(path.with_file_name(db_name))
+}
+
 fn canonicalize_component_storage_type(raw: &str) -> Option<&'static str> {
     match raw.to_lowercase().as_str() {
         "text" | "string" => Some("TEXT"),
@@ -1669,9 +1731,6 @@ fn valid_filter_operator(raw: &str) -> Option<&'static str> {
 }
 
 fn validate_storage_schema(schema: &SharedStorageSchema) -> Result<(), String> {
-    if schema.tables.is_empty() {
-        return Err("storageSchema requires at least one table.".to_string());
-    }
     let mut table_names = std::collections::HashSet::new();
     for table in &schema.tables {
         if !is_valid_table_name(&table.name) {
@@ -2089,36 +2148,43 @@ fn read_manifest(path: &Path) -> Option<SharedComponentManifest> {
     serde_json::from_str::<SharedComponentManifest>(&raw).ok()
 }
 
-fn verify_component_metadata(
+fn verify_storage_metadata(
     conn: &Connection,
-    component_id: &str,
+    owner_id: &str,
     schema_version: u32,
+    metadata_table: &str,
+    id_column: &str,
 ) -> Result<(), String> {
     let mut stmt = conn
         .prepare(&format!(
-            "SELECT component_id, schema_version FROM {storage_table}",
-            storage_table = storage_table_name()
+            "SELECT {id_column}, schema_version FROM {metadata_table}"
         ))
         .map_err(|e| e.to_string())?;
     let row = stmt
         .query_row(params![], |row| {
-            let manifest_id: String = row.get(0)?;
-            let manifest_version: u32 = row.get(1)?;
-            Ok((manifest_id, manifest_version))
+            let stored_owner_id: String = row.get(0)?;
+            let stored_schema_version: u32 = row.get(1)?;
+            Ok((stored_owner_id, stored_schema_version))
         })
         .map_err(|e| e.to_string())?;
-    if row.0 != component_id {
-        return Err("Manifest component mismatch.".to_string());
+    if row.0 != owner_id {
+        return Err("Storage owner mismatch.".to_string());
     }
     if row.1 != schema_version {
-        return Err("Component schema version mismatch.".to_string());
+        return Err("Storage schema version mismatch.".to_string());
     }
     Ok(())
 }
 
-fn initialize_component_db(path: &Path, manifest: &SharedComponentManifest) -> Result<(), String> {
+fn initialize_storage_db(
+    path: &Path,
+    owner_id: &str,
+    schema_version: u32,
+    schema: &SharedStorageSchema,
+    metadata_table: &str,
+    id_column: &str,
+) -> Result<(), String> {
     let mut conn = Connection::open(path).map_err(|e| e.to_string())?;
-    let schema = &manifest.storage_schema;
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     tx.execute("PRAGMA foreign_keys = ON;", params![])
         .map_err(|e| e.to_string())?;
@@ -2173,21 +2239,91 @@ fn initialize_component_db(path: &Path, manifest: &SharedComponentManifest) -> R
     }
 
     let metadata_sql = format!(
-        "CREATE TABLE {table} (component_id TEXT PRIMARY KEY, schema_version INTEGER NOT NULL)",
-        table = storage_table_name()
+        "CREATE TABLE {metadata_table} ({id_column} TEXT PRIMARY KEY, schema_version INTEGER NOT NULL)"
     );
     tx.execute(&metadata_sql, params![])
         .map_err(|e| e.to_string())?;
     tx.execute(
-        &format!(
-            "INSERT INTO {table} (component_id, schema_version) VALUES (?1, ?2)",
-            table = storage_table_name()
-        ),
-        params![manifest.id, manifest.schema_version as i64],
+        &format!("INSERT INTO {metadata_table} ({id_column}, schema_version) VALUES (?1, ?2)"),
+        params![owner_id, schema_version as i64],
     )
     .map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+fn verify_component_metadata(
+    conn: &Connection,
+    component_id: &str,
+    schema_version: u32,
+) -> Result<(), String> {
+    verify_storage_metadata(
+        conn,
+        component_id,
+        schema_version,
+        storage_table_name(),
+        "component_id",
+    )
+}
+
+fn verify_widget_metadata(
+    conn: &Connection,
+    widget_id: &str,
+    schema_version: u32,
+) -> Result<(), String> {
+    verify_storage_metadata(
+        conn,
+        widget_id,
+        schema_version,
+        widget_storage_table_name(),
+        "widget_id",
+    )
+}
+
+fn initialize_component_db(path: &Path, manifest: &SharedComponentManifest) -> Result<(), String> {
+    initialize_storage_db(
+        path,
+        &manifest.id,
+        manifest.schema_version,
+        &manifest.storage_schema,
+        storage_table_name(),
+        "component_id",
+    )
+}
+
+fn initialize_widget_db(
+    path: &Path,
+    widget_id: &str,
+    storage_schema: &SharedStorageSchema,
+) -> Result<(), String> {
+    initialize_storage_db(
+        path,
+        widget_id,
+        WIDGET_STORAGE_SCHEMA_VERSION,
+        storage_schema,
+        widget_storage_table_name(),
+        "widget_id",
+    )
+}
+
+fn ensure_widget_storage_ready(input: &WidgetStorageInput) -> Result<PathBuf, String> {
+    if input.schema_version != WIDGET_STORAGE_SCHEMA_VERSION {
+        return Err("Unsupported widget storage schema version.".to_string());
+    }
+
+    validate_storage_schema(&input.storage_schema)?;
+    let db_path = widget_db_path(&input.widget_path)?;
+    if db_path.exists() {
+        let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+        verify_widget_metadata(&conn, &input.widget_id, input.schema_version)?;
+        return Ok(db_path);
+    }
+
+    if let Some(parent) = db_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    initialize_widget_db(&db_path, &input.widget_id, &input.storage_schema)?;
+    Ok(db_path)
 }
 
 #[derive(Serialize)]
@@ -2720,6 +2856,119 @@ fn run_shared_component_mutation(
 }
 
 #[tauri::command]
+fn ensure_widget_storage(input: WidgetStorageInput) -> Result<(), String> {
+    ensure_widget_storage_ready(&input)?;
+    Ok(())
+}
+
+#[tauri::command]
+fn run_widget_storage_query(input: WidgetQueryInput) -> Result<SharedQueryResult, String> {
+    let storage_input = WidgetStorageInput {
+        widget_path: input.widget_path.clone(),
+        widget_id: input.widget_id.clone(),
+        storage_schema: input.storage_schema.clone(),
+        schema_version: input.schema_version,
+    };
+    let params = read_params_as_object(&input.params)?;
+    let named_query = input
+        .storage_schema
+        .named_queries
+        .iter()
+        .find(|query| query.name == input.query_name)
+        .ok_or_else(|| format!("Unknown query '{}'.", input.query_name))?;
+    let sql = build_named_select(&input.storage_schema, &named_query.name)?;
+
+    let db_path = ensure_widget_storage_ready(&storage_input)?;
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    verify_widget_metadata(&conn, &input.widget_id, input.schema_version)?;
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut values = Vec::new();
+    for filter in &named_query.filters {
+        let value = params
+            .get(&filter.parameter)
+            .ok_or_else(|| format!("Missing query param '{}'.", filter.parameter))?;
+        values.push(to_sql_value(value)?);
+    }
+
+    let column_names = if named_query.columns.len() == 1 && named_query.columns[0] == "*" {
+        let mut pragma = conn
+            .prepare(&format!(
+                "PRAGMA table_info({})",
+                quoted_identifier(&named_query.table)
+            ))
+            .map_err(|e| e.to_string())?;
+        let rows = pragma
+            .query_map(params![], |row| {
+                let name: String = row.get(1)?;
+                Ok(name)
+            })
+            .map_err(|e| e.to_string())?;
+        let mut names = Vec::new();
+        for row in rows {
+            names.push(row.map_err(|e| e.to_string())?);
+        }
+        names
+    } else {
+        named_query.columns.clone()
+    };
+
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(values), |row| {
+            Ok(row_to_json(row, &column_names))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(SharedQueryResult { rows })
+}
+
+#[tauri::command]
+fn run_widget_storage_mutation(input: WidgetMutationInput) -> Result<SharedMutationResult, String> {
+    let storage_input = WidgetStorageInput {
+        widget_path: input.widget_path.clone(),
+        widget_id: input.widget_id.clone(),
+        storage_schema: input.storage_schema.clone(),
+        schema_version: input.schema_version,
+    };
+    let params = read_params_as_object(&input.params)?;
+    let named_mutation = input
+        .storage_schema
+        .named_mutations
+        .iter()
+        .find(|mutation| mutation.name == input.mutation_name)
+        .ok_or_else(|| format!("Unknown mutation '{}'.", input.mutation_name))?;
+
+    let (sql, mutation) = build_named_mutation(&input.storage_schema, &named_mutation.name)?;
+    let db_path = ensure_widget_storage_ready(&storage_input)?;
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    verify_widget_metadata(&conn, &input.widget_id, input.schema_version)?;
+    let mut values = Vec::new();
+
+    for column in &mutation.set_columns {
+        let value = params
+            .get(column)
+            .ok_or_else(|| format!("Missing mutation value '{}'.", column))?;
+        values.push(to_sql_value(value)?);
+    }
+    for filter in &mutation.filters {
+        let value = params
+            .get(&filter.parameter)
+            .ok_or_else(|| format!("Missing mutation param '{}'.", filter.parameter))?;
+        values.push(to_sql_value(value)?);
+    }
+
+    let changed_rows = conn
+        .execute(&sql, rusqlite::params_from_iter(values))
+        .map_err(|e| e.to_string())?;
+
+    Ok(SharedMutationResult {
+        changed_rows: changed_rows as u64,
+    })
+}
+
+#[tauri::command]
 fn detect_obsidian_settings(vault_dir: String) -> ObsidianSettingsDetection {
     if vault_dir.trim().is_empty() {
         return ObsidianSettingsDetection {
@@ -2993,7 +3242,10 @@ pub fn run() {
             update_shared_component,
             delete_shared_component,
             run_shared_component_query,
-            run_shared_component_mutation
+            run_shared_component_mutation,
+            ensure_widget_storage,
+            run_widget_storage_query,
+            run_widget_storage_mutation
         ])
         .setup(|app| {
             let app_handle = app.handle().clone();
@@ -3257,6 +3509,17 @@ mod tests {
     }
 
     #[test]
+    fn validate_storage_schema_allows_empty_schema() {
+        let schema = SharedStorageSchema {
+            tables: vec![],
+            named_queries: vec![],
+            named_mutations: vec![],
+        };
+
+        assert!(validate_storage_schema(&schema).is_ok());
+    }
+
+    #[test]
     fn shared_component_db_supports_named_queries_and_mutations() {
         let library_dir = temp_library_dir("shared-db");
         let component_id = "component-shared";
@@ -3338,5 +3601,50 @@ mod tests {
         assert!(empty_result.rows.is_empty());
 
         let _ = fs::remove_dir_all(&library_dir);
+    }
+
+    #[test]
+    fn widget_storage_db_supports_named_queries_and_mutations() {
+        let widgets_dir = temp_library_dir("widget-db");
+        fs::create_dir_all(&widgets_dir).unwrap();
+        let widget_path = widgets_dir.join("tracker.widget.md");
+        fs::write(&widget_path, "---\n---\n").unwrap();
+
+        let storage_input = WidgetStorageInput {
+            widget_path: widget_path.to_string_lossy().to_string(),
+            widget_id: "widget-instance".to_string(),
+            storage_schema: sample_storage_schema(),
+            schema_version: WIDGET_STORAGE_SCHEMA_VERSION,
+        };
+        ensure_widget_storage(storage_input).unwrap();
+
+        let insert_result = run_widget_storage_mutation(WidgetMutationInput {
+            widget_path: widget_path.to_string_lossy().to_string(),
+            widget_id: "widget-instance".to_string(),
+            storage_schema: sample_storage_schema(),
+            schema_version: WIDGET_STORAGE_SCHEMA_VERSION,
+            mutation_name: "insertItem".to_string(),
+            params: json!({
+                "id": 1,
+                "title": "First widget item",
+                "done": 0
+            }),
+        })
+        .unwrap();
+        assert_eq!(insert_result.changed_rows, 1);
+
+        let list_result = run_widget_storage_query(WidgetQueryInput {
+            widget_path: widget_path.to_string_lossy().to_string(),
+            widget_id: "widget-instance".to_string(),
+            storage_schema: sample_storage_schema(),
+            schema_version: WIDGET_STORAGE_SCHEMA_VERSION,
+            query_name: "listItems".to_string(),
+            params: json!({}),
+        })
+        .unwrap();
+        assert_eq!(list_result.rows.len(), 1);
+        assert_eq!(list_result.rows[0]["title"], json!("First widget item"));
+
+        let _ = fs::remove_dir_all(&widgets_dir);
     }
 }

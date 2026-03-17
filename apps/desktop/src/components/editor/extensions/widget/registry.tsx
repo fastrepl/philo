@@ -4,7 +4,7 @@ import { useCurrentTime, } from "../../../../hooks/useCurrentTime";
 import { widgetCatalog, } from "./catalog";
 
 export interface SharedWidgetRuntimeApi {
-  mode: "inline" | "shared";
+  mode: "inline" | "instance" | "shared";
   runQuery: (queryName: string, params?: Record<string, unknown>,) => Promise<Array<Record<string, unknown>>>;
   runMutation: (mutationName: string, params?: Record<string, unknown>,) => Promise<number>;
   refresh: () => void;
@@ -110,7 +110,7 @@ function useSharedRows(queryName?: string,): {
   const [error, setError,] = useState<string | null>(null,);
 
   const refresh = useCallback(async () => {
-    if (!queryName || !runtime || runtime.mode !== "shared") {
+    if (!queryName || !runtime || runtime.mode === "inline") {
       setRows([],);
       setError(null,);
       setLoading(false,);
@@ -537,8 +537,8 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       const widgetState = useWidgetState();
       const label = resolveTemplateString(props.label, temporal, widgetState,);
       const [running, setRunning,] = useState(false,);
-      const canMutate = Boolean(runtime && runtime.mode === "shared" && props.mutation,);
-      const canRunLocalAction = Boolean(widgetState && runtime?.mode !== "shared" && props.action,);
+      const canMutate = Boolean(runtime && runtime.mode !== "inline" && props.mutation,);
+      const canRunLocalAction = Boolean(widgetState && runtime?.mode === "inline" && props.action,);
 
       const handleClick = async () => {
         if (!canMutate || !runtime || !props.mutation) return;
@@ -638,7 +638,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       const runtime = useWidgetRuntime();
       const boundRow = rows[0] ?? null;
       const runtimeMode = runtime?.mode ?? "inline";
-      const initial = runtimeMode === "shared" && boundRow && props.bindColumn
+      const initial = runtimeMode !== "inline" && boundRow && props.bindColumn
         ? boundRow[props.bindColumn]
         : props.binding && widgetState
         ? widgetState.getValue(props.binding,)
@@ -649,7 +649,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
         setValue(toStringValue(initial ?? "",),);
       }, [initial, runtimeMode, props.value,],);
 
-      const canWrite = !!(runtimeMode === "shared" && runtime && props.mutation);
+      const canWrite = !!(runtimeMode !== "inline" && runtime && props.mutation);
 
       const submit = async (next: string,) => {
         if (!canWrite || !runtime || !props.mutation || !props.bindColumn) {
@@ -663,7 +663,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
             await refresh();
           }
         } catch (err) {
-          console.error("Shared mutation failed", err,);
+          console.error("Widget mutation failed", err,);
         }
       };
 
@@ -683,17 +683,17 @@ export const { registry, } = defineRegistry(widgetCatalog, {
             onChange={(event,) => {
               const next = event.target.value;
               setValue(next,);
-              if (runtimeMode !== "shared" && props.binding && widgetState) {
+              if (runtimeMode === "inline" && props.binding && widgetState) {
                 widgetState.setValue(props.binding, next,);
               }
             }}
             onBlur={() => {
-              if (runtimeMode === "shared" && canWrite) {
+              if (runtimeMode !== "inline" && canWrite) {
                 void submit(value,);
               }
             }}
             onKeyDown={(event,) => {
-              if (event.key === "Enter" && runtimeMode === "shared" && canWrite) {
+              if (event.key === "Enter" && runtimeMode !== "inline" && canWrite) {
                 event.preventDefault();
                 void submit(value,);
               }
@@ -720,14 +720,14 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       const runtime = useWidgetRuntime();
       const boundRow = rows[0] ?? null;
       const runtimeMode = runtime?.mode ?? "inline";
-      const initial = runtimeMode === "shared" && boundRow && props.bindColumn
+      const initial = runtimeMode !== "inline" && boundRow && props.bindColumn
         ? boundRow[props.bindColumn]
         : props.binding && widgetState
         ? widgetState.getValue(props.binding,)
         : props.checked;
       const checked = normalizeBoolean(initial,);
       const [localChecked, setLocalChecked,] = useState(checked,);
-      const canWrite = !!(runtimeMode === "shared" && runtime && props.mutation);
+      const canWrite = !!(runtimeMode !== "inline" && runtime && props.mutation);
 
       useEffect(() => {
         setLocalChecked(checked,);
@@ -744,7 +744,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
             await refresh();
           }
         } catch (err) {
-          console.error("Shared mutation failed", err,);
+          console.error("Widget mutation failed", err,);
           setLocalChecked(!next,);
         }
       };
@@ -764,11 +764,11 @@ export const { registry, } = defineRegistry(widgetCatalog, {
           <input
             type="checkbox"
             checked={localChecked}
-            disabled={runtimeMode === "shared" && props.mutation ? false : false}
+            disabled={false}
             onChange={(event,) => {
               const next = event.target.checked;
               setLocalChecked(next,);
-              if (runtimeMode === "shared" && canWrite) {
+              if (runtimeMode !== "inline" && canWrite) {
                 void submit(next,);
                 return;
               }
@@ -853,7 +853,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       const widgetState = useWidgetState();
       const staticItems = props.items ?? [];
       const items = useMemo(() => {
-        if (!props.query || runtime?.mode !== "shared") {
+        if (!props.query || runtime?.mode === "inline") {
           if (props.binding && widgetState) {
             return normalizeListItems(widgetState.getValue(props.binding,),);
           }
@@ -930,7 +930,7 @@ export const { registry, } = defineRegistry(widgetCatalog, {
         ? queryColumns.map((column,) => resolveTemplateString(column.header, temporal,) ?? "")
         : (props.headers ?? []).map((header,) => resolveTemplateString(header, temporal,) ?? "");
       const body = useMemo(() => {
-        if (!props.query || runtime?.mode !== "shared") {
+        if (!props.query || runtime?.mode === "inline") {
           return (props.rows ?? []).map((row,) => row.map((cell,) => resolveTemplateString(cell, temporal,) ?? ""));
         }
 

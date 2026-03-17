@@ -6,7 +6,7 @@ import { Archive, PencilLine, RefreshCw, Trash2, } from "lucide-react";
 import { Component, useCallback, useEffect, useMemo, useState, } from "react";
 import type { ErrorInfo, ReactNode, } from "react";
 import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../../../services/ai";
-import { generateSharedWidget, generateWidget, } from "../../../../services/generate";
+import { generateWidgetWithStorage, } from "../../../../services/generate";
 import {
   addToLibrary,
   getSharedComponent,
@@ -23,6 +23,13 @@ import {
   readWidgetFile,
   updateWidgetFile,
 } from "../../../../services/widget-files";
+import {
+  hasPersistentStorage,
+  parseStorageSchema,
+  runWidgetStorageMutation,
+  runWidgetStorageQuery,
+  stringifyStorageSchema,
+} from "../../../../services/widget-storage";
 import {
   WIDGET_BUILD_STATE_EVENT,
   WIDGET_EDIT_REQUEST_EVENT,
@@ -195,7 +202,19 @@ function specNeedsInlineRepair(spec: Spec | null,): boolean {
 }
 
 export function WidgetView({ node, updateAttributes, deleteNode, selected, }: NodeViewProps,) {
-  const { id, spec: specStr, saved, prompt, loading, error, componentId, libraryItemId, file, path, } = node.attrs as {
+  const {
+    id,
+    spec: specStr,
+    saved,
+    prompt,
+    loading,
+    error,
+    componentId,
+    libraryItemId,
+    file,
+    path,
+    storageSchema: storageSchemaStr,
+  } = node.attrs as {
     id: string;
     spec: string;
     saved: boolean;
@@ -206,6 +225,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     libraryItemId?: string | null;
     file?: string;
     path?: string;
+    storageSchema?: string;
   };
   const [missingComponent, setMissingComponent,] = useState(false,);
   const [sharedLoading, setSharedLoading,] = useState(false,);
@@ -217,6 +237,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const effectiveLibraryItemId = libraryItemId ?? componentId ?? null;
 
   const inlineSpec = useMemo(() => parseSpec(specStr,), [specStr,],);
+  const storageSchema = useMemo(() => parseStorageSchema(storageSchemaStr,), [storageSchemaStr,],);
   const isShared = Boolean(componentId,);
   const sharedSpec = manifest?.uiSpec ? parseSpec(manifest.uiSpec,) : null;
   const currentSpec = useMemo(
@@ -304,6 +325,23 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   }, [currentSpec, id, prompt,],);
 
   const runtimeApi: SharedWidgetRuntimeApi = useMemo(() => {
+    if (path && storageSchema && hasPersistentStorage(storageSchema,)) {
+      return {
+        mode: "instance",
+        runQuery: async (queryName: string, params: Record<string, unknown> = {},) =>
+          runWidgetStorageQuery(path, id, storageSchema, queryName, params,),
+        runMutation: async (mutationName: string, params: Record<string, unknown> = {},) => {
+          const changed = await runWidgetStorageMutation(path, id, storageSchema, mutationName, params,);
+          setRuntimeRefreshToken((value,) => value + 1);
+          return changed;
+        },
+        refresh: () => {
+          setRuntimeRefreshToken((value,) => value + 1);
+        },
+        refreshToken: runtimeRefreshToken,
+      };
+    }
+
     if (!isShared || !componentId || missingComponent || !manifest) {
       return {
         mode: "inline",
@@ -329,7 +367,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       },
       refreshToken: runtimeRefreshToken,
     };
-  }, [componentId, isShared, manifest, missingComponent, runtimeRefreshToken,],);
+  }, [componentId, id, isShared, manifest, missingComponent, path, runtimeRefreshToken, storageSchema,],);
 
   const persistWidgetRecord = useCallback(async (
     nextPrompt: string,
@@ -337,6 +375,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     nextSaved: boolean,
     nextLibraryItemId?: string | null,
     nextComponentId?: string | null,
+    nextStorageSchema?: SharedStorageSchema | null,
     createRevision = false,
   ) => {
     const title = deriveTitle(nextPrompt,);
@@ -361,6 +400,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         revisions: nextHistory?.revisions ?? existingRecord?.revisions ?? [],
         libraryItemId: nextLibraryItemId ?? null,
         componentId: nextComponentId ?? null,
+        storageSchema: nextStorageSchema ?? existingRecord?.storageSchema ?? null,
       },);
     }
 
@@ -373,6 +413,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       revisions: nextHistory?.revisions,
       libraryItemId: nextLibraryItemId ?? null,
       componentId: nextComponentId ?? null,
+      storageSchema: nextStorageSchema ?? existingRecord?.storageSchema ?? null,
     },);
   }, [file, id, path,],);
 
@@ -386,7 +427,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     await waitForNextPaint();
     try {
       if (isShared && manifest) {
-        const generated = await generateSharedWidget(generationPrompt, manifest.storageSchema,);
+        const generated = await generateWidgetWithStorage(generationPrompt, manifest.storageSchema,);
         if (!storageSchemaMatch(generated.storageSchema, manifest.storageSchema,)) {
           throw new Error("Storage schema changed. Save as a new component to rebuild with a new DB schema.",);
         }
@@ -398,6 +439,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
           true,
           effectiveLibraryItemId,
           manifest.id,
+          generated.storageSchema,
           true,
         );
         updateAttributes({
@@ -408,19 +450,24 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
           prompt: persistedPrompt,
           loading: false,
           spec: record.spec,
+          storageSchema: stringifyStorageSchema(record.storageSchema,),
           saved: true,
           error: "",
         },);
         return;
       }
 
-      const nextSpec = await generateWidget(generationPrompt,);
+      const generated = await generateWidgetWithStorage(generationPrompt, storageSchema ?? undefined,);
+      if (storageSchema && !storageSchemaMatch(generated.storageSchema, storageSchema,)) {
+        throw new Error("Storage schema changed. Build a new widget to use a new DB schema.",);
+      }
       const record = await persistWidgetRecord(
         persistedPrompt,
-        JSON.stringify(nextSpec,),
+        JSON.stringify(generated.uiSpec,),
         saved,
         effectiveLibraryItemId,
         componentId,
+        generated.storageSchema,
         true,
       );
       updateAttributes({
@@ -430,6 +477,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         libraryItemId: record.libraryItemId,
         prompt: persistedPrompt,
         spec: record.spec,
+        storageSchema: stringifyStorageSchema(record.storageSchema,),
         loading: false,
         error: "",
       },);
@@ -460,9 +508,12 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     await waitForNextPaint();
     try {
       const uiSpec = inlineSpec;
-      const generated = await generateSharedWidget(prompt, undefined,);
+      const generated = await generateWidgetWithStorage(prompt, storageSchema ?? undefined,);
       if (!generated.uiSpec || !generated.storageSchema) {
         throw new Error("Missing shared component generation data.",);
+      }
+      if (storageSchema && !storageSchemaMatch(generated.storageSchema, storageSchema,)) {
+        throw new Error("Storage schema changed. Build a new widget to archive with a new DB schema.",);
       }
 
       const item = await addToLibrary({
@@ -479,6 +530,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         true,
         item.id,
         item.componentId,
+        generated.storageSchema,
         true,
       );
 
@@ -489,6 +541,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         libraryItemId: item.id,
         componentId: item.componentId,
         spec: record.spec,
+        storageSchema: stringifyStorageSchema(record.storageSchema,),
         saved: true,
         loading: false,
         error: "",
