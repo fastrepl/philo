@@ -22,6 +22,7 @@ import {
   createWidgetFile,
   readWidgetFile,
   updateWidgetFile,
+  type WidgetRuntimeKind,
 } from "../../../../services/widget-files";
 import {
   hasPersistentStorage,
@@ -204,7 +205,9 @@ function specNeedsInlineRepair(spec: Spec | null,): boolean {
 export function WidgetView({ node, updateAttributes, deleteNode, selected, }: NodeViewProps,) {
   const {
     id,
+    runtime,
     spec: specStr,
+    source: sourceStr,
     saved,
     prompt,
     loading,
@@ -216,7 +219,9 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     storageSchema: storageSchemaStr,
   } = node.attrs as {
     id: string;
+    runtime?: WidgetRuntimeKind;
     spec: string;
+    source?: string;
     saved: boolean;
     prompt: string;
     loading: boolean;
@@ -235,11 +240,13 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const [isEditingInChat, setIsEditingInChat,] = useState(false,);
   const [autoRepairAttempted, setAutoRepairAttempted,] = useState(false,);
   const effectiveLibraryItemId = libraryItemId ?? componentId ?? null;
+  const widgetRuntime = runtime === "code" ? "code" : "json";
+  const isCodeWidget = widgetRuntime === "code";
 
-  const inlineSpec = useMemo(() => parseSpec(specStr,), [specStr,],);
+  const inlineSpec = useMemo(() => isCodeWidget ? null : parseSpec(specStr,), [isCodeWidget, specStr,],);
   const storageSchema = useMemo(() => parseStorageSchema(storageSchemaStr,), [storageSchemaStr,],);
   const isShared = Boolean(componentId,);
-  const sharedSpec = manifest?.uiSpec ? parseSpec(manifest.uiSpec,) : null;
+  const sharedSpec = !isCodeWidget && manifest?.uiSpec ? parseSpec(manifest.uiSpec,) : null;
   const currentSpec = useMemo(
     () => (isShared ? sharedSpec ?? inlineSpec : inlineSpec),
     [inlineSpec, isShared, sharedSpec,],
@@ -376,13 +383,26 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     nextLibraryItemId?: string | null,
     nextComponentId?: string | null,
     nextStorageSchema?: SharedStorageSchema | null,
+    nextSource?: string,
     createRevision = false,
   ) => {
     const title = deriveTitle(nextPrompt,);
     const existingRecord = path && file ? await readWidgetFile(path, file,) : null;
+    const effectiveRuntime = existingRecord?.runtime ?? widgetRuntime;
+    const effectiveSource = nextSource ?? existingRecord?.source ?? sourceStr ?? "";
+    const effectiveSpec = effectiveRuntime === "code" ? "" : nextSpec;
     const nextHistory = existingRecord
       ? createRevision
-        ? appendWidgetRevision(existingRecord, nextPrompt, nextSpec,)
+        ? appendWidgetRevision(
+          {
+            ...existingRecord,
+            runtime: effectiveRuntime,
+            spec: effectiveSpec,
+            source: effectiveSource,
+          },
+          nextPrompt,
+          effectiveRuntime === "code" ? effectiveSource : effectiveSpec,
+        )
         : {
           currentRevisionId: existingRecord.currentRevisionId,
           revisions: existingRecord.revisions,
@@ -394,9 +414,11 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         id,
         title,
         prompt: nextPrompt,
+        runtime: effectiveRuntime,
         favorite: existingRecord?.favorite ?? false,
         saved: nextSaved,
-        spec: nextSpec,
+        spec: effectiveSpec,
+        source: effectiveSource,
         currentRevisionId: nextHistory?.currentRevisionId ?? existingRecord?.currentRevisionId ?? "",
         revisions: nextHistory?.revisions ?? existingRecord?.revisions ?? [],
         libraryItemId: nextLibraryItemId ?? null,
@@ -408,7 +430,9 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     return await createWidgetFile({
       title,
       prompt: nextPrompt,
-      spec: nextSpec,
+      runtime: effectiveRuntime,
+      spec: effectiveSpec,
+      source: effectiveSource,
       favorite: existingRecord?.favorite ?? false,
       saved: nextSaved,
       currentRevisionId: nextHistory?.currentRevisionId,
@@ -442,16 +466,19 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
           effectiveLibraryItemId,
           manifest.id,
           generated.storageSchema,
+          undefined,
           true,
         );
         updateAttributes({
           id: record.id,
+          runtime: record.runtime,
           file: record.file,
           path: record.path,
           libraryItemId: record.libraryItemId,
           prompt: persistedPrompt,
           loading: false,
           spec: record.spec,
+          source: record.source,
           storageSchema: stringifyStorageSchema(record.storageSchema,),
           saved: true,
           error: "",
@@ -470,15 +497,18 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         effectiveLibraryItemId,
         componentId,
         generated.storageSchema,
+        undefined,
         true,
       );
       updateAttributes({
         id: record.id,
+        runtime: record.runtime,
         file: record.file,
         path: record.path,
         libraryItemId: record.libraryItemId,
         prompt: persistedPrompt,
         spec: record.spec,
+        source: record.source,
         storageSchema: stringifyStorageSchema(record.storageSchema,),
         loading: false,
         error: "",
@@ -533,16 +563,19 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         item.id,
         item.componentId,
         generated.storageSchema,
+        undefined,
         true,
       );
 
       updateAttributes({
         id: record.id,
+        runtime: record.runtime,
         file: record.file,
         path: record.path,
         libraryItemId: item.id,
         componentId: item.componentId,
         spec: record.spec,
+        source: record.source,
         storageSchema: stringifyStorageSchema(record.storageSchema,),
         saved: true,
         loading: false,
@@ -561,6 +594,10 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   };
 
   useEffect(() => {
+    if (isCodeWidget) {
+      return;
+    }
+
     if (isShared || loading || sharedLoading || autoRepairAttempted || !currentSpec) {
       return;
     }
@@ -571,14 +608,14 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
 
     setAutoRepairAttempted(true,);
     void runGeneration(prompt,);
-  }, [autoRepairAttempted, currentSpec, isShared, loading, prompt, sharedLoading,],);
+  }, [autoRepairAttempted, currentSpec, isCodeWidget, isShared, loading, prompt, sharedLoading,],);
 
   const renderError = error || sharedLoadError;
   const toolbarTitle = formatToolbarTitle(prompt,);
   const saveTitle = isShared || saved ? "Archived in library" : "Archive in library";
   const rebuildTitle = loading || sharedLoading ? "Refreshing widget" : "Refresh widget";
-  const showSaveAction = !isShared && !saved;
-  const showRenderOverlay = (loading || sharedLoading) && Boolean(currentSpec,);
+  const showSaveAction = !isCodeWidget && !isShared && !saved;
+  const showRenderOverlay = !isCodeWidget && (loading || sharedLoading) && Boolean(currentSpec,);
   const overlayText = isEditingInChat ? "Building new version..." : "Refreshing widget...";
   const overlayPrompt = isEditingInChat ? "Updating this widget with your latest edit." : prompt;
 
@@ -593,6 +630,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
             <button
               className={`widget-btn widget-btn-icon widget-btn-iterate ${isEditingInChat ? "widget-btn-active" : ""}`}
               onClick={() => {
+                if (isCodeWidget) return;
                 setIsEditingInChat(true,);
                 window.dispatchEvent(
                   new CustomEvent(WIDGET_EDIT_REQUEST_EVENT, {
@@ -603,7 +641,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
                   },),
                 );
               }}
-              disabled={loading || sharedLoading}
+              disabled={isCodeWidget || loading || sharedLoading}
               title="Edit widget in chat"
               aria-label="Edit widget in chat"
             >
@@ -612,9 +650,10 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
             <button
               className="widget-btn widget-btn-icon widget-btn-rebuild"
               onClick={() => {
+                if (isCodeWidget) return;
                 void handleRebuild();
               }}
-              disabled={loading || sharedLoading}
+              disabled={isCodeWidget || loading || sharedLoading}
               title={rebuildTitle}
               aria-label={rebuildTitle}
             >
@@ -656,6 +695,15 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
             <div className="widget-error">
               <p className="widget-error-title">Sophia couldn't build this</p>
               <p className="widget-error-message">{renderError}</p>
+            </div>
+          )
+          : isCodeWidget
+          ? (
+            <div className="widget-error">
+              <p className="widget-error-title">Code widget detected</p>
+              <p className="widget-error-message">
+                This widget uses the new code runtime. Rendering support is loading next.
+              </p>
             </div>
           )
           : renderSpec

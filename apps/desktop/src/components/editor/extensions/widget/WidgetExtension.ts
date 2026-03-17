@@ -9,6 +9,7 @@ import {
   encodeWidgetDataAttr,
   escapeWidgetHtmlAttr,
 } from "../../../../services/widget-attrs";
+import type { WidgetRuntimeKind, } from "../../../../services/widget-files";
 import { createWidgetFile, } from "../../../../services/widget-files";
 import { stringifyStorageSchema, } from "../../../../services/widget-storage";
 import { getEditorSelectionText, } from "../../selectionText";
@@ -23,8 +24,10 @@ function deriveTitle(prompt: string,): string {
 
 export interface WidgetAttributes {
   id: string;
+  runtime: WidgetRuntimeKind;
   /** JSON-stringified Spec from json-render, or empty string */
   spec: string;
+  source?: string;
   file?: string;
   path?: string;
   libraryItemId?: string | null;
@@ -77,8 +80,11 @@ export const WidgetExtension = Node.create({
 
     const parts = ['<div data-widget=""',];
     if (attrs.id) parts.push(` data-id="${escapeWidgetHtmlAttr(String(attrs.id,),)}"`,);
+    if (attrs.runtime) parts.push(` data-runtime="${escapeWidgetHtmlAttr(String(attrs.runtime,),)}"`,);
     if (attrs.componentId) {
       parts.push(` data-component-id="${escapeWidgetHtmlAttr(String(attrs.componentId,),)}"`,);
+    } else if (attrs.runtime === "code" && attrs.source) {
+      parts.push(` data-source="${encodeWidgetDataAttr(String(attrs.source,),)}"`,);
     } else if (attrs.spec) {
       parts.push(` data-spec="${encodeWidgetDataAttr(compactWidgetSpec(String(attrs.spec,),),)}"`,);
     }
@@ -100,9 +106,17 @@ export const WidgetExtension = Node.create({
         default: null,
         parseHTML: (el: HTMLElement,) => el.getAttribute("data-id",),
       },
+      runtime: {
+        default: "json",
+        parseHTML: (el: HTMLElement,) => el.getAttribute("data-runtime",) === "code" ? "code" : "json",
+      },
       spec: {
         default: "",
         parseHTML: (el: HTMLElement,) => decodeWidgetDataAttr(el.getAttribute("data-spec",),),
+      },
+      source: {
+        default: "",
+        parseHTML: (el: HTMLElement,) => decodeWidgetDataAttr(el.getAttribute("data-source",),),
       },
       file: {
         default: "",
@@ -153,7 +167,10 @@ export const WidgetExtension = Node.create({
       mergeAttributes(HTMLAttributes, {
         "data-widget": "",
         "data-id": String(HTMLAttributes.id ?? "",),
-        "data-spec": encodeWidgetDataAttr(compactWidgetSpec(String(HTMLAttributes.spec ?? "",),),),
+        "data-runtime": String(HTMLAttributes.runtime ?? "json",),
+        ...(HTMLAttributes.runtime === "code"
+          ? { "data-source": encodeWidgetDataAttr(String(HTMLAttributes.source ?? "",),), }
+          : { "data-spec": encodeWidgetDataAttr(compactWidgetSpec(String(HTMLAttributes.spec ?? "",),),), }),
         "data-prompt": encodeWidgetDataAttr(String(HTMLAttributes.prompt ?? "",),),
         "data-file": String(HTMLAttributes.file ?? "",),
         "data-path": String(HTMLAttributes.path ?? "",),
@@ -180,7 +197,9 @@ export const WidgetExtension = Node.create({
           type: this.name,
           attrs: {
             id: crypto.randomUUID(),
+            runtime: "json",
             spec: "",
+            source: "",
             file: "",
             path: "",
             storageSchema: "",
@@ -207,7 +226,16 @@ export const WidgetExtension = Node.create({
           .deleteSelection()
           .insertContent({
             type: "widget",
-            attrs: { id: widgetId, prompt: selectedText, spec: "", loading: true, saved: false, error: "", },
+            attrs: {
+              id: widgetId,
+              runtime: "json",
+              prompt: selectedText,
+              spec: "",
+              source: "",
+              loading: true,
+              saved: false,
+              error: "",
+            },
           },)
           .run();
 
@@ -217,16 +245,20 @@ export const WidgetExtension = Node.create({
             const record = await createWidgetFile({
               title: deriveTitle(selectedText,),
               prompt: selectedText,
+              runtime: "json",
               spec: specString,
+              source: "",
               favorite: false,
               storageSchema,
               saved: false,
             },);
             updateWidgetById(this.editor, widgetId, {
               id: record.id,
+              runtime: record.runtime,
               file: record.file,
               path: record.path,
               spec: record.spec,
+              source: record.source,
               storageSchema: stringifyStorageSchema(record.storageSchema,),
               loading: false,
             },);

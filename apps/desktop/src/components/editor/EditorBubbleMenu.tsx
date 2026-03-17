@@ -61,8 +61,10 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
         type: "widget",
         attrs: {
           id: widgetId,
+          runtime: "json",
           prompt: selectedText,
           spec: "",
+          source: "",
           storageSchema: "",
           loading: true,
           saved: false,
@@ -86,9 +88,11 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
       },);
       updateWidgetById(editor, widgetId, {
         id: record.id,
+        runtime: record.runtime,
         file: record.file,
         path: record.path,
         spec: record.spec,
+        source: record.source,
         storageSchema: stringifyStorageSchema(record.storageSchema,),
         loading: false,
       },);
