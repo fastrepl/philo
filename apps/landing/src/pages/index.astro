@@ -359,7 +359,6 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
 
       <aside class="video-column enter" style="--delay: 120ms;">
         <ReadOnlyHeroNote client:only="react" />
-        <p class="video-note">A real read-only Philo note render, using the same Tiptap document model and chip styling as the app.</p>
       </aside>
     </div>
   </body>
@@ -1358,12 +1357,6 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     height: auto;
     border: 1px dashed color-mix(in srgb, var(--line) 82%, #bfc2ce);
     background: #efefe9;
-  }
-
-  .video-note {
-    margin: 10px 0 0;
-    color: #676762;
-    font-size: var(--fs-xs);
   }
 
   footer {
