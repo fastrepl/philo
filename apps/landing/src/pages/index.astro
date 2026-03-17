@@ -5,50 +5,27 @@ const capabilities = [
   {
     title: "Daily notes in one timeline",
     description: "Review older notes in a continuous feed instead of bouncing through tabs and old files.",
+    visual: "timeline",
   },
   {
     title: "Unfinished tasks roll forward",
     description: "If a task is still open when the date changes, Philo brings it into today automatically.",
+    visual: "rollover",
   },
   {
     title: "Recurring work comes back on its own",
     description: "Daily and scheduled tasks can return automatically, so you do not have to rebuild the same plan every morning.",
+    visual: "recurring",
   },
   {
     title: "Markdown, not lock-in",
     description: "Keep your journal as plain files on disk and use your existing Obsidian vault if you want.",
+    visual: "markdown",
   },
   {
     title: "Free and open source",
     description: "Philo is meant to augment your vault, not turn your daily notes into another subscription silo.",
-  },
-];
-
-const explainerScenes = [
-  {
-    label: "Timeline",
-    title: "See old notes as one continuous planning surface",
-    detail: "Scroll across days instead of opening and closing files.",
-  },
-  {
-    label: "Rollover",
-    title: "Open tasks move into today when the date changes",
-    detail: "Yesterday closes cleanly without losing unfinished work.",
-  },
-  {
-    label: "Recurring",
-    title: "Scheduled work returns automatically",
-    detail: "Repeating chores and routines show up again on their own.",
-  },
-  {
-    label: "Markdown",
-    title: "Your files stay plain text on disk",
-    detail: "Use your existing vault and keep the note format portable.",
-  },
-  {
-    label: "Open source",
-    title: "The app supports your workflow instead of owning it",
-    detail: "Free, inspectable, and meant to live beside the rest of your tools.",
+    visual: "open-source",
   },
 ];
 
@@ -156,144 +133,98 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
 
         <section class="panel enter" style="--delay: 140ms;">
           <h2>Why Philo exists</h2>
-          <div class="why-layout">
-            <div class="why-demo" data-why-demo aria-label="Animated overview of how Philo works" role="img">
-              <div class="why-demo-header">
-                <span>Generated explainer</span>
-                <span>5 scenes / 20 seconds</span>
-              </div>
-              <div class="why-demo-screen">
-                {
-                  explainerScenes.map((scene, index,) => (
-                    <article class={`why-scene ${index === 0 ? "is-active" : ""}`} data-why-scene>
-                      <p class="why-scene-label">{scene.label}</p>
-                      <p class="why-scene-title">{scene.title}</p>
-                      <p class="why-scene-detail">{scene.detail}</p>
-                      {
-                        index === 0 && (
-                          <div class="scene-shell scene-timeline">
-                            <div class="scene-sidebar">
-                              <span>Mar 15</span>
-                              <span>Mar 16</span>
-                              <span class="is-current">Mar 17</span>
-                            </div>
-                            <div class="scene-notes">
-                              <div class="scene-note-card">
-                                <p>Mon 15</p>
-                                <span>capture meeting notes</span>
-                                <span>draft launch copy</span>
-                              </div>
-                              <div class="scene-note-card">
-                                <p>Tue 16</p>
-                                <span>plan Q2 roadmap</span>
-                              </div>
-                              <div class="scene-note-card is-current">
-                                <p>Today</p>
-                                <span>review older notes inline</span>
-                                <span class="is-accent">focus on what is next</span>
-                              </div>
-                            </div>
+          <ul class="detail-list">
+            {
+              capabilities.map((item,) => (
+                <li class="detail-item">
+                  <div class="detail-copy">
+                    <p class="item-title">{item.title}</p>
+                    <p class="item-copy">{item.description}</p>
+                  </div>
+                  <div class={`detail-visual detail-visual-${item.visual}`} aria-hidden="true">
+                    {
+                      item.visual === "timeline" && (
+                        <div class="mini-stack">
+                          <span class="mini-sidebar"></span>
+                          <div class="mini-stack-cards">
+                            <span class="mini-card-line mini-card-line-short"></span>
+                            <span class="mini-card-line"></span>
+                            <span class="mini-card-line mini-card-line-accent"></span>
                           </div>
-                        )
-                      }
-                      {
-                        index === 1 && (
-                          <div class="scene-shell scene-rollover">
-                            <div class="scene-column">
-                              <p>Yesterday</p>
-                              <span class="task-chip is-done">write project brief</span>
-                              <span class="task-chip">follow up with design</span>
-                            </div>
-                            <div class="scene-transfer">→ rolls forward</div>
-                            <div class="scene-column is-target">
-                              <p>Today</p>
-                              <span class="task-chip is-highlight">follow up with design</span>
-                              <span class="task-chip">ship bug fix</span>
-                            </div>
+                        </div>
+                      )
+                    }
+                    {
+                      item.visual === "rollover" && (
+                        <div class="mini-transfer">
+                          <div class="mini-column">
+                            <span class="mini-label"></span>
+                            <span class="mini-chip mini-chip-muted"></span>
+                            <span class="mini-chip"></span>
                           </div>
-                        )
-                      }
-                      {
-                        index === 2 && (
-                          <div class="scene-shell scene-recurring">
-                            <div class="scene-recurring-row">
-                              <span>Daily</span>
-                              <span class="task-chip is-highlight">morning review</span>
-                            </div>
-                            <div class="scene-recurring-row">
-                              <span>Weekly</span>
-                              <span class="task-chip">clean inbox</span>
-                            </div>
-                            <div class="scene-recurring-row">
-                              <span>Monthly</span>
-                              <span class="task-chip">close books</span>
-                            </div>
-                            <div class="scene-repeat-badge">returns on schedule</div>
+                          <span class="mini-arrow"></span>
+                          <div class="mini-column mini-column-target">
+                            <span class="mini-label"></span>
+                            <span class="mini-chip mini-chip-accent"></span>
+                            <span class="mini-chip"></span>
                           </div>
-                        )
-                      }
-                      {
-                        index === 3 && (
-                          <div class="scene-shell scene-markdown">
-                            <div class="scene-tree">
-                              <span>vault/</span>
-                              <span>daily/</span>
-                              <span class="is-current">2026-03-17.md</span>
-                              <span>projects/</span>
-                            </div>
-                            <div class="scene-editor">
-                              <p># 2026-03-17</p>
-                              <span>- [ ] follow up with design</span>
-                              <span>- [x] morning review</span>
-                              <span>[[Roadmap]] [[Weekly Review]]</span>
-                            </div>
+                        </div>
+                      )
+                    }
+                    {
+                      item.visual === "recurring" && (
+                        <div class="mini-repeat">
+                          <div class="mini-repeat-row">
+                            <span class="mini-tag"></span>
+                            <span class="mini-chip mini-chip-accent"></span>
                           </div>
-                        )
-                      }
-                      {
-                        index === 4 && (
-                          <div class="scene-shell scene-open-source">
-                            <div class="scene-repo-card">
-                              <p>ComputelessComputer / philo</p>
-                              <div class="scene-stat-row">
-                                <span>open source</span>
-                                <span>markdown-first</span>
-                              </div>
-                              <div class="scene-stat-row">
-                                <span>local files stay yours</span>
-                                <span>free forever</span>
-                              </div>
-                            </div>
+                          <div class="mini-repeat-row">
+                            <span class="mini-tag"></span>
+                            <span class="mini-chip"></span>
                           </div>
-                        )
-                      }
-                    </article>
-                  ))
-                }
-                <div class="why-scene-dots" aria-hidden="true">
-                  {
-                    explainerScenes.map((scene, index,) => (
-                      <span class={`why-scene-dot ${index === 0 ? "is-active" : ""}`} data-why-dot title={scene.label}>
-                        <span class="why-scene-dot-fill" data-why-fill></span>
-                      </span>
-                    ))
-                  }
-                </div>
-              </div>
-            </div>
-            <ul class="detail-list">
-              {
-                capabilities.map((item,) => (
-                  <li class="detail-item">
-                    <div class="detail-copy">
-                      <p class="item-title">{item.title}</p>
-                      <p class="item-copy">{item.description}</p>
-                    </div>
-                  </li>
-                ))
-              }
-            </ul>
-          </div>
+                          <div class="mini-repeat-row">
+                            <span class="mini-tag"></span>
+                            <span class="mini-chip"></span>
+                          </div>
+                        </div>
+                      )
+                    }
+                    {
+                      item.visual === "markdown" && (
+                        <div class="mini-files">
+                          <div class="mini-tree">
+                            <span></span>
+                            <span></span>
+                            <span class="is-current"></span>
+                          </div>
+                          <div class="mini-doc">
+                            <span class="mini-doc-line mini-card-line-short"></span>
+                            <span class="mini-doc-line"></span>
+                            <span class="mini-doc-line"></span>
+                          </div>
+                        </div>
+                      )
+                    }
+                    {
+                      item.visual === "open-source" && (
+                        <div class="mini-repo">
+                          <span class="mini-repo-title"></span>
+                          <div class="mini-repo-row">
+                            <span class="mini-pill"></span>
+                            <span class="mini-pill"></span>
+                          </div>
+                          <div class="mini-repo-row">
+                            <span class="mini-pill mini-pill-wide"></span>
+                            <span class="mini-pill"></span>
+                          </div>
+                        </div>
+                      )
+                    }
+                  </div>
+                </li>
+              ))
+            }
+          </ul>
         </section>
 
         <section class="panel enter" style="--delay: 210ms;">
@@ -533,84 +464,6 @@ primary.firstChild.textContent = labels[os];
     window.addEventListener("resize", setActiveDot,);
   }
 
-  const whyDemo = document.querySelector("[data-why-demo]",);
-  if (whyDemo) {
-    const scenes = Array.from(whyDemo.querySelectorAll("[data-why-scene]",),);
-    const dots = Array.from(whyDemo.querySelectorAll("[data-why-dot]",),);
-    const fills = dots.map((dot,) => dot.querySelector("[data-why-fill]",),);
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)",);
-    const DURATION = 4000;
-    let activeIndex = 0;
-    let start = 0;
-    let frame = 0;
-
-    const render = (progress,) => {
-      for (const [index, scene] of scenes.entries()) {
-        scene.classList.toggle("is-active", index === activeIndex,);
-      }
-
-      for (const [index, dot] of dots.entries()) {
-        dot.classList.toggle("is-active", index === activeIndex,);
-        const fill = fills[index];
-        if (!fill) continue;
-
-        const scale =
-          index < activeIndex
-            ? 1
-            : index === activeIndex
-              ? progress
-              : 0;
-
-        fill.style.transform = `scaleX(${scale})`;
-      }
-    };
-
-    const tick = (now,) => {
-      const elapsed = now - start;
-      if (elapsed >= DURATION) {
-        activeIndex = (activeIndex + 1) % scenes.length;
-        start = now;
-        render(0,);
-      } else {
-        render(elapsed / DURATION,);
-      }
-
-      frame = window.requestAnimationFrame(tick,);
-    };
-
-    const stop = () => {
-      if (frame) {
-        window.cancelAnimationFrame(frame,);
-        frame = 0;
-      }
-    };
-
-    const startLoop = () => {
-      stop();
-
-      if (reducedMotion.matches || scenes.length === 0) {
-        activeIndex = 0;
-        render(1,);
-        return;
-      }
-
-      start = performance.now();
-      render(0,);
-      frame = window.requestAnimationFrame(tick,);
-    };
-
-    startLoop();
-    reducedMotion.addEventListener("change", startLoop,);
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        stop();
-        return;
-      }
-
-      start = performance.now();
-      frame = window.requestAnimationFrame(tick,);
-    },);
-  }
 </script>
 
 <style>
@@ -841,282 +694,189 @@ primary.firstChild.textContent = labels[os];
     gap: 18px;
   }
 
-  .why-layout {
-    margin-top: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
+  .detail-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 16px;
+    align-items: start;
   }
 
-  .why-demo {
-    border: 1px solid var(--line);
-    background: color-mix(in srgb, var(--bg-soft) 90%, #ffffff);
-  }
-
-  .why-demo-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--line);
-    color: #676762;
-    font-size: var(--fs-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .why-demo-screen {
-    position: relative;
-    min-height: 320px;
-    padding: 16px;
-    overflow: hidden;
+  .detail-visual {
+    border: 1px dashed color-mix(in srgb, var(--line) 82%, #bfc2ce);
     background:
-      radial-gradient(circle at top left, color-mix(in srgb, #ffffff 88%, var(--accent)) 0%, transparent 34%),
-      linear-gradient(180deg, color-mix(in srgb, var(--bg-soft) 68%, #ffffff) 0%, #f3f3ef 100%);
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.9) 0%, transparent 42%),
+      color-mix(in srgb, var(--bg-soft) 90%, #ffffff);
+    min-height: 92px;
+    padding: 10px;
+    overflow: hidden;
   }
 
-  .why-scene {
-    position: absolute;
-    inset: 16px;
-    opacity: 0;
-    transform: translateY(8px) scale(0.985);
-    transition:
-      opacity 220ms ease,
-      transform 220ms ease;
+  .mini-stack,
+  .mini-transfer,
+  .mini-repeat,
+  .mini-files,
+  .mini-repo {
+    width: 100%;
+    height: 100%;
   }
 
-  .why-scene.is-active {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-
-  .why-scene-label,
-  .why-scene-title,
-  .why-scene-detail {
-    position: relative;
-    z-index: 1;
-  }
-
-  .why-scene-label {
-    margin: 0;
-    color: var(--accent);
-    font-size: var(--fs-xs);
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .why-scene-title {
-    margin: 8px 0 0;
-    max-width: 34ch;
-    font-size: var(--fs-lg);
-    font-weight: 500;
-    line-height: 1.6;
-  }
-
-  .why-scene-detail {
-    margin: 6px 0 0;
-    max-width: 44ch;
-    color: var(--muted);
-    font-size: var(--fs-sm);
-  }
-
-  .scene-shell {
-    margin-top: 18px;
-    border: 1px solid color-mix(in srgb, var(--line) 84%, #c7cad5);
-    background: rgba(255, 255, 255, 0.72);
-    min-height: 168px;
-    padding: 14px;
+  .mini-stack {
     display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    gap: 8px;
     align-items: stretch;
-    gap: 12px;
-    box-shadow: 0 18px 40px rgba(37, 37, 37, 0.06);
   }
 
-  .scene-timeline {
-    grid-template-columns: 96px minmax(0, 1fr);
-  }
-
-  .scene-sidebar,
-  .scene-tree {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    color: #72726d;
-    font-size: var(--fs-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .scene-sidebar .is-current,
-  .scene-tree .is-current {
-    color: var(--accent);
-    font-weight: 500;
-  }
-
-  .scene-notes {
-    display: grid;
-    gap: 8px;
-  }
-
-  .scene-note-card,
-  .scene-editor,
-  .scene-repo-card,
-  .scene-column {
-    border: 1px solid color-mix(in srgb, var(--line) 80%, #d3d6df);
-    background: rgba(255, 255, 255, 0.92);
-    padding: 10px;
-  }
-
-  .scene-note-card p,
-  .scene-editor p,
-  .scene-column p,
-  .scene-repo-card p {
-    margin: 0 0 8px;
-    color: #454540;
-    font-size: var(--fs-sm);
-    font-weight: 500;
-  }
-
-  .scene-note-card span,
-  .scene-editor span,
-  .scene-tree span,
-  .scene-sidebar span,
-  .scene-column span,
-  .scene-stat-row span,
-  .scene-recurring-row span {
+  .mini-sidebar {
     display: block;
+    border-right: 1px solid color-mix(in srgb, var(--line) 84%, #c7cad5);
+    background:
+      linear-gradient(
+        180deg,
+        transparent 0 10%,
+        color-mix(in srgb, var(--accent) 14%, #ffffff) 10% 28%,
+        transparent 28% 42%,
+        rgba(95, 95, 90, 0.08) 42% 58%,
+        transparent 58% 72%,
+        rgba(95, 95, 90, 0.08) 72% 88%,
+        transparent 88% 100%
+      );
   }
 
-  .scene-note-card span,
-  .scene-editor span,
-  .scene-column span,
-  .scene-stat-row span {
-    color: #5f5f5a;
-    font-size: var(--fs-sm);
-  }
-
-  .scene-note-card.is-current {
-    border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
-    transform: translateX(-10px);
-  }
-
-  .scene-note-card.is-current .is-accent {
-    color: var(--accent);
-  }
-
-  .scene-rollover {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: center;
-  }
-
-  .scene-transfer,
-  .scene-repeat-badge {
-    color: var(--accent);
-    font-size: var(--fs-xs);
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-align: center;
-  }
-
-  .scene-column {
+  .mini-stack-cards,
+  .mini-column,
+  .mini-doc,
+  .mini-repo {
     display: grid;
-    gap: 8px;
-    min-height: 136px;
-    align-content: start;
-  }
-
-  .scene-column.is-target {
-    border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
-  }
-
-  .task-chip {
-    border: 1px solid color-mix(in srgb, var(--line) 78%, #d2d5de);
-    background: #f6f6f3;
-    padding: 6px 8px;
-  }
-
-  .task-chip.is-done {
-    color: #8a8a84;
-    text-decoration: line-through;
-  }
-
-  .task-chip.is-highlight {
-    border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
-    background: color-mix(in srgb, var(--accent) 9%, #ffffff);
-  }
-
-  .scene-recurring {
-    position: relative;
-    gap: 10px;
-  }
-
-  .scene-recurring-row {
-    display: grid;
-    grid-template-columns: 76px minmax(0, 1fr);
-    align-items: center;
-    gap: 10px;
-  }
-
-  .scene-markdown {
-    grid-template-columns: 108px minmax(0, 1fr);
-  }
-
-  .scene-editor {
-    display: grid;
-    gap: 8px;
-  }
-
-  .scene-open-source {
-    align-content: center;
-  }
-
-  .scene-repo-card {
-    display: grid;
-    gap: 10px;
-    min-height: 168px;
-  }
-
-  .scene-stat-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .scene-stat-row span {
-    border: 1px solid color-mix(in srgb, var(--line) 80%, #d4d7de);
-    background: #f8f8f5;
-    padding: 10px;
-  }
-
-  .why-scene-dots {
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 14px;
-    display: flex;
     gap: 6px;
   }
 
-  .why-scene-dot {
-    flex: 1 1 0;
-    height: 4px;
-    background: rgba(95, 95, 90, 0.12);
-    overflow: hidden;
+  .mini-card-line,
+  .mini-doc-line,
+  .mini-pill,
+  .mini-label,
+  .mini-tag {
+    display: block;
+    height: 8px;
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #d1d4de);
+    background: rgba(255, 255, 255, 0.92);
   }
 
-  .why-scene-dot-fill {
+  .mini-card-line-short {
+    width: 54%;
+  }
+
+  .mini-card-line-accent,
+  .mini-chip-accent,
+  .mini-tree .is-current {
+    border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+    background: color-mix(in srgb, var(--accent) 12%, #ffffff);
+  }
+
+  .mini-transfer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+  }
+
+  .mini-column {
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #d3d6df);
+    background: rgba(255, 255, 255, 0.86);
+    padding: 6px;
+  }
+
+  .mini-column-target {
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+  }
+
+  .mini-chip {
+    display: block;
+    height: 12px;
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #d1d4de);
+    background: #f6f6f3;
+  }
+
+  .mini-chip-muted {
+    opacity: 0.55;
+  }
+
+  .mini-arrow {
     display: block;
     width: 100%;
-    height: 100%;
-    background: color-mix(in srgb, var(--accent) 90%, #7c8ae8);
-    transform-origin: left;
-    transform: scaleX(0);
+    height: 2px;
+    background: var(--accent);
+    position: relative;
   }
 
-  .detail-item {
+  .mini-arrow::after {
+    content: "";
+    position: absolute;
+    right: -1px;
+    top: -3px;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 6px solid var(--accent);
+  }
+
+  .mini-repeat {
+    display: grid;
+    gap: 8px;
+  }
+
+  .mini-repeat-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+  }
+
+  .mini-files {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .mini-tree {
+    display: grid;
+    gap: 6px;
+  }
+
+  .mini-tree span {
     display: block;
+    height: 10px;
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #d1d4de);
+    background: rgba(95, 95, 90, 0.08);
+  }
+
+  .mini-doc {
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #d3d6df);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 6px;
+  }
+
+  .mini-repo {
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #d3d6df);
+    background: rgba(255, 255, 255, 0.88);
+    padding: 6px;
+  }
+
+  .mini-repo-title {
+    display: block;
+    width: 68%;
+    height: 10px;
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #d1d4de);
+    background: color-mix(in srgb, var(--accent) 10%, #ffffff);
+  }
+
+  .mini-repo-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .mini-pill-wide {
+    width: 100%;
   }
 
   .item-title {
@@ -1399,29 +1159,21 @@ primary.firstChild.textContent = labels[os];
       font-size: var(--fs-md);
     }
 
-    .why-demo-header,
-    .scene-rollover,
-    .scene-markdown,
-    .scene-timeline,
-    .scene-stat-row {
+    .detail-item,
+    .mini-transfer,
+    .mini-files,
+    .mini-repo-row {
       grid-template-columns: 1fr;
     }
 
-    .why-demo-header {
-      display: grid;
+    .detail-visual {
+      max-width: 220px;
     }
 
-    .scene-transfer {
-      padding: 2px 0;
-    }
-
-    .scene-sidebar,
-    .scene-tree {
-      gap: 4px;
-    }
-
-    .why-demo-screen {
-      min-height: 420px;
+    .mini-arrow {
+      width: 14px;
+      margin: 0 auto;
+      transform: rotate(90deg);
     }
   }
 
