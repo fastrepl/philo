@@ -24,6 +24,7 @@ interface AiComposerProps {
   error: string | null;
   onPromptChange: (value: string,) => void;
   onClose: () => void;
+  onNewChat: () => void;
   onSubmit: () => void;
   onRefresh: () => void;
   onStop: () => void;
@@ -53,6 +54,7 @@ export function AiComposer({
   submittingLabel = "Sophia is thinking...",
   error,
   onPromptChange,
+  onNewChat,
   onSubmit,
   onRefresh,
   onStop,
@@ -110,6 +112,11 @@ export function AiComposer({
                     pendingChanges={pendingChanges}
                     applyingDates={applyingDates}
                     canApplyPendingChanges={canApplyPendingChanges}
+                    canStartNewChat={!isSubmitting}
+                    onNewChat={() => {
+                      onNewChat();
+                      window.setTimeout(() => inputRef.current?.focus(), 0,);
+                    }}
                     onSelectChat={onSelectChat}
                     onOpenDate={onOpenDate}
                     onApplyChange={onApplyChange}

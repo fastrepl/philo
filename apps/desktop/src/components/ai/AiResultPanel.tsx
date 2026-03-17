@@ -1,4 +1,4 @@
-import { ChevronDown, } from "lucide-react";
+import { ChevronDown, Plus, } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, } from "react";
 import type { AssistantCitation, AssistantPendingChange, } from "../../services/assistant";
 import type { ChatHistoryEntry, } from "../../services/chats";
@@ -13,6 +13,8 @@ interface AiResultPanelProps {
   pendingChanges: AssistantPendingChange[];
   applyingDates: string[];
   canApplyPendingChanges: boolean;
+  canStartNewChat: boolean;
+  onNewChat: () => void;
   onSelectChat: (id: string,) => void;
   onOpenDate: (date: string,) => void;
   onApplyChange: (date: string,) => void;
@@ -28,6 +30,8 @@ export function AiResultPanel({
   pendingChanges,
   applyingDates,
   canApplyPendingChanges,
+  canStartNewChat,
+  onNewChat,
   onSelectChat,
   onOpenDate,
   onApplyChange,
@@ -40,7 +44,7 @@ export function AiResultPanel({
     () => chatHistory.find((chat,) => chat.id === activeChatId) ?? null,
     [activeChatId, chatHistory,],
   );
-  const panelTitle = title || activeChat?.title || "Recent chats";
+  const panelTitle = title || activeChat?.title || "New chat";
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -61,19 +65,34 @@ export function AiResultPanel({
       <div className="sticky top-0 z-10 border-b border-gray-100 bg-white/95 px-4 pt-4 pb-3 backdrop-blur-sm">
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="min-w-0 truncate text-sm font-medium text-gray-900">
-              {panelTitle}
-            </p>
-            {chatHistory.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setHistoryOpen((open,) => !open)}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-900"
-                aria-label={historyOpen ? "Hide chat history" : "Show chat history"}
-              >
-                <ChevronDown size={15} className={`transition-transform ${historyOpen ? "rotate-180" : ""}`} />
-              </button>
-            )}
+            <div className="min-w-0 flex items-center gap-2">
+              <p className="min-w-0 truncate text-sm font-medium text-gray-900">
+                {panelTitle}
+              </p>
+              {chatHistory.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen((open,) => !open)}
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-900"
+                  aria-label={historyOpen ? "Hide chat history" : "Show chat history"}
+                >
+                  <ChevronDown size={15} className={`transition-transform ${historyOpen ? "rotate-180" : ""}`} />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setHistoryOpen(false,);
+                onNewChat();
+              }}
+              disabled={!canStartNewChat}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Start new chat"
+              title="Start new chat"
+            >
+              <Plus size={15} />
+            </button>
           </div>
 
           {historyOpen && chatHistory.length > 0 && (

@@ -986,6 +986,19 @@ export default function AppLayout() {
     aiLastSubmittedPromptRef.current = chat.prompt;
   }, [aiChatHistory,],);
 
+  const handleStartNewAiChat = useCallback(() => {
+    const selection = currentSelectionRef.current;
+    setAiActiveChatId(null,);
+    setAiPrompt("",);
+    setAiResult(null,);
+    setAiError(null,);
+    setAiSelectedLabel(null,);
+    setAiSelectedText(selection?.text ?? null,);
+    setAiSelectionHighlight(selection ? { noteDate: selection.noteDate, from: selection.from, to: selection.to, } : null,);
+    setAiScope("recent",);
+    aiLastSubmittedPromptRef.current = "";
+  }, [],);
+
   const handleEditorInteract = useCallback(() => {
     if (!aiComposerOpen) return;
     closeAiComposer();
@@ -1356,6 +1369,7 @@ export default function AppLayout() {
         error={aiError}
         onPromptChange={setAiPrompt}
         onClose={closeAiComposer}
+        onNewChat={handleStartNewAiChat}
         onSubmit={handleAiSubmit}
         onRefresh={handleRefreshAi}
         onStop={handleStopAi}
