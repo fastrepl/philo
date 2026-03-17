@@ -1,12 +1,12 @@
 import type { Editor, } from "@tiptap/core";
 import type { Node as ProseMirrorNode, } from "@tiptap/pm/model";
-import { getMentionChipLabel, } from "../../services/mentions";
+import { getMentionChipLabel, type MentionKind, } from "../../services/mentions";
 
 function getLeafSelectionText(node: ProseMirrorNode,) {
   if (node.type.name === "mentionChip") {
     return getMentionChipLabel({
       id: String(node.attrs.id ?? "",),
-      kind: String(node.attrs.kind ?? "tag",) as "date" | "recurring" | "tag",
+      kind: String(node.attrs.kind ?? "tag",) as MentionKind,
       label: String(node.attrs.label ?? "",),
     },);
   }

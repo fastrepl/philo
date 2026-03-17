@@ -82,6 +82,18 @@
   color: #c2410c;
 }
 
+.tiptap .mention-chip-gmail {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.tiptap .mention-chip-google_calendar {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
 .tiptap .mention-chip-tag {
   border-color: #d1d5db;
   background: #f9fafb;

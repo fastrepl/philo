@@ -10,6 +10,8 @@ const LEGACY_DATE_TARGET_RE = /^date_(\d{4}-\d{2}-\d{2})$/;
 const LEGACY_RECURRING_TARGET_RE = /^recurring_(daily|weekly|monthly|(\d+)(days?|weeks?|months?))$/i;
 const CANONICAL_DUE_TARGET_RE = /^(\d{4}-\d{2}-\d{2})\(due date\)$/i;
 const CANONICAL_RECURRING_TARGET_RE = /^(\d{4}-\d{2}-\d{2})\(start date\),\s*(\d+)\((day|days)\)$/i;
+const GMAIL_TARGET_RE = /^gmail_([A-Za-z0-9_-]+)$/;
+const GOOGLE_CALENDAR_TARGET_RE = /^google_calendar_([A-Za-z0-9_-]+)$/;
 const RECURRING_ID_RE = /^recurring_(\d{4}-\d{2}-\d{2})_(\d+)$/;
 const DATE_ID_RE = /^date_(\d{4}-\d{2}-\d{2})$/;
 const LEGACY_DATE_LINK_RE = /\[\[(date_\d{4}-\d{2}-\d{2})(?:\|[^[\]]+)?\]\]/i;
@@ -45,7 +47,7 @@ const WEEKDAYS = [
   "saturday",
 ];
 
-export type MentionKind = "date" | "recurring" | "tag";
+export type MentionKind = "date" | "recurring" | "tag" | "gmail" | "google_calendar";
 export type MentionGroup = "action" | "date" | "recurring";
 
 export interface MentionChipData {
@@ -57,6 +59,14 @@ export interface MentionChipData {
 export interface MentionSuggestion extends MentionChipData {
   group: MentionGroup;
   action?: "open_date_picker";
+}
+
+interface ExternalChipPayload {
+  version: 1;
+  accountEmail: string;
+  href: string;
+  revision: string;
+  sourceId: string;
 }
 
 function escapeAttr(value: string,): string {
@@ -125,6 +135,76 @@ function toTitleCase(value: string,): string {
   return value.replace(/\b\w/g, (match,) => match.toUpperCase(),);
 }
 
+function toBase64Url(value: string,) {
+  if (typeof TextEncoder === "undefined" || typeof btoa === "undefined") {
+    return "";
+  }
+
+  let binary = "";
+  for (const byte of new TextEncoder().encode(value,)) {
+    binary += String.fromCharCode(byte,);
+  }
+
+  return btoa(binary,).replace(/\+/g, "-",).replace(/\//g, "_").replace(/=+$/g, "",);
+}
+
+function fromBase64Url(value: string,) {
+  if (!value || typeof atob === "undefined") return null;
+
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/",);
+  const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4,);
+
+  try {
+    return atob(padded,);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeExternalChipPayload(value: unknown,): ExternalChipPayload | null {
+  if (!value || typeof value !== "object") return null;
+
+  const payload = value as Partial<ExternalChipPayload>;
+  if (
+    payload.version !== 1
+    || typeof payload.accountEmail !== "string"
+    || typeof payload.href !== "string"
+    || typeof payload.revision !== "string"
+    || typeof payload.sourceId !== "string"
+  ) {
+    return null;
+  }
+
+  const accountEmail = payload.accountEmail.trim();
+  const href = payload.href.trim();
+  const revision = payload.revision.trim();
+  const sourceId = payload.sourceId.trim();
+  if (!accountEmail || !href || !revision || !sourceId) return null;
+
+  return {
+    version: 1,
+    accountEmail,
+    href,
+    revision,
+    sourceId,
+  };
+}
+
+function encodeExternalChipPayload(payload: ExternalChipPayload,) {
+  return toBase64Url(JSON.stringify(payload,),);
+}
+
+function decodeExternalChipPayload(encoded: string,) {
+  const decoded = fromBase64Url(encoded,);
+  if (!decoded) return null;
+
+  try {
+    return normalizeExternalChipPayload(JSON.parse(decoded,),);
+  } catch {
+    return null;
+  }
+}
+
 function monthIndex(input: string,): number {
   const normalized = input.toLowerCase();
   return MONTHS.findIndex((month,) => month.startsWith(normalized,));
@@ -152,6 +232,14 @@ function buildDateId(date: string,): string {
 
 function buildRecurringId(startDate: string, intervalDays: number,): string {
   return `recurring_${startDate}_${intervalDays}`;
+}
+
+function buildGmailId(payload: ExternalChipPayload,) {
+  return `gmail_${encodeExternalChipPayload(payload,)}`;
+}
+
+function buildGoogleCalendarId(payload: ExternalChipPayload,) {
+  return `google_calendar_${encodeExternalChipPayload(payload,)}`;
 }
 
 function formatRecurringInterval(intervalDays: number,): string {
@@ -190,6 +278,27 @@ function parseMentionId(
     startDate: recurringMatch[1],
     intervalDays: Number(recurringMatch[2],),
   };
+}
+
+function buildExternalChipLabel(kind: "gmail" | "google_calendar", label?: string,) {
+  const normalized = label?.trim();
+  if (normalized) return normalized;
+  return kind === "gmail" ? "Gmail" : "Google Calendar";
+}
+
+function parseExternalChipId(
+  id: string,
+): { kind: "gmail" | "google_calendar"; payload: ExternalChipPayload; } | null {
+  const gmailMatch = GMAIL_TARGET_RE.exec(id,);
+  if (gmailMatch) {
+    const payload = decodeExternalChipPayload(gmailMatch[1],);
+    return payload ? { kind: "gmail", payload, } : null;
+  }
+
+  const googleCalendarMatch = GOOGLE_CALENDAR_TARGET_RE.exec(id,);
+  if (!googleCalendarMatch) return null;
+  const payload = decodeExternalChipPayload(googleCalendarMatch[1],);
+  return payload ? { kind: "google_calendar", payload, } : null;
 }
 
 function buildDateSuggestion(date: string, label: string,): MentionSuggestion {
@@ -338,6 +447,15 @@ function parseMentionTarget(
   label?: string | null,
   fallbackRecurringStartDate?: string,
 ): MentionChipData | null {
+  const external = parseExternalChipId(target,);
+  if (external) {
+    return {
+      id: target,
+      kind: external.kind,
+      label: buildExternalChipLabel(external.kind, label ?? undefined,),
+    };
+  }
+
   const canonicalDueMatch = CANONICAL_DUE_TARGET_RE.exec(target,);
   if (canonicalDueMatch) {
     return {
@@ -428,6 +546,11 @@ export function getMentionChipLabel(
   data: Pick<MentionChipData, "id" | "kind" | "label">,
   referenceDate: string = getToday(),
 ): string {
+  const external = parseExternalChipId(data.id,);
+  if (external) {
+    return data.label || buildExternalChipLabel(external.kind, data.label,);
+  }
+
   const parsed = parseMentionId(data.id,);
   if (!parsed) {
     return data.label || String(data.id ?? "",);
@@ -445,6 +568,8 @@ export function getMentionChipDate(
   data: Pick<MentionChipData, "id" | "kind">,
   referenceDate: string = getToday(),
 ): string | null {
+  if (parseExternalChipId(data.id,)) return null;
+
   const parsed = parseMentionId(data.id,);
   if (!parsed) return null;
 
@@ -459,6 +584,8 @@ export function getMentionChipState(
   data: Pick<MentionChipData, "id" | "kind">,
   referenceDate: string = getToday(),
 ): "today" | "overdue" | null {
+  if (parseExternalChipId(data.id,)) return null;
+
   const parsed = parseMentionId(data.id,);
   if (!parsed) return null;
 
@@ -475,6 +602,14 @@ export function getMentionChipState(
 export function renderMentionMarkdown(
   data: Pick<MentionChipData, "id" | "kind" | "label">,
 ): string {
+  if (parseExternalChipId(data.id,)) {
+    const id = String(data.id ?? "",);
+    const label = String(data.label ?? "",);
+    if (!id) return "";
+    if (!label || label === id) return `[[${id}]]`;
+    return `[[${id}|${label}]]`;
+  }
+
   const parsed = parseMentionId(data.id,);
 
   if (parsed?.kind === "date") {
@@ -535,6 +670,74 @@ export function createRecurringMention(
   }
 
   return buildRecurringSuggestion(startDate, intervalDays, label ?? formatDisplayDate(startDate,),);
+}
+
+export function createGmailMention(
+  input: {
+    accountEmail: string;
+    href: string;
+    revision: string;
+    sourceId: string;
+  },
+  label = "Gmail",
+): MentionChipData {
+  return {
+    id: buildGmailId({
+      version: 1,
+      accountEmail: input.accountEmail.trim(),
+      href: input.href.trim(),
+      revision: input.revision.trim(),
+      sourceId: input.sourceId.trim(),
+    },),
+    kind: "gmail",
+    label: buildExternalChipLabel("gmail", label,),
+  };
+}
+
+export function createGoogleCalendarMention(
+  input: {
+    accountEmail: string;
+    href: string;
+    revision: string;
+    sourceId: string;
+  },
+  label = "Google Calendar",
+): MentionChipData {
+  return {
+    id: buildGoogleCalendarId({
+      version: 1,
+      accountEmail: input.accountEmail.trim(),
+      href: input.href.trim(),
+      revision: input.revision.trim(),
+      sourceId: input.sourceId.trim(),
+    },),
+    kind: "google_calendar",
+    label: buildExternalChipLabel("google_calendar", label,),
+  };
+}
+
+export function getMentionChipHref(
+  data: Pick<MentionChipData, "id" | "kind">,
+): string | null {
+  return parseExternalChipId(data.id,)?.payload.href ?? null;
+}
+
+export function getMentionChipAccountEmail(
+  data: Pick<MentionChipData, "id" | "kind">,
+): string | null {
+  return parseExternalChipId(data.id,)?.payload.accountEmail ?? null;
+}
+
+export function getMentionChipRevision(
+  data: Pick<MentionChipData, "id" | "kind">,
+): string | null {
+  return parseExternalChipId(data.id,)?.payload.revision ?? null;
+}
+
+export function getMentionChipSourceId(
+  data: Pick<MentionChipData, "id" | "kind">,
+): string | null {
+  return parseExternalChipId(data.id,)?.payload.sourceId ?? null;
 }
 
 export function convertAtMentionsToWikiLinks(markdown: string, referenceDate?: string,): string {

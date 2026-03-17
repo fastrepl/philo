@@ -16,7 +16,7 @@ import { useDebounceCallback, } from "usehooks-ts";
 import "../editor/Editor.css";
 import { parseJsonContent, } from "../../lib/markdown";
 import { resolveAssetUrl, saveImage, } from "../../services/images";
-import { getMentionChipDate, } from "../../services/mentions";
+import { getMentionChipDate, getMentionChipHref, type MentionKind, } from "../../services/mentions";
 import { saveDailyNote, } from "../../services/storage";
 import type { DailyNote, } from "../../types/note";
 import { EditorBubbleMenu, } from "../editor/EditorBubbleMenu";
@@ -160,17 +160,22 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
                 props: {
                   handleClick(_view, _pos, event,) {
                     const chip = (event.target as HTMLElement).closest("[data-mention-chip]",);
-                    if (chip && onOpenDate) {
-                      const date = getMentionChipDate(
-                        {
-                          id: chip.getAttribute("data-id",) ?? "",
-                          kind: (chip.getAttribute("data-kind",) ?? "tag") as "date" | "recurring" | "tag",
-                        },
-                        noteRef.current.date,
-                      );
+                    if (chip) {
+                      const chipData = {
+                        id: chip.getAttribute("data-id",) ?? "",
+                        kind: (chip.getAttribute("data-kind",) ?? "tag") as MentionKind,
+                      };
+                      const date = onOpenDate ? getMentionChipDate(chipData, noteRef.current.date,) : null;
                       if (date) {
                         event.preventDefault();
-                        onOpenDate(date,);
+                        onOpenDate?.(date,);
+                        return true;
+                      }
+
+                      const href = getMentionChipHref(chipData,);
+                      if (href) {
+                        event.preventDefault();
+                        openUrl(href,);
                         return true;
                       }
                     }

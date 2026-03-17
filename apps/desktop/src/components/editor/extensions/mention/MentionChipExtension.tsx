@@ -21,6 +21,7 @@ import {
   getMentionChipLabel,
   getMentionChipState,
   getMentionSuggestions,
+  type MentionKind,
   type MentionSuggestion,
   renderMentionMarkdown,
 } from "../../../../services/mentions";
@@ -382,14 +383,14 @@ export const MentionChipExtension = Mention.extend({
       renderText: ({ node, },) =>
         getMentionChipLabel({
           id: String(node.attrs.id ?? "",),
-          kind: String(node.attrs.kind ?? "tag",) as "date" | "recurring" | "tag",
+          kind: String(node.attrs.kind ?? "tag",) as MentionKind,
           label: String(node.attrs.label ?? "",),
         },),
       deleteTriggerWithBackspace: true,
       renderHTML: ({ node, options, },) => {
         const chip = {
           id: String(node.attrs.id ?? "",),
-          kind: String(node.attrs.kind ?? "tag",) as "date" | "recurring" | "tag",
+          kind: String(node.attrs.kind ?? "tag",) as MentionKind,
           label: String(node.attrs.label ?? "",),
         };
         const dateState = getMentionChipState(chip,);
@@ -443,7 +444,7 @@ export const MentionChipExtension = Mention.extend({
   renderMarkdown(node,) {
     return renderMentionMarkdown({
       id: String(node.attrs?.id ?? "",),
-      kind: String(node.attrs?.kind ?? "tag",) as "date" | "recurring" | "tag",
+      kind: String(node.attrs?.kind ?? "tag",) as MentionKind,
       label: String(node.attrs?.label ?? "",),
     },);
   },
