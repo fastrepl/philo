@@ -467,7 +467,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 18px;
+  padding: 8px 12px;
   border-bottom: 1px solid #f3f4f6;
   cursor: grab;
   background: #fafafa;
@@ -559,7 +559,7 @@
 }
 
 .widget-iterate-form {
-  padding: 14px 18px 18px;
+  padding: 8px 12px 12px;
   border-bottom: 1px solid #f3f4f6;
   background: linear-gradient(180deg, rgba(249, 250, 251, 0.96), rgba(255, 255, 255, 0.96));
   display: flex;
@@ -601,7 +601,7 @@
 /* Widget rendered content */
 
 .widget-render {
-  padding: 18px 20px 20px;
+  padding: 8px 12px 12px;
   min-height: 80px;
 }
 
