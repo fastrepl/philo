@@ -3,7 +3,7 @@ import { JSONUIProvider, Renderer, } from "@json-render/react";
 import { NodeViewWrapper, } from "@tiptap/react";
 import type { NodeViewProps, } from "@tiptap/react";
 import { Archive, PencilLine, RefreshCw, Trash2, } from "lucide-react";
-import { Component, useCallback, useEffect, useMemo, useRef, useState, } from "react";
+import { Component, useCallback, useEffect, useMemo, useState, } from "react";
 import type { ErrorInfo, ReactNode, } from "react";
 import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../../../services/ai";
 import { generateSharedWidget, generateWidget, } from "../../../../services/generate";
@@ -18,6 +18,13 @@ import {
   updateSharedComponent,
 } from "../../../../services/library";
 import { createWidgetFile, updateWidgetFile, } from "../../../../services/widget-files";
+import {
+  WIDGET_EDIT_REQUEST_EVENT,
+  WIDGET_EDIT_STATE_EVENT,
+  WIDGET_EDIT_SUBMIT_EVENT,
+  type WidgetEditStateDetail,
+  type WidgetEditSubmitDetail,
+} from "./events";
 import {
   type SharedWidgetRuntimeApi,
   WidgetCardDepthProvider,
@@ -149,7 +156,7 @@ function specNeedsInlineRepair(spec: Spec | null,): boolean {
   },);
 }
 
-export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProps,) {
+export function WidgetView({ node, updateAttributes, deleteNode, selected, }: NodeViewProps,) {
   const { id, spec: specStr, saved, prompt, loading, error, componentId, file, path, } = node.attrs as {
     id: string;
     spec: string;
@@ -166,10 +173,8 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
   const [manifest, setManifest,] = useState<SharedComponentManifest | null>(null,);
   const [sharedLoadError, setSharedLoadError,] = useState<string | null>(null,);
   const [runtimeRefreshToken, setRuntimeRefreshToken,] = useState(0,);
-  const [isIterating, setIsIterating,] = useState(false,);
-  const [promptDraft, setPromptDraft,] = useState(prompt,);
+  const [isEditingInChat, setIsEditingInChat,] = useState(false,);
   const [autoRepairAttempted, setAutoRepairAttempted,] = useState(false,);
-  const promptInputRef = useRef<HTMLTextAreaElement>(null,);
 
   const inlineSpec = useMemo(() => parseSpec(specStr,), [specStr,],);
 
@@ -221,18 +226,32 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
   }, [componentId, loadManifest,],);
 
   useEffect(() => {
-    setPromptDraft(prompt,);
-  }, [prompt,],);
-
-  useEffect(() => {
     setAutoRepairAttempted(false,);
   }, [id,],);
 
   useEffect(() => {
-    if (!isIterating) return;
-    promptInputRef.current?.focus();
-    promptInputRef.current?.setSelectionRange(promptDraft.length, promptDraft.length,);
-  }, [isIterating, promptDraft,],);
+    const handleWidgetEditState = (event: Event,) => {
+      const detail = (event as CustomEvent<WidgetEditStateDetail>).detail;
+      if (detail?.widgetId !== id) return;
+      setIsEditingInChat(detail.isEditing,);
+    };
+
+    const handleWidgetEditSubmit = (event: Event,) => {
+      const detail = (event as CustomEvent<WidgetEditSubmitDetail>).detail;
+      if (detail?.widgetId !== id) return;
+      const instruction = detail.instruction.trim();
+      if (!instruction) return;
+      const nextPrompt = `${prompt.trim()}\n\nChange request: ${instruction}`;
+      void runGeneration(nextPrompt,).finally(() => setIsEditingInChat(false,));
+    };
+
+    window.addEventListener(WIDGET_EDIT_STATE_EVENT, handleWidgetEditState,);
+    window.addEventListener(WIDGET_EDIT_SUBMIT_EVENT, handleWidgetEditSubmit,);
+    return () => {
+      window.removeEventListener(WIDGET_EDIT_STATE_EVENT, handleWidgetEditState,);
+      window.removeEventListener(WIDGET_EDIT_SUBMIT_EVENT, handleWidgetEditSubmit,);
+    };
+  }, [id, prompt,],);
 
   const isShared = Boolean(componentId,);
   const runtimeApi: SharedWidgetRuntimeApi = useMemo(() => {
@@ -345,19 +364,6 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
     await runGeneration(prompt,);
   };
 
-  const handleIterateSubmit = async (event: React.FormEvent<HTMLFormElement>,) => {
-    event.preventDefault();
-    const nextPrompt = promptDraft.trim();
-    if (!nextPrompt) return;
-    setIsIterating(false,);
-    await runGeneration(nextPrompt,);
-  };
-
-  const handleIterateCancel = () => {
-    setPromptDraft(prompt,);
-    setIsIterating(false,);
-  };
-
   const handleSave = async () => {
     if (isShared || !specStr || !inlineSpec || !prompt) return;
 
@@ -426,7 +432,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
   const showSaveAction = !isShared && !saved;
 
   return (
-    <NodeViewWrapper className="widget-node">
+    <NodeViewWrapper className={`widget-node ${selected || isEditingInChat ? "widget-selected" : ""}`}>
       <div className="widget-container">
         <div className="widget-toolbar" data-drag-handle>
           <span className="widget-prompt" title={prompt}>
@@ -434,18 +440,21 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
           </span>
           <div className="widget-actions">
             <button
-              className={`widget-btn widget-btn-icon widget-btn-iterate ${isIterating ? "widget-btn-active" : ""}`}
+              className={`widget-btn widget-btn-icon widget-btn-iterate ${isEditingInChat ? "widget-btn-active" : ""}`}
               onClick={() => {
-                if (isIterating) {
-                  handleIterateCancel();
-                  return;
-                }
-                setPromptDraft(prompt,);
-                setIsIterating(true,);
+                setIsEditingInChat(true,);
+                window.dispatchEvent(
+                  new CustomEvent(WIDGET_EDIT_REQUEST_EVENT, {
+                    detail: {
+                      widgetId: id,
+                      title: toolbarTitle,
+                    },
+                  },),
+                );
               }}
               disabled={loading || sharedLoading}
-              title="Iterate widget"
-              aria-label="Iterate widget"
+              title="Edit widget in chat"
+              aria-label="Edit widget in chat"
             >
               <PencilLine strokeWidth={2} />
             </button>
@@ -483,37 +492,6 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
             </button>
           </div>
         </div>
-
-        {isIterating && (
-          <form className="widget-iterate-form" onSubmit={(event,) => void handleIterateSubmit(event,)}>
-            <textarea
-              ref={promptInputRef}
-              className="widget-iterate-input"
-              value={promptDraft}
-              onChange={(event,) => setPromptDraft(event.target.value,)}
-              placeholder="Refine this widget..."
-              rows={3}
-              disabled={loading || sharedLoading}
-            />
-            <div className="widget-iterate-actions">
-              <button
-                type="button"
-                className="widget-btn widget-iterate-btn"
-                onClick={handleIterateCancel}
-                disabled={loading || sharedLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="widget-btn widget-btn-rebuild widget-iterate-btn"
-                disabled={!promptDraft.trim() || loading || sharedLoading}
-              >
-                Update widget
-              </button>
-            </div>
-          </form>
-        )}
 
         {loading || sharedLoading
           ? (

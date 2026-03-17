@@ -8,6 +8,7 @@ interface AiComposerProps {
   open: boolean;
   prompt: string;
   selectedText: string | null;
+  selectedLabel?: string | null;
   title: string | null;
   activeChatId: string | null;
   chatHistory: ChatHistoryEntry[];
@@ -35,6 +36,7 @@ export function AiComposer({
   open,
   prompt,
   selectedText,
+  selectedLabel,
   title,
   activeChatId,
   chatHistory,
@@ -59,7 +61,7 @@ export function AiComposer({
   const inputRef = useRef<HTMLInputElement>(null,);
   const hasResult = Boolean(answer,) || citations.length > 0 || pendingChanges.length > 0;
   const hasPanel = hasResult || Boolean(title,) || chatHistory.length > 0;
-  const selectedLabel = selectedText ? formatSelectedLabel(selectedText,) : null;
+  const visibleSelectedLabel = selectedLabel ?? (selectedText ? formatSelectedLabel(selectedText,) : null);
 
   useEffect(() => {
     if (!open || !hasAiConfigured) return;
@@ -113,7 +115,7 @@ export function AiComposer({
               )}
 
               <div className="space-y-2 px-4 py-3">
-                {selectedLabel && <div className="px-1 text-sm text-slate-500">{selectedLabel}</div>}
+                {visibleSelectedLabel && <div className="px-1 text-sm text-slate-500">{visibleSelectedLabel}</div>}
                 <form
                   className="flex items-center gap-3"
                   onSubmit={(event,) => {

@@ -36,6 +36,12 @@ import {
 import { createWidgetFile, } from "../../services/widget-files";
 import { DailyNote, formatDate, getDaysAgo, isToday, } from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
+import {
+  WIDGET_EDIT_REQUEST_EVENT,
+  WIDGET_EDIT_STATE_EVENT,
+  WIDGET_EDIT_SUBMIT_EVENT,
+  type WidgetEditRequestDetail,
+} from "../editor/extensions/widget/events";
 import EditableNote, { type EditableNoteHandle, type EditableNoteSelection, } from "../journal/EditableNote";
 import { LibraryDrawer, } from "../library/LibraryDrawer";
 import { OnboardingModal, } from "../onboarding/OnboardingModal";
@@ -275,6 +281,7 @@ export default function AppLayout() {
   const [aiComposerOpen, setAiComposerOpen,] = useState(false,);
   const [aiPrompt, setAiPrompt,] = useState("",);
   const [aiSelectedText, setAiSelectedText,] = useState<string | null>(null,);
+  const [aiSelectedLabel, setAiSelectedLabel,] = useState<string | null>(null,);
   const [aiSelectionHighlight, setAiSelectionHighlight,] = useState<AiSelectionHighlight | null>(null,);
   const [aiScope, setAiScope,] = useState<AssistantScope>("recent",);
   const [hasAiConfigured, setHasAiConfigured,] = useState(false,);
@@ -285,9 +292,11 @@ export default function AppLayout() {
   const [aiActiveChatId, setAiActiveChatId,] = useState<string | null>(null,);
   const [aiLatestChatId, setAiLatestChatId,] = useState<string | null>(null,);
   const [aiApplyingDates, setAiApplyingDates,] = useState<string[]>([],);
+  const [widgetEditSession, setWidgetEditSession,] = useState<WidgetEditRequestDetail | null>(null,);
   const aiAbortControllerRef = useRef<AbortController | null>(null,);
   const currentSelectionRef = useRef<EditableNoteSelection | null>(null,);
   const aiLastSubmittedPromptRef = useRef("",);
+  const widgetEditSessionRef = useRef<WidgetEditRequestDetail | null>(null,);
   const todayNoteRef = useRef<DailyNote | null>(null,);
   const suppressWatcherUntilRef = useRef(0,);
   const searchInputRef = useRef<HTMLInputElement>(null,);
@@ -296,6 +305,10 @@ export default function AppLayout() {
   useEffect(() => {
     todayNoteRef.current = todayNote;
   }, [todayNote,],);
+
+  useEffect(() => {
+    widgetEditSessionRef.current = widgetEditSession;
+  }, [widgetEditSession,],);
 
   const upsertAiChatHistoryEntry = useCallback((entry: ChatHistoryEntry, persist = true,) => {
     setAiChatHistory((current,) => {
@@ -350,6 +363,20 @@ export default function AppLayout() {
     },);
   }, [aiChatHistory, aiLatestChatId, upsertAiChatHistoryEntry,],);
 
+  const clearWidgetEditSession = useCallback(() => {
+    const activeSession = widgetEditSessionRef.current;
+    if (activeSession?.widgetId) {
+      window.dispatchEvent(
+        new CustomEvent(WIDGET_EDIT_STATE_EVENT, {
+          detail: { widgetId: activeSession.widgetId, isEditing: false, },
+        },),
+      );
+    }
+    widgetEditSessionRef.current = null;
+    setWidgetEditSession(null,);
+    setAiSelectedLabel(null,);
+  }, [],);
+
   const syncTodayNoteFromDisk = useCallback(() => {
     loadDailyNote(today,)
       .then((reloaded,) => {
@@ -362,12 +389,13 @@ export default function AppLayout() {
   }, [today,],);
 
   const openGlobalSearch = useCallback(() => {
+    clearWidgetEditSession();
     setAiComposerOpen(false,);
     setAiSelectedText(null,);
     setAiSelectionHighlight(null,);
     setAiError(null,);
     setGlobalSearchOpen(true,);
-  }, [],);
+  }, [clearWidgetEditSession,],);
 
   const closeGlobalSearch = useCallback(() => {
     setGlobalSearchOpen(false,);
@@ -393,6 +421,7 @@ export default function AppLayout() {
     const nextSelectedText = typeof selection === "string"
       ? selection.trim() || nextSelection?.text || null
       : selection?.text || nextSelection?.text || null;
+    clearWidgetEditSession();
     setGlobalSearchOpen(false,);
     setAiScope("recent",);
     setAiSelectedText(nextSelectedText,);
@@ -404,14 +433,15 @@ export default function AppLayout() {
     setAiComposerOpen(true,);
     setAiError(null,);
     refreshAiAvailability();
-  }, [refreshAiAvailability,],);
+  }, [clearWidgetEditSession, refreshAiAvailability,],);
 
   const closeAiComposer = useCallback(() => {
+    clearWidgetEditSession();
     setAiComposerOpen(false,);
     setAiError(null,);
     setAiSelectedText(null,);
     setAiSelectionHighlight(null,);
-  }, [],);
+  }, [clearWidgetEditSession,],);
 
   const handleAiSelectionChange = useCallback((selection: EditableNoteSelection | null,) => {
     currentSelectionRef.current = selection;
@@ -876,8 +906,21 @@ export default function AppLayout() {
   ],);
 
   const handleAiSubmit = useCallback(async () => {
+    if (widgetEditSession) {
+      const instruction = aiPrompt.trim();
+      if (!instruction) return;
+      window.dispatchEvent(
+        new CustomEvent(WIDGET_EDIT_SUBMIT_EVENT, {
+          detail: { widgetId: widgetEditSession.widgetId, instruction, },
+        },),
+      );
+      closeAiComposer();
+      setAiPrompt("",);
+      return;
+    }
+
     await runAiPrompt(aiPrompt,);
-  }, [aiPrompt, runAiPrompt,],);
+  }, [aiPrompt, closeAiComposer, runAiPrompt, widgetEditSession,],);
 
   const handleRefreshAi = useCallback(async () => {
     await runAiPrompt(aiLastSubmittedPromptRef.current,);
@@ -944,6 +987,33 @@ export default function AppLayout() {
     if (!aiComposerOpen) return;
     closeAiComposer();
   }, [aiComposerOpen, closeAiComposer,],);
+
+  useEffect(() => {
+    const handleWidgetEditRequest = (event: Event,) => {
+      const detail = (event as CustomEvent<WidgetEditRequestDetail>).detail;
+      if (!detail?.widgetId) return;
+
+      clearWidgetEditSession();
+      setGlobalSearchOpen(false,);
+      setAiScope("recent",);
+      setAiSelectedText(null,);
+      setAiSelectedLabel(`[Edit widget] ${detail.title}`,);
+      setAiSelectionHighlight(null,);
+      setAiPrompt("",);
+      setAiError(null,);
+      setWidgetEditSession(detail,);
+      setAiComposerOpen(true,);
+      refreshAiAvailability();
+      window.dispatchEvent(
+        new CustomEvent(WIDGET_EDIT_STATE_EVENT, {
+          detail: { widgetId: detail.widgetId, isEditing: true, },
+        },),
+      );
+    };
+
+    window.addEventListener(WIDGET_EDIT_REQUEST_EVENT, handleWidgetEditRequest,);
+    return () => window.removeEventListener(WIDGET_EDIT_REQUEST_EVENT, handleWidgetEditRequest,);
+  }, [clearWidgetEditSession, refreshAiAvailability,],);
 
   const todayEditorRef = useRef<EditableNoteHandle>(null,);
   const todayRef = useRef<HTMLDivElement>(null,);
@@ -1244,6 +1314,7 @@ export default function AppLayout() {
         open={aiComposerOpen}
         prompt={aiPrompt}
         selectedText={aiSelectedText ?? activeAiChat?.selectedText ?? null}
+        selectedLabel={aiSelectedLabel}
         title={aiPanelTitle}
         activeChatId={aiActiveChatId}
         chatHistory={aiChatHistory}

@@ -558,46 +558,6 @@
   background: #fef2f2;
 }
 
-.widget-iterate-form {
-  padding: 8px 12px 12px;
-  border-bottom: 1px solid #f3f4f6;
-  background: linear-gradient(180deg, rgba(249, 250, 251, 0.96), rgba(255, 255, 255, 0.96));
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.widget-iterate-input {
-  width: 100%;
-  min-height: 72px;
-  resize: vertical;
-  border: 1px solid #e5e7eb;
-  border-radius: 0;
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.5;
-  font-family: 'IBM Plex Sans', sans-serif;
-  color: #111827;
-  background: #ffffff;
-  outline: none;
-}
-
-.widget-iterate-input:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-}
-
-.widget-iterate-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.widget-iterate-btn {
-  min-width: 108px;
-  justify-content: center;
-}
-
 /* Widget rendered content */
 
 .widget-render {
