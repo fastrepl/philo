@@ -842,12 +842,6 @@ fn google_http_client() -> Result<HttpClient, String> {
         .map_err(|e| format!("Could not start Google OAuth client: {e}"))
 }
 
-fn http_json_client() -> Result<HttpClient, String> {
-    HttpClient::builder()
-        .build()
-        .map_err(|e| format!("Could not start HTTP client: {e}"))
-}
-
 fn async_http_client() -> Result<AsyncHttpClient, String> {
     AsyncHttpClient::builder()
         .build()
@@ -855,13 +849,13 @@ fn async_http_client() -> Result<AsyncHttpClient, String> {
 }
 
 #[tauri::command]
-fn post_json(input: HttpJsonRequestInput) -> Result<HttpJsonResponse, String> {
+async fn post_json(input: HttpJsonRequestInput) -> Result<HttpJsonResponse, String> {
     let url = input.url.trim();
     if url.is_empty() {
         return Err("Request URL is missing.".to_string());
     }
 
-    let mut request = http_json_client()?.post(url);
+    let mut request = async_http_client()?.post(url);
     for (key, value) in input.headers {
         request = request.header(key, value);
     }
@@ -869,10 +863,12 @@ fn post_json(input: HttpJsonRequestInput) -> Result<HttpJsonResponse, String> {
     let response = request
         .json(&input.body)
         .send()
+        .await
         .map_err(|e| format!("HTTP request failed: {e}"))?;
     let status = response.status().as_u16();
     let body = response
         .text()
+        .await
         .map_err(|e| format!("Could not read HTTP response: {e}"))?;
 
     Ok(HttpJsonResponse { status, body })
