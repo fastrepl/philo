@@ -44,14 +44,16 @@ Data:
 - ProgressBar { value: number, max?: number, color?: "default"|"success"|"warning"|"error"|"accent", showLabel?: boolean }
 
 Interactive:
-- Button { label: string, variant?: "primary"|"secondary"|"ghost", size?: "sm"|"md"|"lg" }
-- TextInput { placeholder?: string, label?: string }
-- Checkbox { label: string }
+- Button { label: string, variant?: "primary"|"secondary"|"ghost", size?: "sm"|"md"|"lg", action?: "append"|"clear"|"pickRandom"|"set", source?: string, target?: string, value?: string }
+- TextInput { placeholder?: string, label?: string, binding?: string, value?: string }
+- Checkbox { label: string, binding?: string, checked?: boolean }
+- List can also read a local array via { binding?: string }
 
 LIVE BINDINGS:
 - Any string prop can include a live binding with {{...}}.
 - Local bindings: {{local.time}}, {{local.shortTime}}, {{local.date}}, {{local.hour}}, {{local.minute}}, {{local.second}}, {{local.period}}, {{local.city}}, {{local.timezone}}, {{local.abbr}}, {{local.offset}}
 - Timezone bindings: {{zone:America/New_York.time}}, {{zone:America/New_York.shortTime}}, {{zone:America/New_York.date}}, {{zone:America/New_York.hour}}, {{zone:America/New_York.minute}}, {{zone:America/New_York.second}}, {{zone:America/New_York.period}}, {{zone:America/New_York.city}}, {{zone:America/New_York.timezone}}, {{zone:America/New_York.abbr}}, {{zone:America/New_York.offset}}
+- Inline widget state bindings: {{state.someKey}} or {{someKey}}
 - Use these bindings for clocks, dates, countdown-style readouts, and world-clock tables/lists.
 
 RULES:
@@ -61,6 +63,10 @@ RULES:
 - Design widgets like compact utility views from Raycast or Obsidian: functional first, minimal chrome, clear hierarchy, and useful actions.
 - Prefer live bindings and explicit UI structure over screenshot-like decoration or placeholder copy.
 - If the prompt implies a tool, make it behave like a tool with live values, sections, inputs, and actions.
+- For inline interactive tools, use TextInput.binding / Checkbox.binding for local state and Button.action for behavior.
+- Use Button.action="append" with source/target for add-to-list flows, Button.action="pickRandom" to choose from a bound array, and Button.action="clear" to reset bound state.
+- When showing user-added collections, use List.binding instead of hardcoded {{item1}}, {{item2}}, {{item3}} placeholders.
+- Do not invent bindings or props outside the API above.
 - Never hardcode the current time, date, timezone abbreviation, or UTC offset when a live binding fits.
 - Be creative and make it visually clean.`;
 

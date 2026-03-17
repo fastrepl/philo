@@ -12,6 +12,12 @@ export interface SharedWidgetRuntimeApi {
 }
 
 const WidgetRuntimeContext = createContext<SharedWidgetRuntimeApi | null>(null,);
+const WidgetStateContext = createContext<
+  {
+    getValue: (key: string,) => unknown;
+    setValue: (key: string, value: unknown,) => void;
+  } | null
+>(null,);
 const WidgetTemporalContext = createContext<
   {
     now: Date;
@@ -40,8 +46,33 @@ export function WidgetTemporalProvider({ children, }: { children: ReactNode; },)
   );
 }
 
+export function WidgetStateProvider({ children, }: { children: ReactNode; },) {
+  const [values, setValues,] = useState<Record<string, unknown>>({},);
+
+  const api = useMemo(() => ({
+    getValue: (key: string,) => {
+      const normalized = normalizeStateKey(key,);
+      if (Object.prototype.hasOwnProperty.call(values, normalized,)) {
+        return values[normalized];
+      }
+
+      return getNestedValue(values, normalized,);
+    },
+    setValue: (key: string, value: unknown,) => {
+      const normalized = normalizeStateKey(key,);
+      setValues((current,) => ({ ...current, [normalized]: value, }));
+    },
+  }), [values,],);
+
+  return <WidgetStateContext.Provider value={api}>{children}</WidgetStateContext.Provider>;
+}
+
 function useWidgetRuntime(): SharedWidgetRuntimeApi | null {
   return useContext(WidgetRuntimeContext,);
+}
+
+function useWidgetState() {
+  return useContext(WidgetStateContext,);
 }
 
 function useWidgetTemporal() {
@@ -110,6 +141,19 @@ function normalizeBoolean(value: unknown,): boolean {
     return value.toLowerCase() === "true" || value.toLowerCase() === "1";
   }
   return Boolean(value,);
+}
+
+function normalizeStateKey(value: string,): string {
+  return value.startsWith("state.",) ? value.slice("state.".length,) : value;
+}
+
+function getNestedValue(source: Record<string, unknown>, key: string,): unknown {
+  return key.split(".",).reduce<unknown>((current, segment,) => {
+    if (!current || typeof current !== "object" || !Object.prototype.hasOwnProperty.call(current, segment,)) {
+      return undefined;
+    }
+    return (current as Record<string, unknown>)[segment];
+  }, source,);
 }
 
 function createMutationParams(row: RowMap | null, bindColumn: string | undefined, value: unknown,): RowMap {
@@ -199,6 +243,9 @@ function resolveTemplateString(
     now: Date;
     localTimeZone: string;
   } | null,
+  widgetState?: {
+    getValue: (key: string,) => unknown;
+  } | null,
 ): string | undefined {
   if (!value || !temporal || !value.includes("{{",)) {
     return value;
@@ -223,7 +270,35 @@ function resolveTemplateString(
       return resolved || `{{${token}}}`;
     }
 
+    if (widgetState) {
+      return toStringValue(widgetState.getValue(token,) ?? "",);
+    }
+
     return `{{${token}}}`;
+  },);
+}
+
+function normalizeListItems(items: unknown,): Array<{ label: string; description?: string; trailing?: string; }> {
+  if (!Array.isArray(items,)) return [];
+
+  return items.flatMap((item,) => {
+    if (item === null || item === undefined) {
+      return [];
+    }
+
+    if (typeof item === "object") {
+      const value = item as Record<string, unknown>;
+      const label = toStringValue(value.label ?? value.title ?? value.name ?? value.value,);
+      if (!label) return [];
+      return [{
+        label,
+        description: toStringValue(value.description,),
+        trailing: toStringValue(value.trailing,),
+      },];
+    }
+
+    const label = toStringValue(item,);
+    return label ? [{ label, },] : [];
   },);
 }
 
@@ -231,7 +306,8 @@ export const { registry, } = defineRegistry(widgetCatalog, {
   components: {
     Card: ({ props, children, },) => {
       const temporal = useWidgetTemporal();
-      const title = resolveTemplateString(props.title, temporal,);
+      const widgetState = useWidgetState();
+      const title = resolveTemplateString(props.title, temporal, widgetState,);
 
       return (
         <div
@@ -318,7 +394,8 @@ export const { registry, } = defineRegistry(widgetCatalog, {
 
     Text: ({ props, },) => {
       const temporal = useWidgetTemporal();
-      const content = resolveTemplateString(props.content, temporal,);
+      const widgetState = useWidgetState();
+      const content = resolveTemplateString(props.content, temporal, widgetState,);
 
       return (
         <span
@@ -363,7 +440,8 @@ export const { registry, } = defineRegistry(widgetCatalog, {
 
     Heading: ({ props, },) => {
       const temporal = useWidgetTemporal();
-      const content = resolveTemplateString(props.content, temporal,);
+      const widgetState = useWidgetState();
+      const content = resolveTemplateString(props.content, temporal, widgetState,);
       const sizes = { h1: "20px", h2: "16px", h3: "14px", };
       return (
         <div
@@ -382,9 +460,10 @@ export const { registry, } = defineRegistry(widgetCatalog, {
 
     Metric: ({ props, },) => {
       const temporal = useWidgetTemporal();
-      const label = resolveTemplateString(props.label, temporal,);
-      const value = resolveTemplateString(props.value, temporal,);
-      const unit = resolveTemplateString(props.unit, temporal,);
+      const widgetState = useWidgetState();
+      const label = resolveTemplateString(props.label, temporal, widgetState,);
+      const value = resolveTemplateString(props.value, temporal, widgetState,);
+      const unit = resolveTemplateString(props.unit, temporal, widgetState,);
 
       return (
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", }}>
@@ -411,7 +490,8 @@ export const { registry, } = defineRegistry(widgetCatalog, {
 
     Badge: ({ props, },) => {
       const temporal = useWidgetTemporal();
-      const text = resolveTemplateString(props.text, temporal,);
+      const widgetState = useWidgetState();
+      const text = resolveTemplateString(props.text, temporal, widgetState,);
       const palette = {
         default: { bg: "#f3f4f6", fg: "#6b7280", },
         success: { bg: "#f0fdf4", fg: "#16a34a", },
@@ -441,9 +521,11 @@ export const { registry, } = defineRegistry(widgetCatalog, {
     Button: ({ props, },) => {
       const runtime = useWidgetRuntime();
       const temporal = useWidgetTemporal();
-      const label = resolveTemplateString(props.label, temporal,);
+      const widgetState = useWidgetState();
+      const label = resolveTemplateString(props.label, temporal, widgetState,);
       const [running, setRunning,] = useState(false,);
       const canMutate = Boolean(runtime && runtime.mode === "shared" && props.mutation,);
+      const canRunLocalAction = Boolean(widgetState && runtime?.mode !== "shared" && props.action,);
 
       const handleClick = async () => {
         if (!canMutate || !runtime || !props.mutation) return;
@@ -456,14 +538,68 @@ export const { registry, } = defineRegistry(widgetCatalog, {
         }
       };
 
+      const handleLocalAction = () => {
+        if (!widgetState || !props.action) return;
+
+        const sourceKey = props.source ? normalizeStateKey(props.source,) : "";
+        const targetKey = props.target ? normalizeStateKey(props.target,) : "";
+        const sourceValue = sourceKey ? widgetState.getValue(sourceKey,) : undefined;
+        const resolvedValue = props.value ? resolveTemplateString(props.value, temporal, widgetState,) : undefined;
+
+        switch (props.action) {
+          case "append": {
+            if (!targetKey) return;
+            const nextLabel = resolvedValue ?? toStringValue(sourceValue ?? "",);
+            if (!nextLabel.trim()) return;
+            const current = widgetState.getValue(targetKey,);
+            const items = Array.isArray(current,) ? current.slice() : [];
+            items.push(nextLabel,);
+            widgetState.setValue(targetKey, items,);
+            if (sourceKey) {
+              widgetState.setValue(sourceKey, "",);
+            }
+            return;
+          }
+          case "clear": {
+            if (targetKey) {
+              const current = widgetState.getValue(targetKey,);
+              widgetState.setValue(targetKey, Array.isArray(current,) ? [] : "",);
+            }
+            if (sourceKey) {
+              widgetState.setValue(sourceKey, "",);
+            }
+            return;
+          }
+          case "pickRandom": {
+            if (!sourceKey || !targetKey) return;
+            const current = widgetState.getValue(sourceKey,);
+            const items = Array.isArray(current,) ? current : [];
+            const choice = items.length > 0 ? items[Math.floor(Math.random() * items.length,)] : "";
+            widgetState.setValue(targetKey, choice,);
+            return;
+          }
+          case "set": {
+            if (!targetKey) return;
+            widgetState.setValue(targetKey, resolvedValue ?? sourceValue ?? "",);
+            return;
+          }
+        }
+      };
+
       const isPrimary = props.variant === "primary";
       const isGhost = props.variant === "ghost";
       return (
         <button
           onClick={() => {
-            void handleClick();
+            if (canMutate) {
+              void handleClick();
+              return;
+            }
+            if (canRunLocalAction) {
+              handleLocalAction();
+            }
           }}
-          disabled={running && canMutate}
+          disabled={(running && canMutate) || (!canMutate && !canRunLocalAction)}
           style={{
             fontFamily: "'IBM Plex Sans', sans-serif",
             fontSize: props.size === "sm" ? "12px" : props.size === "lg" ? "14px" : "13px",
@@ -484,12 +620,15 @@ export const { registry, } = defineRegistry(widgetCatalog, {
 
     TextInput: ({ props, },) => {
       const temporal = useWidgetTemporal();
+      const widgetState = useWidgetState();
       const { rows, loading, error, refresh, } = useSharedRows(props.query,);
       const runtime = useWidgetRuntime();
       const boundRow = rows[0] ?? null;
       const runtimeMode = runtime?.mode ?? "inline";
       const initial = runtimeMode === "shared" && boundRow && props.bindColumn
         ? boundRow[props.bindColumn]
+        : props.binding && widgetState
+        ? widgetState.getValue(props.binding,)
         : props.value;
       const [value, setValue,] = useState(toStringValue(initial ?? "",),);
 
@@ -519,18 +658,21 @@ export const { registry, } = defineRegistry(widgetCatalog, {
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", }}>
           {props.label && (
             <label style={{ fontSize: "12px", color: "#6b7280", display: "block", marginBottom: "4px", }}>
-              {resolveTemplateString(props.label, temporal,)}
+              {resolveTemplateString(props.label, temporal, widgetState,)}
             </label>
           )}
           {error && <div style={{ color: "#b91c1c", fontSize: "11px", marginBottom: "4px", }}>{error}</div>}
           <input
             type="text"
             value={value}
-            placeholder={resolveTemplateString(props.placeholder, temporal,)}
+            placeholder={resolveTemplateString(props.placeholder, temporal, widgetState,)}
             disabled={loading}
             onChange={(event,) => {
               const next = event.target.value;
               setValue(next,);
+              if (runtimeMode !== "shared" && props.binding && widgetState) {
+                widgetState.setValue(props.binding, next,);
+              }
             }}
             onBlur={() => {
               if (runtimeMode === "shared" && canWrite) {
@@ -560,12 +702,15 @@ export const { registry, } = defineRegistry(widgetCatalog, {
 
     Checkbox: ({ props, },) => {
       const temporal = useWidgetTemporal();
+      const widgetState = useWidgetState();
       const { rows, refresh, error, } = useSharedRows(props.query,);
       const runtime = useWidgetRuntime();
       const boundRow = rows[0] ?? null;
       const runtimeMode = runtime?.mode ?? "inline";
       const initial = runtimeMode === "shared" && boundRow && props.bindColumn
         ? boundRow[props.bindColumn]
+        : props.binding && widgetState
+        ? widgetState.getValue(props.binding,)
         : props.checked;
       const checked = normalizeBoolean(initial,);
       const [localChecked, setLocalChecked,] = useState(checked,);
@@ -612,11 +757,15 @@ export const { registry, } = defineRegistry(widgetCatalog, {
               setLocalChecked(next,);
               if (runtimeMode === "shared" && canWrite) {
                 void submit(next,);
+                return;
+              }
+              if (props.binding && widgetState) {
+                widgetState.setValue(props.binding, next,);
               }
             }}
             style={{ width: "16px", height: "16px", }}
           />
-          {resolveTemplateString(props.label, temporal,)}
+          {resolveTemplateString(props.label, temporal, widgetState,)}
           {error && <span style={{ fontSize: "11px", color: "#b91c1c", }}>{error}</span>}
         </label>
       );
@@ -688,13 +837,18 @@ export const { registry, } = defineRegistry(widgetCatalog, {
       const { rows, loading, error, } = useSharedRows(props.query,);
       const runtime = useWidgetRuntime();
       const temporal = useWidgetTemporal();
+      const widgetState = useWidgetState();
       const staticItems = props.items ?? [];
       const items = useMemo(() => {
         if (!props.query || runtime?.mode !== "shared") {
+          if (props.binding && widgetState) {
+            return normalizeListItems(widgetState.getValue(props.binding,),);
+          }
+
           return staticItems.map((item,) => ({
-            label: resolveTemplateString(item.label, temporal,) ?? "",
-            description: resolveTemplateString(item.description, temporal,),
-            trailing: resolveTemplateString(item.trailing, temporal,),
+            label: resolveTemplateString(item.label, temporal, widgetState,) ?? "",
+            description: resolveTemplateString(item.description, temporal, widgetState,),
+            trailing: resolveTemplateString(item.trailing, temporal, widgetState,),
           }));
         }
 
@@ -719,6 +873,8 @@ export const { registry, } = defineRegistry(widgetCatalog, {
         props.labelColumn,
         props.trailingColumn,
         staticItems,
+        props.binding,
+        widgetState,
       ],);
 
       return (

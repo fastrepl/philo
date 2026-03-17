@@ -18,7 +18,12 @@ import {
   updateSharedComponent,
 } from "../../../../services/library";
 import { createWidgetFile, updateWidgetFile, } from "../../../../services/widget-files";
-import { type SharedWidgetRuntimeApi, WidgetRuntimeProvider, WidgetTemporalProvider, } from "./registry";
+import {
+  type SharedWidgetRuntimeApi,
+  WidgetRuntimeProvider,
+  WidgetStateProvider,
+  WidgetTemporalProvider,
+} from "./registry";
 import { registry, } from "./registry";
 
 function cloneSchema(value: SharedStorageSchema,): SharedStorageSchema {
@@ -121,6 +126,28 @@ function formatToolbarTitle(prompt: string,): string {
   return title.charAt(0,).toUpperCase() + title.slice(1,);
 }
 
+function specNeedsInlineRepair(spec: Spec | null,): boolean {
+  if (!spec || typeof spec !== "object") return false;
+
+  const elements = "elements" in spec && spec.elements && typeof spec.elements === "object"
+    ? Object.values(spec.elements as Record<string, { type?: string; props?: Record<string, unknown>; }>,)
+    : [];
+
+  return elements.some((element,) => {
+    if (!element || typeof element !== "object") return false;
+    if (element.type === "Button") {
+      return !element.props?.mutation && !element.props?.action;
+    }
+    if (element.type === "TextInput") {
+      return !element.props?.query && !element.props?.binding;
+    }
+    if (element.type === "Checkbox") {
+      return !element.props?.query && !element.props?.binding;
+    }
+    return false;
+  },);
+}
+
 export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProps,) {
   const { id, spec: specStr, saved, prompt, loading, error, componentId, file, path, } = node.attrs as {
     id: string;
@@ -140,6 +167,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
   const [runtimeRefreshToken, setRuntimeRefreshToken,] = useState(0,);
   const [isIterating, setIsIterating,] = useState(false,);
   const [promptDraft, setPromptDraft,] = useState(prompt,);
+  const [autoRepairAttempted, setAutoRepairAttempted,] = useState(false,);
   const promptInputRef = useRef<HTMLTextAreaElement>(null,);
 
   const inlineSpec = useMemo(() => parseSpec(specStr,), [specStr,],);
@@ -194,6 +222,10 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
   useEffect(() => {
     setPromptDraft(prompt,);
   }, [prompt,],);
+
+  useEffect(() => {
+    setAutoRepairAttempted(false,);
+  }, [id,],);
 
   useEffect(() => {
     if (!isIterating) return;
@@ -373,6 +405,19 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
     }
   };
 
+  useEffect(() => {
+    if (isShared || loading || sharedLoading || autoRepairAttempted || !currentSpec) {
+      return;
+    }
+
+    if (!specNeedsInlineRepair(currentSpec,)) {
+      return;
+    }
+
+    setAutoRepairAttempted(true,);
+    void runGeneration(prompt,);
+  }, [autoRepairAttempted, currentSpec, isShared, loading, prompt, sharedLoading,],);
+
   const renderError = error || sharedLoadError;
   const toolbarTitle = formatToolbarTitle(prompt,);
   const saveTitle = isShared || saved ? "Archived in library" : "Archive in library";
@@ -447,9 +492,11 @@ export function WidgetView({ node, updateAttributes, deleteNode, }: NodeViewProp
               <RendererBoundary>
                 <JSONUIProvider registry={registry}>
                   <WidgetRuntimeProvider runtime={runtimeApi}>
-                    <WidgetTemporalProvider>
-                      <Renderer spec={currentSpec} registry={registry} />
-                    </WidgetTemporalProvider>
+                    <WidgetStateProvider key={componentId ?? specStr}>
+                      <WidgetTemporalProvider>
+                        <Renderer spec={currentSpec} registry={registry} />
+                      </WidgetTemporalProvider>
+                    </WidgetStateProvider>
                   </WidgetRuntimeProvider>
                 </JSONUIProvider>
               </RendererBoundary>
