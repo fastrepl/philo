@@ -209,18 +209,16 @@ const heroMetaDescription =
                             <div class="mini-rollover-column mini-rollover-target">
                               <span class="mini-today-pill mini-today-pill-target">Today</span>
                               <p>Mar 17</p>
-                              <div class="mini-task-row">
+                              <div class="mini-task-row mini-task-row-target">
                                 <span class="mini-checkbox"></span>
                                 <span class="mini-task-bar"></span>
                               </div>
-                              <div class="mini-task-row">
+                              <div class="mini-task-row mini-task-row-target mini-task-row-target-delayed">
                                 <span class="mini-checkbox"></span>
                                 <span class="mini-task-bar mini-task-bar-short"></span>
                               </div>
                             </div>
                           </div>
-                          <span class="mini-moving-task mini-moving-task-first"></span>
-                          <span class="mini-moving-task mini-moving-task-second"></span>
                         </div>
                       )
                     }
@@ -231,6 +229,11 @@ const heroMetaDescription =
                             <span class="mini-checkbox"></span>
                             <span class="mini-task-bar mini-task-bar-wide"></span>
                             <span class="mini-frequency-chip">Daily</span>
+                          </div>
+                          <div class="mini-recurring-task">
+                            <span class="mini-checkbox"></span>
+                            <span class="mini-task-bar mini-task-bar-short"></span>
+                            <span class="mini-frequency-chip">Weekly</span>
                           </div>
                         </div>
                       )
@@ -254,9 +257,9 @@ const heroMetaDescription =
                           </div>
                           <div class="mini-app-icon mini-app-icon-markdown">
                             <svg viewBox="0 0 32 32" aria-hidden="true">
-                              <rect x="3" y="6" width="26" height="20" rx="4" fill="none" stroke="currentColor" stroke-width="2"></rect>
-                              <path d="M8 21v-9l4 5 4-5v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                              <path d="m22 12 3 4h-2v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                              <rect x="1" y="4" width="30" height="24" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+                              <path d="M5 23V9h3.2l3.2 5.1L14.6 9h3.2v14h-3.2v-8l-3 4.2-3-4.2v8Z" fill="currentColor"></path>
+                              <path class="mini-markdown-arrow" d="M21 9h4v7h4l-6 7-6-7h4Z" fill="currentColor"></path>
                             </svg>
                           </div>
                         </div>
@@ -833,6 +836,10 @@ const heroMetaDescription =
     position: relative;
   }
 
+  .mini-rollover-column {
+    align-content: start;
+  }
+
   .mini-timeline-day {
     block-size: var(--mini-timeline-day-height);
     align-content: start;
@@ -905,6 +912,15 @@ const heroMetaDescription =
     animation-delay: 0.25s;
   }
 
+  .mini-task-row-target {
+    opacity: 0;
+    animation: mini-target-task-reveal 5s ease-in-out infinite;
+  }
+
+  .mini-task-row-target-delayed {
+    animation: mini-target-task-reveal-delayed 5s ease-in-out infinite;
+  }
+
   .mini-checkbox {
     display: block;
     width: 8px;
@@ -969,35 +985,17 @@ const heroMetaDescription =
     animation: mini-today-target-fade 5s ease-in-out infinite;
   }
 
-  .mini-moving-task {
-    position: absolute;
-    left: 40%;
-    width: 34px;
-    height: 6px;
-    border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
-    background: color-mix(in srgb, var(--accent) 12%, #ffffff);
-    opacity: 0;
-  }
-
-  .mini-moving-task-first {
-    top: 28px;
-    animation: mini-rollover-move 5s ease-in-out infinite;
-  }
-
-  .mini-moving-task-second {
-    top: 44px;
-    width: 26px;
-    animation: mini-rollover-move 5s ease-in-out infinite 0.25s;
-  }
-
   .mini-recurring {
-    display: flex;
-    align-items: center;
+    display: grid;
+    gap: 6px;
   }
 
   .mini-recurring-task {
     width: 100%;
+    display: grid;
     grid-template-columns: 8px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
     border: 1px solid color-mix(in srgb, var(--line) 80%, #d3d6df);
     background: rgba(255, 255, 255, 0.9);
     padding: 6px;
@@ -1038,6 +1036,11 @@ const heroMetaDescription =
 
   .mini-app-icon-markdown {
     color: #3f3f3d;
+  }
+
+  .mini-markdown-arrow {
+    animation: mini-markdown-arrow-bounce 1.6s ease-in-out infinite;
+    transform-origin: center;
   }
 
   .mini-open-source {
@@ -1084,23 +1087,31 @@ const heroMetaDescription =
 
   @keyframes mini-timeline-scroll {
     0%,
-    18% {
+    14% {
       transform: translateY(0);
     }
 
-    28%,
-    46% {
+    22%,
+    38% {
       transform: translateY(calc(-1 * var(--mini-timeline-step)));
     }
 
-    56%,
-    74% {
+    46%,
+    62% {
       transform: translateY(calc(-2 * var(--mini-timeline-step)));
     }
 
-    84%,
+    70%,
+    86% {
+      transform: translateY(calc(-3 * var(--mini-timeline-step)));
+    }
+
+    92% {
+      transform: translateY(calc(-3 * var(--mini-timeline-step)));
+    }
+
     100% {
-      transform: translateY(calc(-2 * var(--mini-timeline-step)));
+      transform: translateY(0);
     }
   }
 
@@ -1152,26 +1163,6 @@ const heroMetaDescription =
     }
   }
 
-  @keyframes mini-rollover-move {
-    0%,
-    52% {
-      opacity: 0;
-      transform: translateX(-40px);
-    }
-
-    60%,
-    82% {
-      opacity: 1;
-      transform: translateX(10px);
-    }
-
-    90%,
-    100% {
-      opacity: 0;
-      transform: translateX(34px);
-    }
-  }
-
   @keyframes mini-source-task-fade {
     0%,
     56% {
@@ -1181,6 +1172,45 @@ const heroMetaDescription =
     64%,
     100% {
       opacity: 0;
+    }
+  }
+
+  @keyframes mini-target-task-reveal {
+    0%,
+    56% {
+      opacity: 0;
+    }
+
+    64%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mini-target-task-reveal-delayed {
+    0%,
+    64% {
+      opacity: 0;
+    }
+
+    72%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mini-markdown-arrow-bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    40% {
+      transform: translateY(-1.5px);
+    }
+
+    70% {
+      transform: translateY(1px);
     }
   }
 
@@ -1431,10 +1461,6 @@ const heroMetaDescription =
       width: 100%;
     }
 
-    .brand {
-      font-size: 15px;
-    }
-
     .hero h1 {
       font-size: 16px;
       line-height: 1.5;
@@ -1469,7 +1495,8 @@ const heroMetaDescription =
 
   @media (prefers-reduced-motion: reduce) {
     .enter,
-    .carousel-dot.is-active .carousel-dot-fill {
+    .carousel-dot.is-active .carousel-dot-fill,
+    .mini-markdown-arrow {
       animation: none;
       transition: none;
     }
