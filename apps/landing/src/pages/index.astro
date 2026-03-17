@@ -1121,14 +1121,18 @@ const heroMetaDescription =
 
   .video-column {
     position: sticky;
-    top: clamp(92px, 12vh, 128px);
+    top: 0;
     align-self: flex-start;
     flex: 0 0 clamp(400px, 34vw, 500px);
     width: clamp(400px, 34vw, 500px);
-    padding-top: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding-block: clamp(24px, 4vh, 40px);
   }
 
   .video-frame {
+    width: 100%;
     border: 1px solid var(--line);
     background: color-mix(in srgb, var(--bg-soft) 90%, #ffffff);
     padding: 8px;
