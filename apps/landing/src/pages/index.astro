@@ -87,14 +87,8 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     <div class="ambient"></div>
     <div class="page-layout">
       <main class="shell">
-        <header class="enter" style="--delay: 0ms;">
-          <div class="brand-row">
-            <p class="brand">Philo <span class="brand-beta">beta</span></p>
-          </div>
-        </header>
-
         <section class="hero enter" style="--delay: 70ms;">
-          <h1>Vibe <del>coding</del> notetaking</h1>
+          <h1>Philo: Vibe <del>coding</del> notetaking <span class="hero-beta">[beta]</span></h1>
           <p class="lede">
             Build widgets directly inside your notes &mdash; your notetaking app is your IDE.
           </p>
@@ -602,16 +596,6 @@ posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime()
     padding: 68px 0 88px;
   }
 
-  .brand-row {
-    margin-bottom: 22px;
-  }
-
-  .brand {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-  }
   .hero {
     position: relative;
     z-index: 1;

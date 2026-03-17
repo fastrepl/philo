@@ -46,7 +46,7 @@ const AI_PROVIDER_ICONS: Record<AiProvider, string> = {
 const mono = { fontFamily: "'IBM Plex Mono', monospace", };
 const googleButtonText = { fontFamily: "'Roboto', 'IBM Plex Sans', sans-serif", };
 const filenameTokenChip =
-  "inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600";
+  "inline-flex items-center rounded-none border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600";
 const FILENAME_TOKEN_REGEX = /(\{YYYY\}|\{MM\}|\{DD\})/g;
 
 function getErrorMessage(error: unknown, fallback: string,) {
@@ -107,7 +107,7 @@ function FilenameTokenChip(
   },
 ) {
   const classes = variant === "field"
-    ? `inline-flex items-center rounded-md border px-2 py-1 text-xs ${
+    ? `inline-flex items-center rounded-none border px-2 py-1 text-xs ${
       muted
         ? "border-gray-200 bg-gray-50 text-gray-400"
         : "border-violet-200 bg-violet-50 text-violet-700"
@@ -541,7 +541,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       {/* Modal */}
       <div
         ref={modalRef}
-        className="modal-scroll relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[80vh] overflow-y-auto overflow-x-hidden"
+        className="modal-scroll relative bg-white rounded-none shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[80vh] overflow-y-auto overflow-x-hidden"
         onClick={(e,) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
@@ -570,7 +570,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                 <div
                   key={provider}
                   onClick={() => update({ aiProvider: provider, },)}
-                  className={`rounded-lg border p-3 transition-colors cursor-pointer ${
+                  className={`rounded-none border p-3 transition-colors cursor-pointer ${
                     selected
                       ? "border-violet-300 bg-violet-50/50 ring-1 ring-violet-300"
                       : "border-gray-200 hover:border-gray-300"
@@ -578,7 +578,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                 >
                   <label className="mb-2 flex items-center gap-2 text-sm cursor-pointer" style={mono}>
                     <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-md border bg-white ${
+                      className={`flex h-6 w-6 items-center justify-center rounded-none border bg-white ${
                         selected ? "border-violet-200" : "border-gray-200"
                       }`}
                     >
@@ -601,7 +601,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                     onClick={(e,) => e.stopPropagation()}
                     onFocus={() => update({ aiProvider: provider, },)}
                     placeholder={AI_PROVIDER_PLACEHOLDERS[provider]}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all bg-white"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all bg-white"
                     style={mono}
                   />
                 </div>
@@ -639,7 +639,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                       <button
                         onClick={() => handleRefreshGoogle(account.email,)}
                         disabled={googleAction !== null}
-                        className="group relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-emerald-600 transition-colors cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300/40 disabled:cursor-default disabled:opacity-60"
+                        className="group relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-none text-emerald-600 transition-colors cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300/40 disabled:cursor-default disabled:opacity-60"
                         title={`Refresh ${account.email}`}
                         aria-label={`Refresh ${account.email}`}
                       >
@@ -661,7 +661,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                       <button
                         onClick={() => handleDisconnectGoogle(account.email,)}
                         disabled={googleAction !== null}
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-none text-gray-400 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
                         title={`Disconnect ${account.email}`}
                         aria-label={`Disconnect ${account.email}`}
                       >
@@ -686,7 +686,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             <button
               onClick={handleConnectGoogle}
               disabled={googleAction !== null}
-              className="inline-flex min-h-10 items-center gap-3 rounded-full border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
+              className="inline-flex min-h-10 items-center gap-3 rounded-none border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
               style={{
                 ...googleButtonText,
                 backgroundColor: "#f2f2f2",
@@ -714,7 +714,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           </label>
           <div className="flex items-center gap-2">
             <div
-              className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 bg-gray-50"
+              className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-none text-sm text-gray-500 bg-gray-50"
               style={mono}
               title={settings.vaultDir || settings.journalDir || defaultJournalDir}
             >
@@ -725,7 +725,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             </div>
             <button
               onClick={handleChooseVault}
-              className="shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer text-gray-700"
+              className="shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-none hover:bg-gray-50 transition-colors cursor-pointer text-gray-700"
               style={mono}
             >
               Choose…
@@ -748,7 +748,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             value={settings.dailyLogsFolder}
             onChange={(e,) => update({ dailyLogsFolder: e.target.value, },)}
             placeholder="Daily Notes"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+            className="w-full px-3 py-2 border border-gray-200 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
             style={mono}
           />
           <label className="block text-sm text-gray-600 pt-2" style={mono}>
@@ -759,7 +759,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             value={settings.excalidrawFolder}
             onChange={(e,) => update({ excalidrawFolder: e.target.value, },)}
             placeholder="Excalidraw"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+            className="w-full px-3 py-2 border border-gray-200 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
             style={mono}
           />
           <label className="block text-sm text-gray-600 pt-2" style={mono}>
@@ -770,7 +770,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             value={settings.assetsFolder}
             onChange={(e,) => update({ assetsFolder: e.target.value, },)}
             placeholder="assets"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+            className="w-full px-3 py-2 border border-gray-200 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
             style={mono}
           />
         </div>
@@ -802,7 +802,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               onFocus={() => setIsFilenamePatternFocused(true,)}
               onBlur={() => setIsFilenamePatternFocused(false,)}
               placeholder={DEFAULT_FILENAME_PATTERN}
-              className={`w-full px-3 py-2 border rounded-lg text-sm caret-gray-900 focus:outline-none focus:ring-2 transition-all ${
+              className={`w-full px-3 py-2 border rounded-none text-sm caret-gray-900 focus:outline-none focus:ring-2 transition-all ${
                 isFilenamePatternFocused
                   ? "text-gray-900 placeholder:text-gray-400"
                   : "text-transparent placeholder:text-transparent"
