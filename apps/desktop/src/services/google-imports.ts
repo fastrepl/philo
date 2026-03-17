@@ -20,23 +20,34 @@ import { type ActiveAiConfig, loadSettings, resolveActiveAiConfig, } from "./set
 import { getOrCreateDailyNote, saveDailyNote, } from "./storage";
 
 const GOOGLE_IMPORT_STATE_FILE = "google-import-state.json";
-const GOOGLE_IMPORT_STATE_VERSION = 1;
+const GOOGLE_IMPORT_STATE_VERSION = 2;
 const GOOGLE_BLOCK_HEADING = "# Google";
 const GOOGLE_EMAIL_HEADING = "## Email";
 const GOOGLE_CALENDAR_HEADING = "## Calendar";
+const GOOGLE_EMAIL_READ_HEADING = "### Read";
+const GOOGLE_EMAIL_REPLY_HEADING = "### Reply";
+const GOOGLE_CALENDAR_THIS_WEEK_HEADING = "### This Week";
+const GOOGLE_CALENDAR_ACTION_HEADING = "### Action Needed";
 const GOOGLE_CALENDAR_LOOKAHEAD_DAYS = 7;
 const GMAIL_HISTORY_PAGE_SIZE = 500;
+const GMAIL_INITIAL_SCAN_MAX_THREADS = 40;
+const GMAIL_INITIAL_SCAN_QUERY = "newer_than:30d";
 const GMAIL_THREAD_METADATA_HEADERS = ["Subject", "From", "Date", "Message-ID",];
 const WIKI_LINK_RE = /\[\[([^[\]|]+)(?:\|([^[\]]+))?\]\]/g;
 const TASK_LINE_RE = /^[-*] \[( |x|X)\] (.+)$/;
+const BULLET_LINE_RE = /^[-*] (.+)$/;
 
 type GoogleImportKind = "gmail" | "google_calendar";
-type GoogleImportSection = "email" | "calendar";
+type GoogleImportSection =
+  | "email_read"
+  | "email_reply"
+  | "calendar_this_week"
+  | "calendar_action_needed";
 
 interface GoogleImportState {
   version: number;
   gmailHistoryIds: Record<string, string>;
-  lastRenderedByDate: Record<string, GoogleRenderedTaskSnapshot[]>;
+  lastRenderedByDate: Record<string, GoogleRenderedItemSnapshot[]>;
   records: Record<string, GoogleImportRecord>;
 }
 
@@ -44,17 +55,20 @@ interface GoogleImportRecord {
   active: boolean;
   accountEmail: string;
   classification: null | {
-    actionable: boolean;
+    section: GoogleImportSection;
     revision: string;
-    taskText: string;
+    text: string;
+    visible: boolean;
   };
   completedRevision: string | null;
   current: {
     calendarUid: string | null;
     dueDate: string | null;
-    fallbackTaskText: string;
+    fallbackSection: GoogleImportSection;
+    fallbackText: string;
     href: string;
     messageId: string | null;
+    renderAsTask: boolean;
     revision: string;
     sortKey: string;
     sourceChipLabel: string;
@@ -65,13 +79,14 @@ interface GoogleImportRecord {
   sourceId: string;
 }
 
-interface GoogleRenderedTaskSnapshot {
+interface GoogleRenderedItemSnapshot {
   key: string;
+  renderAsTask: boolean;
   revision: string;
   section: GoogleImportSection;
 }
 
-interface ParsedGoogleTaskLine extends GoogleRenderedTaskSnapshot {
+interface ParsedGoogleLine extends GoogleRenderedItemSnapshot {
   checked: boolean;
 }
 
@@ -82,6 +97,11 @@ interface GmailProfileResponse {
 interface GmailHistoryResponse {
   history?: GmailHistoryItem[];
   nextPageToken?: string;
+}
+
+interface GmailThreadListResponse {
+  nextPageToken?: string;
+  threads?: GmailMessageRef[];
 }
 
 interface GmailHistoryItem {
@@ -142,22 +162,27 @@ interface GoogleCalendarEvent {
 
 interface GmailCandidate {
   accountEmail: string;
-  fallbackTaskText: string;
+  fallbackSection: GoogleImportSection;
+  fallbackText: string;
+  from: string;
   href: string;
   kind: "gmail";
+  latestSenderIsUser: boolean;
   messageId: string | null;
   revision: string;
+  snippet: string;
   sortKey: string;
   sourceId: string;
   sourceChipLabel: string;
-  summary: string;
+  subject: string;
+  unread: boolean;
 }
 
 interface CalendarCandidate {
   accountEmail: string;
   calendarUid: string | null;
   dueDate: string;
-  fallbackTaskText: string;
+  fallbackText: string;
   href: string;
   kind: "google_calendar";
   revision: string;
@@ -170,17 +195,17 @@ interface CalendarCandidate {
 
 const EmailClassificationSchema = z.object({
   items: z.array(z.object({
-    actionable: z.boolean(),
+    section: z.enum(["ignore", "read", "reply",],),
     sourceId: z.string(),
-    taskText: z.string(),
+    text: z.string(),
   },),),
 },);
 
-const CalendarClassificationSchema = z.object({
+const CalendarActionSchema = z.object({
   items: z.array(z.object({
     actionable: z.boolean(),
     sourceId: z.string(),
-    taskText: z.string(),
+    text: z.string(),
   },),),
 },);
 
@@ -215,6 +240,10 @@ function normalizeGoogleImportState(value: unknown,): GoogleImportState {
   if (!value || typeof value !== "object") return { ...DEFAULT_GOOGLE_IMPORT_STATE, };
 
   const candidate = value as Partial<GoogleImportState>;
+  if (candidate.version !== GOOGLE_IMPORT_STATE_VERSION) {
+    return { ...DEFAULT_GOOGLE_IMPORT_STATE, };
+  }
+
   return {
     version: GOOGLE_IMPORT_STATE_VERSION,
     gmailHistoryIds: candidate.gmailHistoryIds && typeof candidate.gmailHistoryIds === "object"
@@ -229,13 +258,19 @@ function normalizeGoogleImportState(value: unknown,): GoogleImportState {
           .map(([date, items,],) => [
             date,
             Array.isArray(items,)
-              ? items.filter((item,): item is GoogleRenderedTaskSnapshot => {
+              ? items.filter((item,): item is GoogleRenderedItemSnapshot => {
                 if (!item || typeof item !== "object") return false;
-                const entry = item as Partial<GoogleRenderedTaskSnapshot>;
+                const entry = item as Partial<GoogleRenderedItemSnapshot>;
                 return (
                   typeof entry.key === "string"
+                  && typeof entry.renderAsTask === "boolean"
                   && typeof entry.revision === "string"
-                  && (entry.section === "email" || entry.section === "calendar")
+                  && (
+                    entry.section === "email_read"
+                    || entry.section === "email_reply"
+                    || entry.section === "calendar_this_week"
+                    || entry.section === "calendar_action_needed"
+                  )
                 );
               },)
               : [],
@@ -255,8 +290,9 @@ function normalizeGoogleImportState(value: unknown,): GoogleImportState {
               || (entry.kind !== "gmail" && entry.kind !== "google_calendar")
               || typeof entry.accountEmail !== "string"
               || typeof entry.sourceId !== "string"
-              || typeof current.fallbackTaskText !== "string"
+              || typeof current.fallbackText !== "string"
               || typeof current.href !== "string"
+              || typeof current.renderAsTask !== "boolean"
               || typeof current.revision !== "string"
               || typeof current.sortKey !== "string"
               || typeof current.sourceChipLabel !== "string"
@@ -271,22 +307,33 @@ function normalizeGoogleImportState(value: unknown,): GoogleImportState {
                 accountEmail: entry.accountEmail,
                 classification: entry.classification
                     && typeof entry.classification === "object"
+                    && typeof entry.classification.section === "string"
                     && typeof entry.classification.revision === "string"
-                    && typeof entry.classification.taskText === "string"
-                    && typeof entry.classification.actionable === "boolean"
+                    && typeof entry.classification.text === "string"
+                    && typeof entry.classification.visible === "boolean"
                   ? {
-                    actionable: entry.classification.actionable,
+                    section: entry.classification.section as GoogleImportSection,
                     revision: entry.classification.revision,
-                    taskText: entry.classification.taskText,
+                    text: entry.classification.text,
+                    visible: entry.classification.visible,
                   }
                   : null,
                 completedRevision: typeof entry.completedRevision === "string" ? entry.completedRevision : null,
                 current: {
                   calendarUid: typeof current.calendarUid === "string" ? current.calendarUid : null,
                   dueDate: typeof current.dueDate === "string" ? current.dueDate : null,
-                  fallbackTaskText: current.fallbackTaskText,
+                  fallbackSection: (
+                      current.fallbackSection === "email_read"
+                      || current.fallbackSection === "email_reply"
+                      || current.fallbackSection === "calendar_this_week"
+                      || current.fallbackSection === "calendar_action_needed"
+                    )
+                    ? current.fallbackSection
+                    : "email_reply",
+                  fallbackText: current.fallbackText,
                   href: current.href,
                   messageId: typeof current.messageId === "string" ? current.messageId : null,
+                  renderAsTask: current.renderAsTask,
                   revision: current.revision,
                   sortKey: current.sortKey,
                   sourceChipLabel: current.sourceChipLabel,
@@ -369,15 +416,49 @@ function cleanTaskText(value: string,) {
   return value.replace(/\s+/g, " ",).trim().replace(/[.?!]+$/g, "",);
 }
 
-function buildEmailFallbackTask(subject: string, from: string, snippet: string,) {
-  const base = cleanTaskText(subject || snippet || from || "New email",);
-  if (!base) return "Check email";
-  return `Check email: ${base}`;
+function extractEmailAddress(value: string,) {
+  const bracketMatch = value.match(/<([^>]+)>/,);
+  if (bracketMatch?.[1]) {
+    return normalizeEmail(bracketMatch[1],);
+  }
+
+  const inlineMatch = value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,);
+  return inlineMatch?.[0] ? normalizeEmail(inlineMatch[0],) : "";
 }
 
-function buildCalendarFallbackTask(summary: string, timeText: string | null,) {
+function isFromCurrentAccount(from: string, accountEmail: string,) {
+  return extractEmailAddress(from,) === normalizeEmail(accountEmail,);
+}
+
+function buildEmailReadFallbackText(subject: string, from: string, snippet: string,) {
+  const base = cleanTaskText(subject || snippet || from || "New email",);
+  if (!base) return "Check email";
+  return `Read email: ${base}`;
+}
+
+function buildEmailReplyFallbackText(subject: string, from: string, snippet: string,) {
+  const base = cleanTaskText(subject || from || snippet || "email",);
+  if (!base) return "Reply to email";
+  return `Reply: ${base}`;
+}
+
+function buildCalendarActionFallbackText(summary: string, timeText: string | null,) {
   const base = cleanTaskText(summary || "event",);
   return timeText ? `Attend ${base} at ${timeText}` : `Attend ${base}`;
+}
+
+function buildCalendarOverviewText(summary: string, dueDate: string, timeText: string | null,) {
+  const date = new Date(`${dueDate}T00:00:00`,);
+  const dayLabel = Number.isNaN(date.getTime(),)
+    ? dueDate
+    : date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    },);
+  const when = timeText ? `${dayLabel} · ${timeText}` : `${dayLabel} · All day`;
+  const base = cleanTaskText(summary || "Event",);
+  return `${when} ${base}`.trim();
 }
 
 function formatCalendarTime(value: GoogleCalendarEvent["start"],) {
@@ -408,28 +489,33 @@ function truncateForPrompt(value: string, maxLength = 320,) {
 async function classifyEmails(
   candidates: GmailCandidate[],
   config: ActiveAiConfig,
-) {
-  if (candidates.length === 0) return new Map<string, { actionable: boolean; taskText: string; }>();
+): Promise<Map<string, { section: GoogleImportSection; text: string; visible: boolean; }>> {
+  if (candidates.length === 0) {
+    return new Map<string, { section: GoogleImportSection; text: string; visible: boolean; }>();
+  }
 
   try {
     const result = await generateObject({
       model: getAiSdkModel(config, "assistant",),
       schema: EmailClassificationSchema,
       system:
-        "You turn inbox threads into concise task text. Keep only email that requires a reply, follow-up, decision, or deliberate review. Hide newsletters, receipts, routine notifications, and FYI updates.",
+        "You triage inbox threads. Put each thread into one bucket: read, reply, or ignore. Use read for unread email worth opening. Use reply when a response is likely owed. Ignore newsletters, receipts, routine notifications, and FYI threads that do not need attention.",
       prompt: JSON.stringify(
         {
           items: candidates.map((candidate,) => ({
             accountEmail: candidate.accountEmail,
-            from: candidate.summary,
-            href: candidate.href,
+            from: candidate.from,
+            latestSenderIsUser: candidate.latestSenderIsUser,
+            messageId: candidate.messageId,
+            snippet: candidate.snippet,
             sourceId: candidate.sourceId,
-            subject: candidate.summary,
-            suggestedFallback: candidate.fallbackTaskText,
+            subject: candidate.subject,
+            unread: candidate.unread,
           })),
           instructions: {
-            actionableTaskStyle: "Return imperative task text under 80 characters.",
-            whenNotActionable: "Set actionable=false and taskText to an empty string.",
+            readStyle: "If section=read, text should be an imperative read/open task under 80 characters.",
+            replyStyle: "If section=reply, text should be an imperative reply/follow-up task under 80 characters.",
+            ignoreStyle: "If section=ignore, return an empty text string.",
           },
         },
         null,
@@ -437,44 +523,51 @@ async function classifyEmails(
       ),
     },);
 
-    return new Map(
+    return new Map<string, { section: GoogleImportSection; text: string; visible: boolean; }>(
       result.object.items.map((item,) => [
         item.sourceId,
-        {
-          actionable: item.actionable,
-          taskText: cleanTaskText(item.taskText,),
-        },
+        item.section === "ignore"
+          ? {
+            section: "email_read" as const,
+            text: "",
+            visible: false,
+          }
+          : {
+            section: item.section === "reply" ? "email_reply" : "email_read" as const,
+            text: cleanTaskText(item.text,),
+            visible: true,
+          },
       ]),
     );
   } catch {
-    return new Map<string, { actionable: boolean; taskText: string; }>();
+    return new Map<string, { section: GoogleImportSection; text: string; visible: boolean; }>();
   }
 }
 
-async function classifyCalendarEvents(
+async function classifyCalendarActionItems(
   candidates: CalendarCandidate[],
   config: ActiveAiConfig,
-) {
-  if (candidates.length === 0) return new Map<string, { actionable: boolean; taskText: string; }>();
+): Promise<Map<string, { text: string; visible: boolean; }>> {
+  if (candidates.length === 0) return new Map<string, { text: string; visible: boolean; }>();
 
   try {
     const result = await generateObject({
       model: getAiSdkModel(config, "assistant",),
-      schema: CalendarClassificationSchema,
+      schema: CalendarActionSchema,
       system:
-        "You turn calendar events into concise task text. Keep meetings, appointments, and events that require attendance or preparation. Hide routine/personal/default events like gym, commute blockers, or passive reminders.",
+        "You identify calendar events that need action. Keep meetings, appointments, and events that require attendance or preparation. Hide routine/personal/default events like gym, commute blockers, or passive reminders.",
       prompt: JSON.stringify(
         {
           items: candidates.map((candidate,) => ({
             accountEmail: candidate.accountEmail,
             sourceId: candidate.sourceId,
-            suggestedFallback: candidate.fallbackTaskText,
+            suggestedFallback: candidate.fallbackText,
             summary: candidate.summary,
             timeText: candidate.timeText,
           })),
           instructions: {
-            actionableTaskStyle: "Return imperative task text under 80 characters.",
-            whenNotActionable: "Set actionable=false and taskText to an empty string.",
+            actionableTaskStyle: "If actionable=true, return imperative task text under 80 characters.",
+            whenNotActionable: "If actionable=false, return an empty text string.",
           },
         },
         null,
@@ -486,13 +579,13 @@ async function classifyCalendarEvents(
       result.object.items.map((item,) => [
         item.sourceId,
         {
-          actionable: item.actionable,
-          taskText: cleanTaskText(item.taskText,),
+          text: cleanTaskText(item.text,),
+          visible: item.actionable,
         },
       ]),
     );
   } catch {
-    return new Map<string, { actionable: boolean; taskText: string; }>();
+    return new Map<string, { text: string; visible: boolean; }>();
   }
 }
 
@@ -524,6 +617,35 @@ async function fetchGmailHistory(accessToken: string, startHistoryId: string,) {
   } while (nextPageToken);
 
   return history;
+}
+
+async function fetchInitialGmailThreadIds(accessToken: string,) {
+  const threadIds = new Set<string>();
+  let nextPageToken = "";
+
+  while (threadIds.size < GMAIL_INITIAL_SCAN_MAX_THREADS) {
+    const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/threads",);
+    url.searchParams.set("labelIds", "INBOX",);
+    url.searchParams.set("maxResults", String(Math.min(100, GMAIL_INITIAL_SCAN_MAX_THREADS - threadIds.size,),),);
+    url.searchParams.set("q", GMAIL_INITIAL_SCAN_QUERY,);
+    if (nextPageToken) {
+      url.searchParams.set("pageToken", nextPageToken,);
+    }
+
+    const response = await fetchGoogleJson<GmailThreadListResponse>(accessToken, url,);
+    (response.threads ?? []).forEach((thread,) => {
+      if (thread.id?.trim()) {
+        threadIds.add(thread.id.trim(),);
+      }
+    },);
+
+    if (!response.nextPageToken) {
+      break;
+    }
+    nextPageToken = response.nextPageToken;
+  }
+
+  return [...threadIds,];
 }
 
 async function fetchGmailThread(accessToken: string, threadId: string,) {
@@ -566,50 +688,78 @@ async function syncGmailAccount(
   }
 
   const baselineHistoryId = state.gmailHistoryIds[normalizedEmail];
+  let threadIds: string[] = [];
+  let fullInboxScan = false;
+
   if (!baselineHistoryId) {
+    fullInboxScan = true;
+    threadIds = await fetchInitialGmailThreadIds(accessToken,);
     state.gmailHistoryIds[normalizedEmail] = latestHistoryId;
-    return;
-  }
-
-  let history: GmailHistoryItem[] = [];
-  try {
-    history = await fetchGmailHistory(accessToken, baselineHistoryId,);
-  } catch (error) {
-    if (isHistoryResetError(error,)) {
-      state.gmailHistoryIds[normalizedEmail] = latestHistoryId;
-      return;
+  } else {
+    let history: GmailHistoryItem[] = [];
+    try {
+      history = await fetchGmailHistory(accessToken, baselineHistoryId,);
+    } catch (error) {
+      if (isHistoryResetError(error,)) {
+        fullInboxScan = true;
+        threadIds = await fetchInitialGmailThreadIds(accessToken,);
+        state.gmailHistoryIds[normalizedEmail] = latestHistoryId;
+      } else {
+        throw error;
+      }
     }
-    throw error;
+
+    if (!fullInboxScan) {
+      state.gmailHistoryIds[normalizedEmail] = latestHistoryId;
+      threadIds = getThreadIdsFromHistory(history,);
+    }
   }
 
-  state.gmailHistoryIds[normalizedEmail] = latestHistoryId;
-  const threadIds = getThreadIdsFromHistory(history,);
   if (threadIds.length === 0) {
     return;
   }
 
+  if (fullInboxScan) {
+    Object.entries(state.records,).forEach(([key, record,],) => {
+      if (record.kind === "gmail" && normalizeEmail(record.accountEmail,) === normalizedEmail) {
+        state.records[key] = { ...record, active: false, };
+      }
+    },);
+  }
+
   const emailCandidates: GmailCandidate[] = [];
+  const seenKeys = new Set<string>();
 
   await Promise.all(
     threadIds.map(async (threadId,) => {
       const thread = await fetchGmailThread(accessToken, threadId,);
       const sourceId = thread.id?.trim() || threadId;
       const key = buildRecordKey("gmail", accountEmail, sourceId,);
+      seenKeys.add(key,);
       const sortedMessages = [...(thread.messages ?? []),].sort((left, right,) =>
         Number(left.internalDate ?? 0,) - Number(right.internalDate ?? 0,)
       );
       const latestMessage = sortedMessages[sortedMessages.length - 1];
 
       const isInbox = latestMessage?.labelIds?.includes("INBOX",) ?? false;
+      const unread = latestMessage?.labelIds?.includes("UNREAD",) ?? false;
       const revision = thread.historyId?.trim() || latestHistoryId;
       const subject = getHeaderValue(latestMessage?.payload?.headers, "Subject",);
       const from = getHeaderValue(latestMessage?.payload?.headers, "From",);
       const messageId = getHeaderValue(latestMessage?.payload?.headers, "Message-ID",) || null;
+      const latestSenderIsUser = isFromCurrentAccount(from, accountEmail,);
       const snippet = thread.snippet?.trim() ?? "";
-      const fallbackTaskText = buildEmailFallbackTask(subject, from, snippet,);
+      const fallbackSection = unread && !latestSenderIsUser
+        ? "email_read"
+        : !latestSenderIsUser
+        ? "email_reply"
+        : null;
+      const fallbackText = fallbackSection === "email_reply"
+        ? buildEmailReplyFallbackText(subject, from, snippet,)
+        : buildEmailReadFallbackText(subject, from, snippet,);
 
       const nextRecord: GoogleImportRecord = {
-        active: isInbox,
+        active: isInbox && (aiConfig !== null || fallbackSection !== null),
         accountEmail,
         classification: state.records[key]?.classification?.revision === revision
           ? state.records[key]?.classification ?? null
@@ -618,9 +768,11 @@ async function syncGmailAccount(
         current: {
           calendarUid: null,
           dueDate: null,
-          fallbackTaskText,
+          fallbackSection: fallbackSection ?? "email_read",
+          fallbackText,
           href: buildGmailThreadHref(accountEmail, sourceId,),
           messageId,
+          renderAsTask: true,
           revision,
           sortKey: latestMessage?.internalDate?.trim() || new Date().toISOString(),
           sourceChipLabel: "Gmail",
@@ -637,20 +789,39 @@ async function syncGmailAccount(
         return;
       }
 
-      emailCandidates.push({
-        accountEmail,
-        fallbackTaskText,
-        href: nextRecord.current.href,
-        kind: "gmail",
-        messageId,
-        revision,
-        sortKey: nextRecord.current.sortKey,
-        sourceChipLabel: nextRecord.current.sourceChipLabel,
-        sourceId,
-        summary: truncateForPrompt(`${subject} ${from} ${snippet}`,),
-      },);
+      if (aiConfig) {
+        emailCandidates.push({
+          accountEmail,
+          fallbackSection: fallbackSection ?? "email_read",
+          fallbackText,
+          from,
+          href: nextRecord.current.href,
+          kind: "gmail",
+          latestSenderIsUser,
+          messageId,
+          revision,
+          snippet: truncateForPrompt(snippet,),
+          sortKey: nextRecord.current.sortKey,
+          sourceChipLabel: nextRecord.current.sourceChipLabel,
+          sourceId,
+          subject: truncateForPrompt(subject,),
+          unread,
+        },);
+      }
     },),
   );
+
+  if (fullInboxScan) {
+    Object.entries(state.records,).forEach(([key, record,],) => {
+      if (
+        record.kind === "gmail"
+        && normalizeEmail(record.accountEmail,) === normalizedEmail
+        && !seenKeys.has(key,)
+      ) {
+        state.records[key] = { ...record, active: false, };
+      }
+    },);
+  }
 
   if (!aiConfig) {
     return;
@@ -668,9 +839,10 @@ async function syncGmailAccount(
       ...state.records[key]!,
       classification: decision
         ? {
-          actionable: decision.actionable,
+          section: decision.section,
           revision: candidate.revision,
-          taskText: decision.taskText,
+          text: decision.text,
+          visible: decision.visible,
         }
         : null,
     };
@@ -706,17 +878,27 @@ async function syncCalendarAccount(
   },);
 
   (response.items ?? []).forEach((event,) => {
-    const sourceId = event.id?.trim();
+    const eventId = event.id?.trim();
     const href = event.htmlLink?.trim();
-    if (!sourceId || !href) return;
+    if (!eventId || !href) return;
 
-    const key = buildRecordKey("google_calendar", accountEmail, sourceId,);
-    seenKeys.add(key,);
+    const overviewSourceId = `${eventId}:overview`;
+    const actionSourceId = `${eventId}:action`;
+    const overviewKey = buildRecordKey("google_calendar", accountEmail, overviewSourceId,);
+    const actionKey = buildRecordKey("google_calendar", accountEmail, actionSourceId,);
+    seenKeys.add(overviewKey,);
+    if (aiConfig) {
+      seenKeys.add(actionKey,);
+    }
 
     if (event.status === "cancelled") {
-      const existing = state.records[key];
-      if (existing) {
-        state.records[key] = { ...existing, active: false, };
+      const existingOverview = state.records[overviewKey];
+      const existingAction = state.records[actionKey];
+      if (existingOverview) {
+        state.records[overviewKey] = { ...existingOverview, active: false, };
+      }
+      if (existingAction) {
+        state.records[actionKey] = { ...existingAction, active: false, };
       }
       return;
     }
@@ -729,43 +911,73 @@ async function syncCalendarAccount(
     const summary = truncateForPrompt(
       `${event.summary ?? ""} ${event.location ?? ""} ${event.organizer?.displayName ?? event.organizer?.email ?? ""}`,
     );
-    const revision = event.updated?.trim() || event.etag?.trim() || `${sourceId}:${dueDate}`;
-    const fallbackTaskText = buildCalendarFallbackTask(event.summary?.trim() ?? "", timeText,);
-    const nextRecord: GoogleImportRecord = {
+    const revision = event.updated?.trim() || event.etag?.trim() || `${eventId}:${dueDate}`;
+    const overviewRecord: GoogleImportRecord = {
       active: true,
       accountEmail,
-      classification: state.records[key]?.classification?.revision === revision
-        ? state.records[key]?.classification ?? null
-        : null,
-      completedRevision: state.records[key]?.completedRevision ?? null,
+      classification: null,
+      completedRevision: state.records[overviewKey]?.completedRevision ?? null,
       current: {
         calendarUid,
         dueDate,
-        fallbackTaskText,
+        fallbackSection: "calendar_this_week",
+        fallbackText: buildCalendarOverviewText(event.summary?.trim() ?? "", dueDate, timeText,),
         href,
         messageId: null,
+        renderAsTask: false,
         revision,
-        sortKey: `${dueDate}:${timeText ?? "all-day"}:${sourceId}`,
+        sortKey: `${dueDate}:${timeText ?? "all-day"}:${eventId}:overview`,
         sourceChipLabel: "Google Calendar",
         timeText,
       },
-      dismissedRevision: state.records[key]?.dismissedRevision ?? null,
+      dismissedRevision: state.records[overviewKey]?.dismissedRevision ?? null,
       kind: "google_calendar",
-      sourceId,
+      sourceId: overviewSourceId,
     };
 
-    state.records[key] = nextRecord;
+    state.records[overviewKey] = overviewRecord;
+
+    if (!aiConfig) {
+      return;
+    }
+
+    const actionRecord: GoogleImportRecord = {
+      active: true,
+      accountEmail,
+      classification: state.records[actionKey]?.classification?.revision === revision
+        ? state.records[actionKey]?.classification ?? null
+        : null,
+      completedRevision: state.records[actionKey]?.completedRevision ?? null,
+      current: {
+        calendarUid,
+        dueDate,
+        fallbackSection: "calendar_action_needed",
+        fallbackText: buildCalendarActionFallbackText(event.summary?.trim() ?? "", timeText,),
+        href,
+        messageId: null,
+        renderAsTask: true,
+        revision,
+        sortKey: `${dueDate}:${timeText ?? "all-day"}:${eventId}:action`,
+        sourceChipLabel: "Google Calendar",
+        timeText,
+      },
+      dismissedRevision: state.records[actionKey]?.dismissedRevision ?? null,
+      kind: "google_calendar",
+      sourceId: actionSourceId,
+    };
+
+    state.records[actionKey] = actionRecord;
     calendarCandidates.push({
       accountEmail,
       calendarUid,
       dueDate,
-      fallbackTaskText,
+      fallbackText: actionRecord.current.fallbackText,
       href,
       kind: "google_calendar",
       revision,
-      sortKey: nextRecord.current.sortKey,
-      sourceChipLabel: nextRecord.current.sourceChipLabel,
-      sourceId,
+      sortKey: actionRecord.current.sortKey,
+      sourceChipLabel: actionRecord.current.sourceChipLabel,
+      sourceId: actionSourceId,
       summary,
       timeText,
     },);
@@ -789,7 +1001,7 @@ async function syncCalendarAccount(
     const key = buildRecordKey("google_calendar", candidate.accountEmail, candidate.sourceId,);
     return state.records[key]?.classification?.revision !== candidate.revision;
   },);
-  const classified = await classifyCalendarEvents(toClassify, aiConfig,);
+  const classified = await classifyCalendarActionItems(toClassify, aiConfig,);
   toClassify.forEach((candidate,) => {
     const key = buildRecordKey("google_calendar", candidate.accountEmail, candidate.sourceId,);
     const decision = classified.get(candidate.sourceId,);
@@ -797,9 +1009,10 @@ async function syncCalendarAccount(
       ...state.records[key]!,
       classification: decision
         ? {
-          actionable: decision.actionable,
+          section: "calendar_action_needed",
           revision: candidate.revision,
-          taskText: decision.taskText,
+          text: decision.text,
+          visible: decision.visible,
         }
         : null,
     };
@@ -856,7 +1069,7 @@ function extractTaskTarget(line: string,) {
   return null;
 }
 
-function parseGoogleBlockTasks(markdown: string,) {
+function parseGoogleBlockItems(markdown: string,) {
   const { block, } = extractGoogleBlock(markdown,);
   if (!block) return [];
 
@@ -866,88 +1079,122 @@ function parseGoogleBlockTasks(markdown: string,) {
     .flatMap((line,) => {
       const trimmed = line.trim();
       if (trimmed === GOOGLE_EMAIL_HEADING) {
-        section = "email";
+        section = null;
         return [];
       }
       if (trimmed === GOOGLE_CALENDAR_HEADING) {
-        section = "calendar";
+        section = null;
+        return [];
+      }
+      if (trimmed === GOOGLE_EMAIL_READ_HEADING) {
+        section = "email_read";
+        return [];
+      }
+      if (trimmed === GOOGLE_EMAIL_REPLY_HEADING) {
+        section = "email_reply";
+        return [];
+      }
+      if (trimmed === GOOGLE_CALENDAR_THIS_WEEK_HEADING) {
+        section = "calendar_this_week";
+        return [];
+      }
+      if (trimmed === GOOGLE_CALENDAR_ACTION_HEADING) {
+        section = "calendar_action_needed";
         return [];
       }
 
-      const match = TASK_LINE_RE.exec(trimmed,);
-      if (!match || !section) return [];
+      const taskMatch = TASK_LINE_RE.exec(trimmed,);
+      const bulletMatch = taskMatch ? null : BULLET_LINE_RE.exec(trimmed,);
+      if ((!taskMatch && !bulletMatch) || !section) return [];
       const target = extractTaskTarget(trimmed,);
       if (!target) return [];
 
       return [
         {
-          checked: match[1].toLowerCase() === "x",
+          checked: taskMatch ? taskMatch[1].toLowerCase() === "x" : false,
           key: target.key,
+          renderAsTask: Boolean(taskMatch,),
           revision: target.revision,
           section,
-        } satisfies ParsedGoogleTaskLine,
+        } satisfies ParsedGoogleLine,
       ];
     },);
 }
 
 function reconcileLocalActions(state: GoogleImportState, date: string, markdown: string,) {
-  const currentTasks = parseGoogleBlockTasks(markdown,);
-  const currentKeys = new Set(currentTasks.map((task,) => `${task.key}:${task.revision}`),);
-  const previousTasks = state.lastRenderedByDate[date] ?? [];
+  const currentItems = parseGoogleBlockItems(markdown,);
+  const currentKeys = new Set(currentItems.map((item,) => `${item.key}:${item.revision}`),);
+  const previousItems = state.lastRenderedByDate[date] ?? [];
 
-  currentTasks.forEach((task,) => {
-    if (!task.checked) return;
-    const record = state.records[task.key];
+  currentItems.forEach((item,) => {
+    if (!item.checked) return;
+    const record = state.records[item.key];
     if (!record) return;
-    state.records[task.key] = {
+    state.records[item.key] = {
       ...record,
-      completedRevision: task.revision,
+      completedRevision: item.revision,
     };
   },);
 
-  previousTasks.forEach((task,) => {
-    const record = state.records[task.key];
+  previousItems.forEach((item,) => {
+    const record = state.records[item.key];
     if (!record) return;
 
-    const compositeKey = `${task.key}:${task.revision}`;
+    const compositeKey = `${item.key}:${item.revision}`;
     if (currentKeys.has(compositeKey,)) return;
-    if (record.completedRevision === task.revision) return;
+    if (record.completedRevision === item.revision) return;
 
-    state.records[task.key] = {
+    state.records[item.key] = {
       ...record,
-      dismissedRevision: task.revision,
+      dismissedRevision: item.revision,
     };
   },);
 }
 
 function getRenderableRecords(state: GoogleImportState,) {
   return Object.entries(state.records,)
-    .filter(([, record,],) => {
-      if (!record.active) return false;
+    .flatMap(([key, record,],) => {
+      if (!record.active) return [];
 
       const currentRevision = record.current.revision;
       if (record.completedRevision === currentRevision || record.dismissedRevision === currentRevision) {
-        return false;
+        return [];
       }
 
       if (record.classification && record.classification.revision === currentRevision) {
-        return record.classification.actionable;
+        if (!record.classification.visible) {
+          return [];
+        }
+
+        return [{
+          key,
+          record,
+          renderAsTask: record.current.renderAsTask,
+          section: record.classification.section,
+          text: cleanTaskText(record.classification.text,) || cleanTaskText(record.current.fallbackText,)
+            || "Open item",
+        },];
       }
 
-      return true;
-    },)
-    .map(([key, record,],) => ({ key, record, }));
+      return [{
+        key,
+        record,
+        renderAsTask: record.current.renderAsTask,
+        section: record.current.fallbackSection,
+        text: cleanTaskText(record.current.fallbackText,) || "Open item",
+      },];
+    },);
 }
 
-function renderRecordTaskMarkdown(record: GoogleImportRecord, multipleAccounts: boolean,) {
-  const taskText = cleanTaskText(
-    record.classification?.revision === record.current.revision
-      ? record.classification.taskText
-      : record.current.fallbackTaskText,
-  ) || cleanTaskText(record.current.fallbackTaskText,) || "Open item";
-
+function renderRecordMarkdown(
+  record: GoogleImportRecord,
+  multipleAccounts: boolean,
+  text: string,
+  renderAsTask: boolean,
+  section: GoogleImportSection,
+) {
   const chips: string[] = [];
-  if (record.kind === "google_calendar" && record.current.dueDate) {
+  if (section === "calendar_action_needed" && record.current.dueDate) {
     chips.push(renderMentionMarkdown(createDateMention(record.current.dueDate,),),);
   }
 
@@ -969,55 +1216,85 @@ function renderRecordTaskMarkdown(record: GoogleImportRecord, multipleAccounts: 
   chips.push(renderMentionMarkdown(sourceChip,),);
 
   const parts = [
-    taskText,
+    text,
     multipleAccounts ? `(${record.accountEmail})` : "",
     ...chips,
   ].filter(Boolean,);
 
-  return `- [ ] ${parts.join(" ",)}`;
+  return renderAsTask ? `- [ ] ${parts.join(" ",)}` : `- ${parts.join(" ",)}`;
 }
 
 function buildGoogleBlock(state: GoogleImportState, settingsGoogleAccountCount: number,) {
   const records = getRenderableRecords(state,)
     .sort((left, right,) => left.record.current.sortKey.localeCompare(right.record.current.sortKey,))
-    .map(({ key, record, },) => ({
-      key,
-      markdown: renderRecordTaskMarkdown(record, settingsGoogleAccountCount > 1,),
-      record,
-      section: record.kind === "gmail" ? "email" : "calendar" as GoogleImportSection,
+    .map((item,) => ({
+      key: item.key,
+      markdown: renderRecordMarkdown(
+        item.record,
+        settingsGoogleAccountCount > 1,
+        item.text,
+        item.renderAsTask,
+        item.section,
+      ),
+      record: item.record,
+      renderAsTask: item.renderAsTask,
+      section: item.section,
     }));
 
-  const emailLines = records.filter((entry,) => entry.section === "email");
-  const calendarLines = records.filter((entry,) => entry.section === "calendar");
+  const emailReadLines = records.filter((entry,) => entry.section === "email_read");
+  const emailReplyLines = records.filter((entry,) => entry.section === "email_reply");
+  const calendarWeekLines = records.filter((entry,) => entry.section === "calendar_this_week");
+  const calendarActionLines = records.filter((entry,) => entry.section === "calendar_action_needed");
 
-  if (emailLines.length === 0 && calendarLines.length === 0) {
+  if (
+    emailReadLines.length === 0
+    && emailReplyLines.length === 0
+    && calendarWeekLines.length === 0
+    && calendarActionLines.length === 0
+  ) {
     return {
       markdown: "",
-      snapshot: [] as GoogleRenderedTaskSnapshot[],
+      snapshot: [] as GoogleRenderedItemSnapshot[],
     };
   }
 
   const parts = [GOOGLE_BLOCK_HEADING,];
-  const snapshot: GoogleRenderedTaskSnapshot[] = [];
+  const snapshot: GoogleRenderedItemSnapshot[] = [];
 
-  if (emailLines.length > 0) {
-    parts.push("", GOOGLE_EMAIL_HEADING, ...emailLines.map((entry,) => entry.markdown),);
+  if (emailReadLines.length > 0 || emailReplyLines.length > 0) {
+    parts.push("", GOOGLE_EMAIL_HEADING,);
+    if (emailReadLines.length > 0) {
+      parts.push("", GOOGLE_EMAIL_READ_HEADING, ...emailReadLines.map((entry,) => entry.markdown),);
+    }
+    if (emailReplyLines.length > 0) {
+      parts.push("", GOOGLE_EMAIL_REPLY_HEADING, ...emailReplyLines.map((entry,) => entry.markdown),);
+    }
+
     snapshot.push(
-      ...emailLines.map((entry,) => ({
+      ...[...emailReadLines, ...emailReplyLines,].map((entry,) => ({
         key: entry.key,
+        renderAsTask: entry.renderAsTask,
         revision: entry.record.current.revision,
-        section: "email" as const,
+        section: entry.section,
       })),
     );
   }
 
-  if (calendarLines.length > 0) {
-    parts.push("", GOOGLE_CALENDAR_HEADING, ...calendarLines.map((entry,) => entry.markdown),);
+  if (calendarWeekLines.length > 0 || calendarActionLines.length > 0) {
+    parts.push("", GOOGLE_CALENDAR_HEADING,);
+    if (calendarWeekLines.length > 0) {
+      parts.push("", GOOGLE_CALENDAR_THIS_WEEK_HEADING, ...calendarWeekLines.map((entry,) => entry.markdown),);
+    }
+    if (calendarActionLines.length > 0) {
+      parts.push("", GOOGLE_CALENDAR_ACTION_HEADING, ...calendarActionLines.map((entry,) => entry.markdown),);
+    }
+
     snapshot.push(
-      ...calendarLines.map((entry,) => ({
+      ...[...calendarWeekLines, ...calendarActionLines,].map((entry,) => ({
         key: entry.key,
+        renderAsTask: entry.renderAsTask,
         revision: entry.record.current.revision,
-        section: "calendar" as const,
+        section: entry.section,
       })),
     );
   }
