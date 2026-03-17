@@ -759,13 +759,16 @@ primary.firstChild.textContent = labels[os];
   }
 
   .detail-visual {
+    inline-size: 220px;
+    block-size: 78px;
     border: 1px dashed color-mix(in srgb, var(--line) 82%, #bfc2ce);
     background:
       radial-gradient(circle at top left, rgba(255, 255, 255, 0.9) 0%, transparent 42%),
       color-mix(in srgb, var(--bg-soft) 90%, #ffffff);
-    min-height: 78px;
     padding: 8px;
     overflow: hidden;
+    display: grid;
+    align-items: center;
   }
 
   .mini-timeline,
@@ -1419,7 +1422,7 @@ primary.firstChild.textContent = labels[os];
     }
 
     .detail-visual {
-      max-width: 220px;
+      inline-size: 220px;
     }
 
     .mini-arrow {
