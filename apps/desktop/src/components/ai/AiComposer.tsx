@@ -163,7 +163,7 @@ export function AiComposer({
                     disabled={!isSubmitting && !prompt.trim()}
                     onClick={isSubmitting ? onStop : undefined}
                     aria-label={isSubmitting ? "Stop generating" : "Send message"}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-900 text-white transition-colors disabled:cursor-not-allowed disabled:bg-gray-300"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-none bg-gray-900 text-white transition-colors disabled:cursor-not-allowed disabled:bg-gray-300"
                     style={{ fontFamily: "'IBM Plex Mono', monospace", }}
                   >
                     {isSubmitting
