@@ -100,11 +100,17 @@ const heroMetaDescription =
           </div>
           <div class="hero-media-mobile">
             <div class="video-frame">
-              <img
-                class="hero-screenshot"
-                src="/philo-hero-screenshot.svg"
-                alt="Philo showing daily notes in a timeline with unfinished tasks carried into today"
-              />
+              <video
+                class="product-video"
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                poster="/philo-video-poster.jpg"
+              >
+                <source src="/philo-demo.mp4" type="video/mp4" />
+              </video>
             </div>
           </div>
         </section>
@@ -1137,6 +1143,10 @@ const heroMetaDescription =
   }
 
   .video-column .product-video {
+    aspect-ratio: 848 / 1080;
+  }
+
+  .hero-media-mobile .product-video {
     aspect-ratio: 848 / 1080;
   }
 
