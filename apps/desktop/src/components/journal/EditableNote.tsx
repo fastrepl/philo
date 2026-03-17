@@ -15,6 +15,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, } from "react";
 import { useDebounceCallback, } from "usehooks-ts";
 import "../editor/Editor.css";
 import { parseJsonContent, } from "../../lib/markdown";
+import { openGoogleMentionChip, } from "../../services/google-open";
 import { resolveAssetUrl, saveImage, } from "../../services/images";
 import { getMentionChipDate, getMentionChipHref, type MentionKind, } from "../../services/mentions";
 import { saveDailyNote, } from "../../services/storage";
@@ -169,6 +170,12 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
                       if (date) {
                         event.preventDefault();
                         onOpenDate?.(date,);
+                        return true;
+                      }
+
+                      if (chipData.kind === "gmail" || chipData.kind === "google_calendar") {
+                        event.preventDefault();
+                        openGoogleMentionChip(chipData,).catch(console.error,);
                         return true;
                       }
 

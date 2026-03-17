@@ -8,6 +8,8 @@ export interface Settings {
   openaiApiKey: string;
   googleApiKey: string;
   openrouterApiKey: string;
+  googleEmailOpenClient: GoogleEmailOpenClient;
+  googleCalendarOpenClient: GoogleCalendarOpenClient;
   googleOAuthClientId: string;
   googleAccounts: GoogleAccount[];
   googleAccountEmail: string;
@@ -29,6 +31,12 @@ const SETTINGS_FILE = "settings.json";
 export const AI_PROVIDERS = ["anthropic", "openai", "google", "openrouter",] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
 export const DEFAULT_AI_PROVIDER: AiProvider = "anthropic";
+export const GOOGLE_EMAIL_OPEN_CLIENTS = ["gmail", "apple_mail",] as const;
+export type GoogleEmailOpenClient = (typeof GOOGLE_EMAIL_OPEN_CLIENTS)[number];
+export const DEFAULT_GOOGLE_EMAIL_OPEN_CLIENT: GoogleEmailOpenClient = "gmail";
+export const GOOGLE_CALENDAR_OPEN_CLIENTS = ["google_calendar", "apple_calendar",] as const;
+export type GoogleCalendarOpenClient = (typeof GOOGLE_CALENDAR_OPEN_CLIENTS)[number];
+export const DEFAULT_GOOGLE_CALENDAR_OPEN_CLIENT: GoogleCalendarOpenClient = "google_calendar";
 
 export interface ActiveAiConfig {
   provider: AiProvider;
@@ -52,6 +60,8 @@ const DEFAULT_SETTINGS: Settings = {
   openaiApiKey: "",
   googleApiKey: "",
   openrouterApiKey: "",
+  googleEmailOpenClient: DEFAULT_GOOGLE_EMAIL_OPEN_CLIENT,
+  googleCalendarOpenClient: DEFAULT_GOOGLE_CALENDAR_OPEN_CLIENT,
   googleOAuthClientId: DEFAULT_GOOGLE_OAUTH_CLIENT_ID,
   googleAccounts: [],
   googleAccountEmail: "",
@@ -72,6 +82,18 @@ function normalizeAiProvider(value: unknown,): AiProvider {
   return typeof value === "string" && AI_PROVIDERS.includes(value as AiProvider,)
     ? value as AiProvider
     : DEFAULT_AI_PROVIDER;
+}
+
+function normalizeGoogleEmailOpenClient(value: unknown,): GoogleEmailOpenClient {
+  return typeof value === "string" && GOOGLE_EMAIL_OPEN_CLIENTS.includes(value as GoogleEmailOpenClient,)
+    ? value as GoogleEmailOpenClient
+    : DEFAULT_GOOGLE_EMAIL_OPEN_CLIENT;
+}
+
+function normalizeGoogleCalendarOpenClient(value: unknown,): GoogleCalendarOpenClient {
+  return typeof value === "string" && GOOGLE_CALENDAR_OPEN_CLIENTS.includes(value as GoogleCalendarOpenClient,)
+    ? value as GoogleCalendarOpenClient
+    : DEFAULT_GOOGLE_CALENDAR_OPEN_CLIENT;
 }
 
 function normalizeGoogleGrantedScopes(value: unknown,) {
@@ -175,6 +197,8 @@ export async function loadSettings(): Promise<Settings> {
       ...DEFAULT_SETTINGS,
       ...parsed,
       aiProvider: normalizeAiProvider(parsed.aiProvider,),
+      googleEmailOpenClient: normalizeGoogleEmailOpenClient(parsed.googleEmailOpenClient,),
+      googleCalendarOpenClient: normalizeGoogleCalendarOpenClient(parsed.googleCalendarOpenClient,),
       googleAccounts: normalizeGoogleAccounts(parsed.googleAccounts, {
         email: parsed.googleAccountEmail,
         accessTokenExpiresAt: parsed.googleAccessTokenExpiresAt,

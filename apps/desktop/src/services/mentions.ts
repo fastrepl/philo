@@ -61,10 +61,12 @@ export interface MentionSuggestion extends MentionChipData {
   action?: "open_date_picker";
 }
 
-interface ExternalChipPayload {
+export interface MentionChipExternalPayload {
   version: 1;
   accountEmail: string;
   href: string;
+  calendarUid?: string;
+  messageId?: string;
   revision: string;
   sourceId: string;
 }
@@ -145,13 +147,13 @@ function toBase64Url(value: string,) {
     binary += String.fromCharCode(byte,);
   }
 
-  return btoa(binary,).replace(/\+/g, "-",).replace(/\//g, "_").replace(/=+$/g, "",);
+  return btoa(binary,).replace(/\+/g, "-",).replace(/\//g, "_",).replace(/=+$/g, "",);
 }
 
 function fromBase64Url(value: string,) {
   if (!value || typeof atob === "undefined") return null;
 
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/",);
+  const normalized = value.replace(/-/g, "+",).replace(/_/g, "/",);
   const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4,);
 
   try {
@@ -161,10 +163,10 @@ function fromBase64Url(value: string,) {
   }
 }
 
-function normalizeExternalChipPayload(value: unknown,): ExternalChipPayload | null {
+function normalizeExternalChipPayload(value: unknown,): MentionChipExternalPayload | null {
   if (!value || typeof value !== "object") return null;
 
-  const payload = value as Partial<ExternalChipPayload>;
+  const payload = value as Partial<MentionChipExternalPayload>;
   if (
     payload.version !== 1
     || typeof payload.accountEmail !== "string"
@@ -180,17 +182,25 @@ function normalizeExternalChipPayload(value: unknown,): ExternalChipPayload | nu
   const revision = payload.revision.trim();
   const sourceId = payload.sourceId.trim();
   if (!accountEmail || !href || !revision || !sourceId) return null;
+  const messageId = typeof payload.messageId === "string" && payload.messageId.trim()
+    ? payload.messageId.trim()
+    : undefined;
+  const calendarUid = typeof payload.calendarUid === "string" && payload.calendarUid.trim()
+    ? payload.calendarUid.trim()
+    : undefined;
 
   return {
     version: 1,
     accountEmail,
+    ...(calendarUid ? { calendarUid, } : {}),
     href,
+    ...(messageId ? { messageId, } : {}),
     revision,
     sourceId,
   };
 }
 
-function encodeExternalChipPayload(payload: ExternalChipPayload,) {
+function encodeExternalChipPayload(payload: MentionChipExternalPayload,) {
   return toBase64Url(JSON.stringify(payload,),);
 }
 
@@ -234,11 +244,11 @@ function buildRecurringId(startDate: string, intervalDays: number,): string {
   return `recurring_${startDate}_${intervalDays}`;
 }
 
-function buildGmailId(payload: ExternalChipPayload,) {
+function buildGmailId(payload: MentionChipExternalPayload,) {
   return `gmail_${encodeExternalChipPayload(payload,)}`;
 }
 
-function buildGoogleCalendarId(payload: ExternalChipPayload,) {
+function buildGoogleCalendarId(payload: MentionChipExternalPayload,) {
   return `google_calendar_${encodeExternalChipPayload(payload,)}`;
 }
 
@@ -288,7 +298,7 @@ function buildExternalChipLabel(kind: "gmail" | "google_calendar", label?: strin
 
 function parseExternalChipId(
   id: string,
-): { kind: "gmail" | "google_calendar"; payload: ExternalChipPayload; } | null {
+): { kind: "gmail" | "google_calendar"; payload: MentionChipExternalPayload; } | null {
   const gmailMatch = GMAIL_TARGET_RE.exec(id,);
   if (gmailMatch) {
     const payload = decodeExternalChipPayload(gmailMatch[1],);
@@ -676,6 +686,7 @@ export function createGmailMention(
   input: {
     accountEmail: string;
     href: string;
+    messageId?: string | null;
     revision: string;
     sourceId: string;
   },
@@ -686,6 +697,7 @@ export function createGmailMention(
       version: 1,
       accountEmail: input.accountEmail.trim(),
       href: input.href.trim(),
+      ...(input.messageId?.trim() ? { messageId: input.messageId.trim(), } : {}),
       revision: input.revision.trim(),
       sourceId: input.sourceId.trim(),
     },),
@@ -697,6 +709,7 @@ export function createGmailMention(
 export function createGoogleCalendarMention(
   input: {
     accountEmail: string;
+    calendarUid?: string | null;
     href: string;
     revision: string;
     sourceId: string;
@@ -707,6 +720,7 @@ export function createGoogleCalendarMention(
     id: buildGoogleCalendarId({
       version: 1,
       accountEmail: input.accountEmail.trim(),
+      ...(input.calendarUid?.trim() ? { calendarUid: input.calendarUid.trim(), } : {}),
       href: input.href.trim(),
       revision: input.revision.trim(),
       sourceId: input.sourceId.trim(),
@@ -720,6 +734,17 @@ export function getMentionChipHref(
   data: Pick<MentionChipData, "id" | "kind">,
 ): string | null {
   return parseExternalChipId(data.id,)?.payload.href ?? null;
+}
+
+export function getMentionChipExternalPayload(
+  data: Pick<MentionChipData, "id" | "kind">,
+): ({ kind: "gmail" | "google_calendar"; } & MentionChipExternalPayload) | null {
+  const parsed = parseExternalChipId(data.id,);
+  if (!parsed) return null;
+  return {
+    kind: parsed.kind,
+    ...parsed.payload,
+  };
 }
 
 export function getMentionChipAccountEmail(

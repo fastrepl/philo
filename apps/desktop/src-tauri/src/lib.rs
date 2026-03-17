@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::{env, fs};
+use std::{env, fs, process::Command};
 use tauri::ipc::Channel;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -1273,6 +1273,119 @@ fn clear_google_oauth_session(account_email: String) -> Result<(), String> {
         return clear_google_stored_session();
     }
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn run_osascript(lines: &[&str], args: &[&str]) -> Result<String, String> {
+    let mut command = Command::new("/usr/bin/osascript");
+    for line in lines {
+        command.arg("-e").arg(line);
+    }
+    if !args.is_empty() {
+        command.arg("--");
+        for arg in args {
+            command.arg(arg);
+        }
+    }
+
+    let output = command
+        .output()
+        .map_err(|e| format!("Could not run AppleScript: {e}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            "AppleScript failed.".to_string()
+        } else {
+            stderr
+        });
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+#[tauri::command]
+fn open_in_apple_mail(message_id: String) -> Result<bool, String> {
+    let normalized = message_id.trim().to_string();
+    if normalized.is_empty() {
+        return Ok(false);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let result = run_osascript(
+            &[
+                "on run argv",
+                "set targetMessageId to item 1 of argv",
+                "tell application "Mail"",
+                "set inboxMatches to (messages of inbox whose message id is targetMessageId)",
+                "if (count of inboxMatches) > 0 then",
+                "set targetMessage to item 1 of inboxMatches",
+                "open targetMessage",
+                "activate",
+                "return "opened"",
+                "end if",
+                "repeat with mailboxRef in mailboxes",
+                "set mailboxMatches to (messages of mailboxRef whose message id is targetMessageId)",
+                "if (count of mailboxMatches) > 0 then",
+                "set targetMessage to item 1 of mailboxMatches",
+                "open targetMessage",
+                "activate",
+                "return "opened"",
+                "end if",
+                "end repeat",
+                "end tell",
+                "return "missing"",
+                "end run",
+            ],
+            &[normalized.as_str()],
+        )?;
+        Ok(result == "opened")
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = normalized;
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+fn open_in_apple_calendar(event_uid: String) -> Result<bool, String> {
+    let normalized = event_uid.trim().to_string();
+    if normalized.is_empty() {
+        return Ok(false);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let result = run_osascript(
+            &[
+                "on run argv",
+                "set targetEventUid to item 1 of argv",
+                "tell application "Calendar"",
+                "repeat with calendarRef in calendars",
+                "set eventMatches to (every event of calendarRef whose uid is targetEventUid)",
+                "if (count of eventMatches) > 0 then",
+                "set targetEvent to item 1 of eventMatches",
+                "show targetEvent",
+                "activate",
+                "return "opened"",
+                "end if",
+                "end repeat",
+                "end tell",
+                "return "missing"",
+                "end run",
+            ],
+            &[normalized.as_str()],
+        )?;
+        Ok(result == "opened")
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = normalized;
+        Ok(false)
+    }
 }
 
 #[tauri::command]
@@ -3233,6 +3346,8 @@ pub fn run() {
             complete_google_oauth,
             ensure_google_access_token,
             clear_google_oauth_session,
+            open_in_apple_mail,
+            open_in_apple_calendar,
             run_ai_tool,
             set_window_opacity,
             search_markdown_files,

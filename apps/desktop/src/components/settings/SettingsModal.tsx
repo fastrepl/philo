@@ -15,6 +15,10 @@ import {
   type AiProvider,
   DEFAULT_FILENAME_PATTERN,
   getAiProviderLabel,
+  GOOGLE_CALENDAR_OPEN_CLIENTS,
+  GOOGLE_EMAIL_OPEN_CLIENTS,
+  type GoogleCalendarOpenClient,
+  type GoogleEmailOpenClient,
   loadSettings,
   saveSettings,
   type Settings,
@@ -41,6 +45,16 @@ const AI_PROVIDER_ICONS: Record<AiProvider, string> = {
   openai: openaiSymbol,
   google: googleGeminiIcon,
   openrouter: openrouterIcon,
+};
+
+const GOOGLE_EMAIL_OPEN_CLIENT_LABELS: Record<GoogleEmailOpenClient, string> = {
+  gmail: "Gmail",
+  apple_mail: "Apple Mail",
+};
+
+const GOOGLE_CALENDAR_OPEN_CLIENT_LABELS: Record<GoogleCalendarOpenClient, string> = {
+  google_calendar: "Google Calendar",
+  apple_calendar: "Apple Calendar",
 };
 
 const mono = { fontFamily: "'IBM Plex Mono', monospace", };
@@ -702,6 +716,43 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                   : "Continue with Google"}
               </span>
             </button>
+          </div>
+          <div className="grid gap-3 pt-2 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="block text-xs text-gray-500" style={mono}>
+                Email opens in
+              </label>
+              <select
+                value={settings.googleEmailOpenClient}
+                onChange={(event,) => update({ googleEmailOpenClient: event.target.value as GoogleEmailOpenClient, },)}
+                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400"
+                style={mono}
+              >
+                {GOOGLE_EMAIL_OPEN_CLIENTS.map((client,) => (
+                  <option key={client} value={client}>
+                    {GOOGLE_EMAIL_OPEN_CLIENT_LABELS[client]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs text-gray-500" style={mono}>
+                Calendar opens in
+              </label>
+              <select
+                value={settings.googleCalendarOpenClient}
+                onChange={(event,) =>
+                  update({ googleCalendarOpenClient: event.target.value as GoogleCalendarOpenClient, },)}
+                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400"
+                style={mono}
+              >
+                {GOOGLE_CALENDAR_OPEN_CLIENTS.map((client,) => (
+                  <option key={client} value={client}>
+                    {GOOGLE_CALENDAR_OPEN_CLIENT_LABELS[client]}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

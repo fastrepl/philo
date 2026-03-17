@@ -26,7 +26,7 @@ const GOOGLE_EMAIL_HEADING = "## Email";
 const GOOGLE_CALENDAR_HEADING = "## Calendar";
 const GOOGLE_CALENDAR_LOOKAHEAD_DAYS = 7;
 const GMAIL_HISTORY_PAGE_SIZE = 500;
-const GMAIL_THREAD_METADATA_HEADERS = ["Subject", "From", "Date",];
+const GMAIL_THREAD_METADATA_HEADERS = ["Subject", "From", "Date", "Message-ID",];
 const WIKI_LINK_RE = /\[\[([^[\]|]+)(?:\|([^[\]]+))?\]\]/g;
 const TASK_LINE_RE = /^[-*] \[( |x|X)\] (.+)$/;
 
@@ -50,9 +50,11 @@ interface GoogleImportRecord {
   };
   completedRevision: string | null;
   current: {
+    calendarUid: string | null;
     dueDate: string | null;
     fallbackTaskText: string;
     href: string;
+    messageId: string | null;
     revision: string;
     sortKey: string;
     sourceChipLabel: string;
@@ -123,6 +125,7 @@ interface GoogleCalendarEvent {
   eventType?: string;
   htmlLink?: string;
   id?: string;
+  iCalUID?: string;
   location?: string;
   organizer?: {
     email?: string;
@@ -142,6 +145,7 @@ interface GmailCandidate {
   fallbackTaskText: string;
   href: string;
   kind: "gmail";
+  messageId: string | null;
   revision: string;
   sortKey: string;
   sourceId: string;
@@ -151,6 +155,7 @@ interface GmailCandidate {
 
 interface CalendarCandidate {
   accountEmail: string;
+  calendarUid: string | null;
   dueDate: string;
   fallbackTaskText: string;
   href: string;
@@ -277,9 +282,11 @@ function normalizeGoogleImportState(value: unknown,): GoogleImportState {
                   : null,
                 completedRevision: typeof entry.completedRevision === "string" ? entry.completedRevision : null,
                 current: {
+                  calendarUid: typeof current.calendarUid === "string" ? current.calendarUid : null,
                   dueDate: typeof current.dueDate === "string" ? current.dueDate : null,
                   fallbackTaskText: current.fallbackTaskText,
                   href: current.href,
+                  messageId: typeof current.messageId === "string" ? current.messageId : null,
                   revision: current.revision,
                   sortKey: current.sortKey,
                   sourceChipLabel: current.sourceChipLabel,
@@ -597,6 +604,7 @@ async function syncGmailAccount(
       const revision = thread.historyId?.trim() || latestHistoryId;
       const subject = getHeaderValue(latestMessage?.payload?.headers, "Subject",);
       const from = getHeaderValue(latestMessage?.payload?.headers, "From",);
+      const messageId = getHeaderValue(latestMessage?.payload?.headers, "Message-ID",) || null;
       const snippet = thread.snippet?.trim() ?? "";
       const fallbackTaskText = buildEmailFallbackTask(subject, from, snippet,);
 
@@ -608,9 +616,11 @@ async function syncGmailAccount(
           : null,
         completedRevision: state.records[key]?.completedRevision ?? null,
         current: {
+          calendarUid: null,
           dueDate: null,
           fallbackTaskText,
           href: buildGmailThreadHref(accountEmail, sourceId,),
+          messageId,
           revision,
           sortKey: latestMessage?.internalDate?.trim() || new Date().toISOString(),
           sourceChipLabel: "Gmail",
@@ -632,6 +642,7 @@ async function syncGmailAccount(
         fallbackTaskText,
         href: nextRecord.current.href,
         kind: "gmail",
+        messageId,
         revision,
         sortKey: nextRecord.current.sortKey,
         sourceChipLabel: nextRecord.current.sourceChipLabel,
@@ -713,6 +724,7 @@ async function syncCalendarAccount(
     const dueDate = getCalendarDueDate(event.start,);
     if (!dueDate) return;
 
+    const calendarUid = event.iCalUID?.trim() || null;
     const timeText = formatCalendarTime(event.start,);
     const summary = truncateForPrompt(
       `${event.summary ?? ""} ${event.location ?? ""} ${event.organizer?.displayName ?? event.organizer?.email ?? ""}`,
@@ -727,9 +739,11 @@ async function syncCalendarAccount(
         : null,
       completedRevision: state.records[key]?.completedRevision ?? null,
       current: {
+        calendarUid,
         dueDate,
         fallbackTaskText,
         href,
+        messageId: null,
         revision,
         sortKey: `${dueDate}:${timeText ?? "all-day"}:${sourceId}`,
         sourceChipLabel: "Google Calendar",
@@ -743,6 +757,7 @@ async function syncCalendarAccount(
     state.records[key] = nextRecord;
     calendarCandidates.push({
       accountEmail,
+      calendarUid,
       dueDate,
       fallbackTaskText,
       href,
@@ -940,11 +955,13 @@ function renderRecordTaskMarkdown(record: GoogleImportRecord, multipleAccounts: 
     ? createGmailMention({
       accountEmail: record.accountEmail,
       href: record.current.href,
+      messageId: record.current.messageId,
       revision: record.current.revision,
       sourceId: record.sourceId,
     }, record.current.sourceChipLabel,)
     : createGoogleCalendarMention({
       accountEmail: record.accountEmail,
+      calendarUid: record.current.calendarUid,
       href: record.current.href,
       revision: record.current.revision,
       sourceId: record.sourceId,
