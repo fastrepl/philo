@@ -252,15 +252,9 @@ const heroMetaDescription =
                     {
                       item.visual === "open-source" && (
                         <div class="mini-open-source">
-                          <div class="mini-github-icon">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path fill="currentColor" d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.03c-3.34.72-4.04-1.41-4.04-1.41-.55-1.38-1.33-1.75-1.33-1.75-1.09-.73.08-.71.08-.71 1.2.09 1.84 1.24 1.84 1.24 1.08 1.83 2.82 1.3 3.5.99.11-.78.42-1.3.76-1.59-2.67-.3-5.47-1.33-5.47-5.92 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.4 11.4 0 0 1 6 0c2.29-1.55 3.29-1.23 3.29-1.23.67 1.66.26 2.88.13 3.18.77.84 1.23 1.91 1.23 3.22 0 4.6-2.81 5.61-5.49 5.91.43.38.81 1.1.81 2.23v3.3c0 .32.21.7.82.58A12 12 0 0 0 12 .5Z"></path>
-                            </svg>
-                          </div>
-                          <div class="mini-stars">
-                            <span class="mini-stars-label">GitHub</span>
-                            <span class="mini-stars-value"><span data-github-stars>20</span> stars</span>
-                          </div>
+                          <svg viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8C0 11.54 2.29 14.53 5.47 15.59C5.87 15.66 6.02 15.42 6.02 15.21C6.02 15.02 6.01 14.39 6.01 13.72C4 14.09 3.48 13.23 3.32 12.78C3.23 12.55 2.84 11.84 2.5 11.65C2.22 11.5 1.82 11.13 2.49 11.12C3.12 11.11 3.57 11.7 3.72 11.94C4.44 13.15 5.59 12.81 6.05 12.6C6.12 12.08 6.33 11.73 6.56 11.53C4.78 11.33 2.92 10.64 2.92 7.58C2.92 6.71 3.23 5.99 3.74 5.43C3.66 5.23 3.38 4.41 3.82 3.31C3.82 3.31 4.49 3.1 6.02 4.13C6.66 3.95 7.34 3.86 8.02 3.86C8.7 3.86 9.38 3.95 10.02 4.13C11.55 3.09 12.22 3.31 12.22 3.31C12.66 4.41 12.38 5.23 12.3 5.43C12.81 5.99 13.12 6.7 13.12 7.58C13.12 10.65 11.25 11.33 9.47 11.53C9.76 11.78 10.01 12.26 10.01 13.01C10.01 14.08 10 14.94 10 15.21C10 15.42 10.15 15.67 10.55 15.59C13.71 14.53 16 11.53 16 8C16 3.58 12.42 0 8 0Z"></path>
+                          </svg>
                         </div>
                       )
                     }
@@ -367,7 +361,6 @@ const heroMetaDescription =
     const macLink = document.querySelector("[data-download-macos]",);
     const winLink = document.querySelector("[data-download-windows]",);
     const linuxLink = document.querySelector("[data-download-linux]",);
-    const starEls = Array.from(document.querySelectorAll("[data-github-stars]",),);
 
     toggle?.addEventListener("click", (e,) => {
       e.stopPropagation();
@@ -427,17 +420,6 @@ const heroMetaDescription =
       // keep fallback links
     }
 
-    try {
-      const repoRes = await fetch(`https://api.github.com/repos/${REPO}`,);
-      if (!repoRes.ok) throw new Error();
-      const repoData = await repoRes.json();
-      const stars = new Intl.NumberFormat().format(repoData.stargazers_count ?? 0,);
-      for (const el of starEls) {
-        el.textContent = stars;
-      }
-    } catch {
-      // keep fallback star count
-    }
   })();
 
   const carousel = document.querySelector("[data-carousel]",);
@@ -1054,44 +1036,16 @@ const heroMetaDescription =
 
   .mini-open-source {
     display: grid;
-    grid-template-columns: 38px minmax(0, 1fr);
-    gap: 7px;
-    align-items: center;
-    height: 100%;
-  }
-
-  .mini-github-icon {
-    width: 38px;
-    height: 38px;
-    border: 1px solid color-mix(in srgb, var(--line) 80%, #d3d6df);
-    background: rgba(255, 255, 255, 0.92);
-    color: #252525;
-    display: grid;
     place-items: center;
+    height: 100%;
+    color: #252525;
   }
 
-  .mini-github-icon svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  .mini-stars {
-    display: grid;
-    gap: 3px;
-  }
-
-  .mini-stars-label {
-    color: #676762;
-    font-size: 8px;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-
-  .mini-stars-value {
-    color: #3f3f3d;
-    font-size: 11px;
-    font-weight: 500;
+  .mini-open-source svg {
+    width: min(52px, calc(100% - 24px));
+    height: auto;
+    display: block;
+    margin: 0 auto;
   }
 
   @keyframes mini-timeline-scroll {
