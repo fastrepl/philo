@@ -333,7 +333,8 @@ function serializeWidgetMarkdown(record: WidgetFileRecord,): string {
 
 function toWidgetHtml(record: WidgetFileRecord,): string {
   const attrs = ['data-widget=""',];
-  attrs.push(`data-id="${escapeWidgetHtmlAttr(record.id,)}"`,);
+  attrs.push(`data-id="${escapeWidgetHtmlAttr(crypto.randomUUID(),)}"`,);
+  attrs.push(`data-storage-id="${escapeWidgetHtmlAttr(record.id,)}"`,);
   attrs.push(`data-file="${escapeWidgetHtmlAttr(record.file,)}"`,);
   attrs.push(`data-path="${escapeWidgetHtmlAttr(record.path,)}"`,);
   attrs.push(`data-prompt="${encodeWidgetDataAttr(record.prompt,)}"`,);

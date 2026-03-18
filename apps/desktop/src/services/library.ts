@@ -81,6 +81,9 @@ export interface LibraryItem {
   favorite: boolean;
   runtime?: "json" | "code";
   source?: string;
+  storageId?: string;
+  file?: string;
+  path?: string;
   componentId?: string;
   storageKind?: "sqlite";
   storageSchema?: SharedStorageSchema;
@@ -512,6 +515,9 @@ export async function loadLibrary(): Promise<LibraryItem[]> {
             savedAt: getWidgetSavedAt(record,),
             runtime: manifestItem.source ? "code" : record.runtime,
             source: manifestItem.source || record.source,
+            storageId: record.id,
+            file: record.file,
+            path: record.path,
           };
         }
 
@@ -525,6 +531,9 @@ export async function loadLibrary(): Promise<LibraryItem[]> {
           favorite: record.favorite,
           runtime: record.runtime,
           source: record.source,
+          storageId: record.id,
+          file: record.file,
+          path: record.path,
           componentId: record.componentId ?? undefined,
           storageSchema: record.storageSchema ?? undefined,
         };

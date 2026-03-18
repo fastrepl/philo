@@ -160,6 +160,7 @@ function formatToolbarTitle(prompt: string,): string {
 export function WidgetView({ node, updateAttributes, deleteNode, selected, }: NodeViewProps,) {
   const {
     id,
+    storageId: storageIdAttr,
     spec: specStr,
     source: sourceStr,
     saved,
@@ -173,6 +174,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     storageSchema: storageSchemaStr,
   } = node.attrs as {
     id: string;
+    storageId?: string;
     runtime?: WidgetRuntimeKind;
     spec: string;
     source?: string;
@@ -193,6 +195,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const [runtimeRefreshToken, setRuntimeRefreshToken,] = useState(0,);
   const [isEditingInChat, setIsEditingInChat,] = useState(false,);
   const effectiveLibraryItemId = libraryItemId ?? componentId ?? null;
+  const storageId = storageIdAttr || id;
   const storageSchema = useMemo(() => parseStorageSchema(storageSchemaStr,), [storageSchemaStr,],);
   const isShared = Boolean(componentId,);
   const localSource = (sourceStr ?? "").trim();
@@ -290,9 +293,9 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       return {
         mode: "instance",
         runQuery: async (queryName: string, params: Record<string, unknown> = {},) =>
-          runWidgetStorageQuery(path, id, storageSchema, queryName, params,),
+          runWidgetStorageQuery(path, storageId, storageSchema, queryName, params,),
         runMutation: async (mutationName: string, params: Record<string, unknown> = {},) => {
-          const changed = await runWidgetStorageMutation(path, id, storageSchema, mutationName, params,);
+          const changed = await runWidgetStorageMutation(path, storageId, storageSchema, mutationName, params,);
           setRuntimeRefreshToken((value,) => value + 1);
           return changed;
         },
@@ -328,7 +331,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       },
       refreshToken: runtimeRefreshToken,
     };
-  }, [componentId, id, isShared, manifest, missingComponent, path, runtimeRefreshToken, storageSchema,],);
+  }, [componentId, isShared, manifest, missingComponent, path, runtimeRefreshToken, storageId, storageSchema,],);
 
   const persistWidgetRecord = useCallback(async ({
     nextPrompt,
@@ -359,6 +362,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     const effectiveSpec = nextRuntime === "json"
       ? (nextSpec ?? existingRecord?.spec ?? "").trim()
       : "";
+    const persistedStorageId = existingRecord?.id || storageId;
     const nextPrimaryContent = nextRuntime === "code" ? effectiveSource : effectiveSpec;
     const nextHistory = existingRecord
       ? createRevision
@@ -380,7 +384,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
 
     if (path && file) {
       return await updateWidgetFile(path, file, {
-        id,
+        id: persistedStorageId,
         title,
         prompt: nextPrompt,
         runtime: nextRuntime,
@@ -410,7 +414,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       componentId: nextComponentId ?? null,
       storageSchema: nextStorageSchema ?? existingRecord?.storageSchema ?? null,
     },);
-  }, [file, id, path, sourceStr,],);
+  }, [file, path, sourceStr, storageId,],);
 
   const runGeneration = async (generationPrompt: string, persistedPrompt = prompt,) => {
     window.dispatchEvent(
@@ -439,7 +443,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
           createRevision: true,
         },);
         updateAttributes({
-          id: record.id,
+          storageId: record.id,
           runtime: record.runtime,
           file: record.file,
           path: record.path,
@@ -471,7 +475,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         createRevision: true,
       },);
       updateAttributes({
-        id: record.id,
+        storageId: record.id,
         runtime: record.runtime,
         file: record.file,
         path: record.path,
@@ -531,7 +535,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       },);
 
       updateAttributes({
-        id: record.id,
+        storageId: record.id,
         runtime: record.runtime,
         file: record.file,
         path: record.path,

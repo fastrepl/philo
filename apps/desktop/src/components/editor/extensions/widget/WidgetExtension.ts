@@ -24,6 +24,7 @@ function deriveTitle(prompt: string,): string {
 
 export interface WidgetAttributes {
   id: string;
+  storageId?: string;
   runtime: WidgetRuntimeKind;
   spec: string;
   source?: string;
@@ -79,6 +80,9 @@ export const WidgetExtension = Node.create({
 
     const parts = ['<div data-widget=""',];
     if (attrs.id) parts.push(` data-id="${escapeWidgetHtmlAttr(String(attrs.id,),)}"`,);
+    if (attrs.storageId) {
+      parts.push(` data-storage-id="${escapeWidgetHtmlAttr(String(attrs.storageId,),)}"`,);
+    }
     if (attrs.runtime) parts.push(` data-runtime="${escapeWidgetHtmlAttr(String(attrs.runtime,),)}"`,);
     if (attrs.componentId) {
       parts.push(` data-component-id="${escapeWidgetHtmlAttr(String(attrs.componentId,),)}"`,);
@@ -108,6 +112,10 @@ export const WidgetExtension = Node.create({
       runtime: {
         default: "code",
         parseHTML: (el: HTMLElement,) => el.getAttribute("data-runtime",) === "code" ? "code" : "json",
+      },
+      storageId: {
+        default: "",
+        parseHTML: (el: HTMLElement,) => el.getAttribute("data-storage-id",) || el.getAttribute("data-id",) || "",
       },
       spec: {
         default: "",
@@ -166,6 +174,7 @@ export const WidgetExtension = Node.create({
       mergeAttributes(HTMLAttributes, {
         "data-widget": "",
         "data-id": String(HTMLAttributes.id ?? "",),
+        "data-storage-id": String(HTMLAttributes.storageId ?? HTMLAttributes.id ?? "",),
         "data-runtime": String(HTMLAttributes.runtime ?? "code",),
         ...(HTMLAttributes.runtime === "code"
           ? { "data-source": encodeWidgetDataAttr(String(HTMLAttributes.source ?? "",),), }
@@ -197,6 +206,7 @@ export const WidgetExtension = Node.create({
           attrs: {
             id: crypto.randomUUID(),
             runtime: "code",
+            storageId: "",
             spec: "",
             source: "",
             file: "",
@@ -228,6 +238,7 @@ export const WidgetExtension = Node.create({
             attrs: {
               id: widgetId,
               runtime: "code",
+              storageId: "",
               prompt: selectedText,
               spec: "",
               source: "",
@@ -251,7 +262,7 @@ export const WidgetExtension = Node.create({
               saved: false,
             },);
             updateWidgetById(this.editor, widgetId, {
-              id: record.id,
+              storageId: record.id,
               runtime: record.runtime,
               file: record.file,
               path: record.path,

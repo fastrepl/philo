@@ -1438,22 +1438,35 @@ export default function AppLayout() {
               throw new Error("This saved widget still uses the retired JSON runtime. Rebuild it first.",);
             }
             const isShared = !!item.componentId && !!item.storageKind;
-            const record = await createWidgetFile({
-              title: item.title,
-              prompt: item.prompt,
-              runtime: "code",
-              spec: "",
-              source,
-              favorite: item.favorite,
-              saved: true,
-              libraryItemId: item.id,
-              componentId: isShared ? item.componentId : null,
-              storageSchema: item.storageSchema,
-            },);
+            const record = item.file && item.path && item.storageId
+              ? {
+                id: item.storageId,
+                runtime: "code" as const,
+                spec: "",
+                source,
+                file: item.file,
+                path: item.path,
+                libraryItemId: item.id,
+                componentId: isShared ? item.componentId : null,
+                storageSchema: item.storageSchema ?? null,
+              }
+              : await createWidgetFile({
+                title: item.title,
+                prompt: item.prompt,
+                runtime: "code",
+                spec: "",
+                source,
+                favorite: item.favorite,
+                saved: true,
+                libraryItemId: item.id,
+                componentId: isShared ? item.componentId : null,
+                storageSchema: item.storageSchema,
+              },);
             editor.chain().focus().insertContent({
               type: "widget",
               attrs: {
-                id: record.id,
+                id: crypto.randomUUID(),
+                storageId: record.id,
                 runtime: record.runtime,
                 spec: record.spec,
                 source: record.source,
