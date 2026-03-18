@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState, } from "react";
+import type { ErrorInfo, ReactNode, } from "react";
 import {
   CODE_WIDGET_FRAME_PARAM,
   CODE_WIDGET_LOAD,
@@ -21,6 +22,34 @@ type WidgetBridge = {
   runMutation: (name: string, params?: Record<string, unknown>,) => Promise<number>;
 };
 
+class WidgetRenderBoundary extends React.Component<
+  { onError: (message: string,) => void; children: ReactNode; },
+  { error: string | null; }
+> {
+  state = { error: null as string | null, };
+
+  static getDerivedStateFromError(error: Error,) {
+    return { error: error.message, };
+  }
+
+  componentDidCatch(error: Error, _info: ErrorInfo,) {
+    this.props.onError(error.message,);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="widget-error">
+          <p className="widget-error-title">Code widget failed</p>
+          <p className="widget-error-message">{this.state.error}</p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function readFrameId(): string {
   const search = new URLSearchParams(window.location.search,);
   return search.get(CODE_WIDGET_FRAME_PARAM,) ?? "";
@@ -35,7 +64,13 @@ function evaluateWidgetModule(code: string,): WidgetComponent {
   globalScope.Philo = PhiloSdk;
   globalScope.PhiloReact = React;
   delete globalScope.__PHILO_WIDGET_MODULE__;
-  const run = new Function(`${code}\nreturn globalThis.__PHILO_WIDGET_MODULE__?.default;`,);
+  const run = new Function(
+    `${code}
+const moduleValue = typeof __PHILO_WIDGET_MODULE__ !== "undefined"
+  ? __PHILO_WIDGET_MODULE__
+  : globalThis.__PHILO_WIDGET_MODULE__;
+return moduleValue?.default ?? moduleValue;`,
+  );
   const component = run() as WidgetComponent | undefined;
   if (typeof component !== "function") {
     throw new Error("Compiled widget did not export a default component.",);
@@ -181,7 +216,9 @@ export function WidgetSandboxApp() {
         : Widget
         ? (
           <WidgetSdkProvider bridge={bridge}>
-            <Widget />
+            <WidgetRenderBoundary onError={setError}>
+              <Widget />
+            </WidgetRenderBoundary>
           </WidgetSdkProvider>
         )
         : (

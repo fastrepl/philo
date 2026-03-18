@@ -160,10 +160,12 @@ const panelStyle: CSSProperties = {
 export function Card({
   title,
   padding = "md",
+  style,
   children,
 }: {
   title?: string;
   padding?: "none" | "sm" | "md" | "lg";
+  style?: CSSProperties;
   children?: ReactNode;
 },) {
   return (
@@ -171,6 +173,7 @@ export function Card({
       style={{
         ...panelStyle,
         padding: padding === "none" ? 0 : padding === "sm" ? "8px" : padding === "lg" ? "24px" : "16px",
+        ...style,
       }}
     >
       {title
@@ -189,11 +192,13 @@ export function Stack({
   direction = "vertical",
   gap = "md",
   align = "stretch",
+  style,
   children,
 }: {
   direction?: "vertical" | "horizontal";
   gap?: "none" | "xs" | "sm" | "md" | "lg";
   align?: "start" | "center" | "end" | "stretch";
+  style?: CSSProperties;
   children?: ReactNode;
 },) {
   return (
@@ -209,6 +214,7 @@ export function Stack({
           : align === "center"
           ? "center"
           : "stretch",
+        ...style,
       }}
     >
       {children}
@@ -221,11 +227,13 @@ export function Text({
   size = "md",
   weight = "normal",
   align = "left",
+  style,
 }: {
   children?: ReactNode;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   weight?: "normal" | "medium" | "semibold" | "bold";
   align?: "left" | "center" | "right";
+  style?: CSSProperties;
 },) {
   return (
     <span
@@ -243,6 +251,7 @@ export function Text({
           : "14px",
         fontWeight: weight === "normal" ? 400 : weight === "medium" ? 500 : weight === "semibold" ? 600 : 700,
         textAlign: align,
+        ...style,
       }}
     >
       {children}
@@ -253,12 +262,15 @@ export function Text({
 export function Heading({
   children,
   level = "h2",
+  style,
 }: {
   children?: ReactNode;
-  level?: "h1" | "h2" | "h3";
+  level?: "h1" | "h2" | "h3" | 1 | 2 | 3;
+  style?: CSSProperties;
 },) {
-  const fontSize = level === "h1" ? "20px" : level === "h3" ? "14px" : "16px";
-  return <div style={{ ...panelStyle, fontSize, fontWeight: 600, }}>{children}</div>;
+  const normalizedLevel = level === 1 ? "h1" : level === 3 ? "h3" : level === 2 ? "h2" : level;
+  const fontSize = normalizedLevel === "h1" ? "20px" : normalizedLevel === "h3" ? "14px" : "16px";
+  return <div style={{ ...panelStyle, fontSize, fontWeight: 600, ...style, }}>{children}</div>;
 }
 
 export function Button({
@@ -266,11 +278,13 @@ export function Button({
   variant = "primary",
   onClick,
   disabled,
+  style,
 }: {
   children?: ReactNode;
   variant?: "primary" | "secondary" | "ghost";
   onClick?: () => void;
   disabled?: boolean;
+  style?: CSSProperties;
 },) {
   return (
     <button
@@ -287,6 +301,7 @@ export function Button({
         color: variant === "primary" ? "#fff" : "#374151",
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.6 : 1,
+        ...style,
       }}
     >
       {children}
@@ -299,11 +314,13 @@ export function TextInput({
   value,
   onChange,
   placeholder,
+  style,
 }: {
   label?: string;
   value: string;
   onChange: (value: string,) => void;
   placeholder?: string;
+  style?: CSSProperties;
 },) {
   return (
     <label style={{ ...panelStyle, display: "block", }}>
@@ -323,6 +340,7 @@ export function TextInput({
           borderRadius: 0,
           fontSize: "13px",
           boxSizing: "border-box",
+          ...style,
         }}
       />
     </label>
