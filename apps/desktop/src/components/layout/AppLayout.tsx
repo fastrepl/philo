@@ -137,7 +137,7 @@ function DateHeader({
       </h1>
       {showToday && (
         <span
-          className="text-xs font-medium uppercase tracking-wide px-3 py-px rounded-full text-white font-sans"
+          className="text-xs font-medium uppercase tracking-wide px-3 py-1 rounded-full text-white font-sans"
           style={{ background: "linear-gradient(to bottom, #4b5563, #1f2937)", }}
         >
           today
