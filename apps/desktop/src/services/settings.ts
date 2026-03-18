@@ -28,6 +28,7 @@ export interface Settings {
 }
 
 const SETTINGS_FILE = "settings.json";
+export const SETTINGS_UPDATED_EVENT = "philo:settings-updated";
 
 export const AI_PROVIDERS = ["anthropic", "openai", "google", "openrouter",] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
@@ -233,6 +234,9 @@ export async function saveSettings(settings: Settings,): Promise<void> {
       2,
     ),
   );
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(SETTINGS_UPDATED_EVENT,),);
+  }
 }
 
 export async function getApiKey(): Promise<string> {

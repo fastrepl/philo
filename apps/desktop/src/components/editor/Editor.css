@@ -666,6 +666,168 @@
   gap: 12px;
   padding: 32px;
 }
+
+.widget-history-panel {
+  border-bottom: 1px solid #f3f4f6;
+  background: #fcfcfd;
+}
+
+.widget-history-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.widget-history-eyebrow {
+  margin: 0 0 2px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.widget-history-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.widget-history-grid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 220px;
+}
+
+.widget-history-list {
+  border-right: 1px solid #f3f4f6;
+  background: #fff;
+}
+
+.widget-history-list-loading {
+  padding: 16px 14px;
+  font-size: 12px;
+  color: #9ca3af;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.widget-history-entry {
+  width: 100%;
+  border: none;
+  border-top: 1px solid #f3f4f6;
+  background: transparent;
+  padding: 12px 14px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.widget-history-entry:first-child {
+  border-top: none;
+}
+
+.widget-history-entry:hover {
+  background: #f9fafb;
+}
+
+.widget-history-entry-selected {
+  background: #eff6ff;
+}
+
+.widget-history-entry-reason {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6366f1;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.widget-history-entry-title {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 600;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.widget-history-entry-date {
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.widget-history-diff {
+  min-width: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.widget-history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.widget-history-restore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+}
+
+.widget-history-restore:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.widget-history-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.widget-history-empty {
+  padding: 20px 16px;
+}
+
+.widget-history-empty-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+@media (max-width: 720px) {
+  .widget-history-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .widget-history-list {
+    border-right: none;
+    border-bottom: 1px solid #f3f4f6;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .widget-history-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
 /* ---- Excalidraw embed ---- */
 
 .excalidraw-node {

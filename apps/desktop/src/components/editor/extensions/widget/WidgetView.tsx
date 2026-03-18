@@ -1,12 +1,13 @@
 import { NodeViewWrapper, } from "@tiptap/react";
 import type { NodeViewProps, } from "@tiptap/react";
-import { Archive, PencilLine, RefreshCw, Trash2, } from "lucide-react";
+import { Archive, History, PencilLine, RefreshCw, Trash2, } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, } from "react";
 import { getAiConfigurationMessage, isAiKeyMissingError, } from "../../../../services/ai";
 import { generateWidgetWithStorage, } from "../../../../services/generate";
 import {
   addToLibrary,
   getSharedComponent,
+  loadLibrary,
   resolveStoredWidgetSource,
   runSharedComponentMutation,
   runSharedComponentQuery,
@@ -15,6 +16,7 @@ import {
   type SharedStorageSchema,
   updateSharedComponent,
 } from "../../../../services/library";
+import { SETTINGS_UPDATED_EVENT, } from "../../../../services/settings";
 import {
   appendWidgetRevision,
   createWidgetFile,
@@ -22,7 +24,17 @@ import {
   updateWidgetFile,
   type WidgetRuntimeKind,
 } from "../../../../services/widget-files";
-import { recordWidgetGitRevision, type WidgetGitReason, } from "../../../../services/widget-git-history";
+import {
+  ensureWidgetGitHistoryBaseline,
+  getWidgetGitDiff,
+  isWidgetGitHistoryEnabled,
+  listWidgetGitHistory,
+  recordWidgetGitRevision,
+  restoreWidgetGitRevision,
+  type WidgetGitDiff,
+  type WidgetGitHistoryEntry,
+  type WidgetGitReason,
+} from "../../../../services/widget-git-history";
 import {
   hasPersistentStorage,
   parseStorageSchema,
@@ -42,6 +54,7 @@ import {
 } from "./events";
 import { waitForNextPaint, } from "./loading";
 import type { SharedWidgetRuntimeApi, } from "./runtime";
+import { WidgetHistoryPanel, } from "./WidgetHistoryPanel";
 
 const EMPTY_STORAGE_SCHEMA: SharedStorageSchema = {
   tables: [],
@@ -195,6 +208,14 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const [sharedLoadError, setSharedLoadError,] = useState<string | null>(null,);
   const [runtimeRefreshToken, setRuntimeRefreshToken,] = useState(0,);
   const [isEditingInChat, setIsEditingInChat,] = useState(false,);
+  const [historyEnabled, setHistoryEnabled,] = useState(true,);
+  const [historyOpen, setHistoryOpen,] = useState(false,);
+  const [historyEntries, setHistoryEntries,] = useState<WidgetGitHistoryEntry[]>([],);
+  const [historyLoading, setHistoryLoading,] = useState(false,);
+  const [historyError, setHistoryError,] = useState("",);
+  const [selectedHistoryCommitId, setSelectedHistoryCommitId,] = useState<string | null>(null,);
+  const [historyDiff, setHistoryDiff,] = useState<WidgetGitDiff | null>(null,);
+  const [historyRestoring, setHistoryRestoring,] = useState(false,);
   const effectiveLibraryItemId = libraryItemId ?? componentId ?? null;
   const storageId = storageIdAttr || id;
   const storageSchema = useMemo(() => parseStorageSchema(storageSchemaStr,), [storageSchemaStr,],);
@@ -252,6 +273,26 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   }, [loadManifest,],);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const refreshHistoryEnabled = async () => {
+      const enabled = await isWidgetGitHistoryEnabled().catch(() => true);
+      if (cancelled) return;
+      setHistoryEnabled(enabled,);
+      if (!enabled) {
+        setHistoryOpen(false,);
+      }
+    };
+
+    void refreshHistoryEnabled();
+    window.addEventListener(SETTINGS_UPDATED_EVENT, refreshHistoryEnabled,);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(SETTINGS_UPDATED_EVENT, refreshHistoryEnabled,);
+    };
+  }, [],);
+
+  useEffect(() => {
     if (!componentId) return;
 
     const handleSharedUpdate = (event: Event,) => {
@@ -288,6 +329,59 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
       window.removeEventListener(WIDGET_EDIT_SUBMIT_EVENT, handleWidgetEditSubmit,);
     };
   }, [generationContext, id, prompt,],);
+
+  const loadHistory = useCallback(async (preferredCommitId?: string | null,) => {
+    if (!file || !path || !historyEnabled) return;
+
+    setHistoryLoading(true,);
+    setHistoryError("",);
+    try {
+      const currentRecord = await readWidgetFile(path, file,);
+      if (!currentRecord) {
+        throw new Error("Could not load this widget from disk.",);
+      }
+      await ensureWidgetGitHistoryBaseline(currentRecord,);
+      const entries = await listWidgetGitHistory(currentRecord,);
+      const nextCommitId = entries.some((entry,) => entry.commitId === preferredCommitId)
+        ? preferredCommitId ?? null
+        : entries[0]?.commitId ?? null;
+
+      setHistoryEntries(entries,);
+      setSelectedHistoryCommitId(nextCommitId,);
+
+      if (!nextCommitId) {
+        setHistoryDiff(null,);
+        return;
+      }
+
+      setHistoryDiff(await getWidgetGitDiff(currentRecord, nextCommitId,),);
+    } catch (err) {
+      setHistoryDiff(null,);
+      setHistoryEntries([],);
+      setSelectedHistoryCommitId(null,);
+      setHistoryError(err instanceof Error ? err.message : "Could not load widget history.",);
+    } finally {
+      setHistoryLoading(false,);
+    }
+  }, [file, historyEnabled, path,],);
+
+  useEffect(() => {
+    if (!historyOpen) return;
+    void loadHistory(selectedHistoryCommitId,);
+  }, [
+    componentId,
+    file,
+    historyOpen,
+    libraryItemId,
+    loadHistory,
+    path,
+    prompt,
+    saved,
+    selectedHistoryCommitId,
+    sourceStr,
+    specStr,
+    storageSchemaStr,
+  ],);
 
   const runtimeApi: SharedWidgetRuntimeApi = useMemo(() => {
     if (path && storageSchema && hasPersistentStorage(storageSchema,)) {
@@ -578,6 +672,108 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     }
   };
 
+  const handleSelectHistory = async (commitId: string,) => {
+    if (!file || !path) return;
+
+    setSelectedHistoryCommitId(commitId,);
+    setHistoryError("",);
+    try {
+      const currentRecord = await readWidgetFile(path, file,);
+      if (!currentRecord) {
+        throw new Error("Could not load this widget from disk.",);
+      }
+      setHistoryDiff(await getWidgetGitDiff(currentRecord, commitId,),);
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : "Could not load widget diff.",);
+    }
+  };
+
+  const handleRestoreHistory = async () => {
+    if (!file || !path || !selectedHistoryCommitId || !historyDiff?.canRestore) return;
+
+    setHistoryRestoring(true,);
+    setHistoryError("",);
+    try {
+      const currentRecord = await readWidgetFile(path, file,);
+      if (!currentRecord) {
+        throw new Error("Could not load this widget from disk.",);
+      }
+
+      const { snapshot, } = await restoreWidgetGitRevision(currentRecord, selectedHistoryCommitId,);
+      const currentSchema = stringifyStorageSchema(currentRecord.storageSchema,);
+      const restoredSchema = stringifyStorageSchema(snapshot.storageSchema,);
+      if (currentSchema !== restoredSchema) {
+        throw new Error("Restore is blocked because the widget storage schema changed.",);
+      }
+
+      let nextSaved = snapshot.saved;
+      let nextLibraryItemId = snapshot.libraryItemId ?? null;
+      let nextComponentId = snapshot.componentId ?? null;
+      if (nextLibraryItemId || nextComponentId) {
+        const [libraryItems, componentManifest,] = await Promise.all([
+          nextLibraryItemId ? loadLibrary().catch(() => []) : Promise.resolve([],),
+          nextComponentId ? getSharedComponent(nextComponentId,).catch(() => null) : Promise.resolve(null,),
+        ],);
+        const hasLibraryItem = nextLibraryItemId
+          ? libraryItems.some((item,) => item.id === nextLibraryItemId || item.componentId === nextComponentId)
+          : true;
+        const hasComponent = nextComponentId ? Boolean(componentManifest,) : true;
+        if (!hasLibraryItem || !hasComponent) {
+          nextSaved = false;
+          nextLibraryItemId = null;
+          nextComponentId = null;
+        }
+      }
+
+      const restoredPrimaryContent = snapshot.runtime === "code" ? snapshot.source : snapshot.spec;
+      const nextHistory = appendWidgetRevision(
+        {
+          ...currentRecord,
+          runtime: snapshot.runtime,
+          spec: snapshot.spec,
+          source: snapshot.source,
+        },
+        snapshot.prompt,
+        restoredPrimaryContent,
+      );
+      const restoredRecord = await updateWidgetFile(path, file, {
+        ...currentRecord,
+        title: snapshot.title,
+        prompt: snapshot.prompt,
+        runtime: snapshot.runtime,
+        saved: nextSaved,
+        spec: snapshot.spec,
+        source: snapshot.source,
+        currentRevisionId: nextHistory.currentRevisionId,
+        revisions: nextHistory.revisions,
+        libraryItemId: nextLibraryItemId,
+        componentId: nextComponentId,
+        storageSchema: snapshot.storageSchema ?? null,
+      },);
+      await recordWidgetGitRevision(restoredRecord, "restore", currentRecord,);
+      updateAttributes({
+        storageId: restoredRecord.id,
+        runtime: restoredRecord.runtime,
+        file: restoredRecord.file,
+        path: restoredRecord.path,
+        libraryItemId: restoredRecord.libraryItemId,
+        componentId: restoredRecord.componentId,
+        prompt: restoredRecord.prompt,
+        spec: restoredRecord.spec,
+        source: restoredRecord.source,
+        storageSchema: stringifyStorageSchema(restoredRecord.storageSchema,),
+        saved: restoredRecord.saved,
+        loading: false,
+        error: "",
+      },);
+      await loadHistory(null,);
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : "Could not restore this widget revision.",);
+    } finally {
+      setHistoryRestoring(false,);
+    }
+  };
+
   const renderError = error || sharedLoadError;
   const toolbarTitle = formatToolbarTitle(prompt,);
   const saveTitle = isShared || saved ? "Archived in library" : "Archive in library";
@@ -596,6 +792,19 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
             {toolbarTitle}
           </span>
           <div className="widget-actions">
+            {historyEnabled && file && path && (
+              <button
+                className={`widget-btn widget-btn-icon ${historyOpen ? "widget-btn-active" : ""}`}
+                onClick={() => {
+                  setHistoryOpen((current,) => !current);
+                }}
+                disabled={loading || sharedLoading}
+                title="Show widget Git history"
+                aria-label="Show widget Git history"
+              >
+                <History strokeWidth={2} />
+              </button>
+            )}
             <button
               className={`widget-btn widget-btn-icon widget-btn-iterate ${isEditingInChat ? "widget-btn-active" : ""}`}
               onClick={() => {
@@ -649,6 +858,23 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
             </button>
           </div>
         </div>
+        {historyOpen && historyEnabled && file && path && (
+          <WidgetHistoryPanel
+            entries={historyEntries}
+            loading={historyLoading}
+            error={historyError}
+            diff={historyDiff}
+            selectedCommitId={selectedHistoryCommitId}
+            restoring={historyRestoring}
+            onClose={() => setHistoryOpen(false,)}
+            onSelect={(commitId,) => {
+              void handleSelectHistory(commitId,);
+            }}
+            onRestore={() => {
+              void handleRestoreHistory();
+            }}
+          />
+        )}
 
         {missingComponent
           ? (
