@@ -2812,7 +2812,7 @@ dependencies = [
 
 [[package]]
 name = "philo"
-version = "0.0.45"
+version = "0.0.46"
 dependencies = [
  "chrono",
  "git2",
