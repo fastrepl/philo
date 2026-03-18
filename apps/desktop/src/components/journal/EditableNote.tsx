@@ -277,6 +277,17 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
               return true;
             }
           }
+          if (
+            event.metaKey
+            && !event.altKey
+            && !event.ctrlKey
+            && (event.key === "ArrowUp" || event.key === "ArrowDown")
+          ) {
+            const { doc, } = _view.state;
+            const selection = event.key === "ArrowUp" ? Selection.atStart(doc,) : Selection.atEnd(doc,);
+            _view.dispatch(_view.state.tr.setSelection(selection,).scrollIntoView(),);
+            return true;
+          }
           if ((event.metaKey || event.ctrlKey) && event.key === "a") {
             const { doc, } = _view.state;
             const from = Selection.atStart(doc,).from;
