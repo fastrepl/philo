@@ -34,6 +34,9 @@ regex = "1"
 similar = "2"
 keyring = "3"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+git2 = { version = "0.20.2", default-features = false, features = ["vendored-libgit2"] }
+sha2 = "0.10.9"
+chrono = { version = "0.4.42", default-features = false, features = ["clock"] }
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-updater = "2"

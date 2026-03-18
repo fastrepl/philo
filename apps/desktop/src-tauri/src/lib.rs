@@ -3,6 +3,7 @@
 extern crate objc;
 
 pub mod philo_tools;
+pub mod widget_git;
 
 use keyring::{Entry as KeyringEntry, Error as KeyringError};
 use reqwest::blocking::{Client as HttpClient, Response as HttpResponse};
@@ -26,6 +27,11 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_fs::FsExt;
 #[cfg(desktop)]
 use tauri_plugin_updater::UpdaterExt;
+use widget_git::{
+    EnsureWidgetGitBaselineInput, RecordWidgetGitRevisionInput, RestoreWidgetGitRevisionInput,
+    WidgetGitDiff, WidgetGitDiffInput, WidgetGitHistoryEntry, WidgetGitHistoryInput,
+    WidgetGitRestoreResult,
+};
 
 const GOOGLE_OAUTH_DEFAULT_TIMEOUT_MS: u64 = 180_000;
 const GOOGLE_OAUTH_ACCESS_TOKEN_BUFFER_MS: u64 = 60_000;
@@ -3351,6 +3357,53 @@ fn extend_fs_scope(app: AppHandle, path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn ensure_widget_git_history_baseline(
+    app: AppHandle,
+    input: EnsureWidgetGitBaselineInput,
+) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+    widget_git::ensure_widget_git_history_baseline(&app_data_dir, input)
+}
+
+#[tauri::command]
+fn record_widget_git_revision(
+    app: AppHandle,
+    input: RecordWidgetGitRevisionInput,
+) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+    widget_git::record_widget_git_revision(&app_data_dir, input)
+}
+
+#[tauri::command]
+fn list_widget_git_history(
+    app: AppHandle,
+    input: WidgetGitHistoryInput,
+) -> Result<Vec<WidgetGitHistoryEntry>, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+    widget_git::list_widget_git_history(&app_data_dir, input)
+}
+
+#[tauri::command]
+fn get_widget_git_diff(app: AppHandle, input: WidgetGitDiffInput) -> Result<WidgetGitDiff, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+    widget_git::get_widget_git_diff(&app_data_dir, input)
+}
+
+#[tauri::command]
+fn restore_widget_git_revision(
+    app: AppHandle,
+    input: RestoreWidgetGitRevisionInput,
+) -> Result<WidgetGitRestoreResult, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+    widget_git::restore_widget_git_revision(&app_data_dir, input)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -3367,6 +3420,11 @@ pub fn run() {
         .manage(HttpStreamState::default())
         .invoke_handler(tauri::generate_handler![
             extend_fs_scope,
+            ensure_widget_git_history_baseline,
+            record_widget_git_revision,
+            list_widget_git_history,
+            get_widget_git_diff,
+            restore_widget_git_revision,
             find_obsidian_vaults,
             detect_obsidian_settings,
             bootstrap_obsidian_vault,
