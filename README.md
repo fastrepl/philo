@@ -2,36 +2,51 @@
 
 ![Philo app screenshot](docs/assets/philo-app-screenshot.png)
 
-Philo is a local-first daily notes app for planning and execution.
+Philo is the IDE for your daily notes.
 
-It keeps your notes as markdown on disk, works with existing Obsidian vaults, carries unfinished work forward automatically, and lets you generate small tools inline when a note needs one.
+Build widgets directly inside your notes. Keep daily planning in one timeline. Let unfinished and recurring work come back automatically. Keep everything as plain markdown on disk.
+
+Philo is built for the gap between capture and execution. Instead of writing something down and rebuilding the context later in another tool, you stay inside the note and keep moving.
+
+## Why Philo exists
+
+Most journaling apps are good at capture and weak at execution. Philo is designed to collapse that gap.
+
+The core bet is simple:
+
+- daily notes should help you run what you thought, not just remember it
+- unfinished tasks should carry forward until they are done
+- recurring work should reappear automatically
+- small tools should be cheap to generate right where the note needs them
 
 ## What Philo does
 
-- Keeps tomorrow, today, and recent notes in one continuous daily planning surface
-- Carries unfinished tasks forward so work does not disappear between days
-- Lets you chat with your notes, search across them, and prepare AI-assisted edits with dry-run diffs
-- Generates disposable or reusable widgets directly inside a note
-- Preserves markdown portability with support for images, wiki links, and Excalidraw embeds
-- Works with app-managed storage or an existing Obsidian vault
+- Keeps older notes in one continuous timeline instead of hiding them behind separate tabs and files
+- Rolls unfinished tasks into today automatically when the date changes
+- Brings recurring tasks back on schedule so your planning surface rebuilds itself
+- Generates disposable widgets inline for one-off tools, trackers, calculators, and experiments
+- Lets you keep the useful widgets in a small reusable library
+- Stores notes as plain markdown on disk and works with existing Obsidian vaults
+- Supports markdown-native content like images, wiki links, and Excalidraw embeds
+- Includes optional AI features for note chat, search, and dry-run edits inside the app
 
-## Product highlights
+## Product principles
 
-### Local-first by default
+### One calmer planning loop
 
-Philo stores notes as plain markdown files on disk instead of locking them into a database. You can point it at your own journal folder or an Obsidian vault and keep your existing file layout.
+Philo keeps tomorrow, today, and past notes close together so the page already knows what was in flight when you open it.
 
-### A calmer daily loop
+### Disposable by default
 
-The core workflow is simple: open today, see what carried over, write what matters, and keep moving. Philo keeps the planning surface short instead of sending you into a heavier project system.
+Many tools only need to exist for a day or a week. Philo makes widgets cheap to create, easy to delete, and reusable only when they earn it.
 
-### AI that works inside the note
+### Markdown, not lock-in
 
-Philo includes an in-app assistant named Sophia. It can answer questions against recent notes, cite what it used, and prepare note changes for review before anything is applied. Widget generation is also built in, so quick one-off tools can live right where the note needs them.
+Your notes stay as files you control. Philo is meant to sit beside your vault, not replace it.
 
-### Reusable when it earns it
+### Free and open source
 
-Generated widgets start disposable. When one proves useful, save it to the library and reuse it later in other notes.
+Philo is built to make daily notes lighter, not turn them into another subscription silo.
 
 ## Keyboard shortcuts
 
@@ -44,7 +59,9 @@ Generated widgets start disposable. When one proves useful, save it to the libra
 ## Links
 
 - Website: [philo.johnjeong.com](https://philo.johnjeong.com)
+- Blog: [Notes from the team](https://philo.johnjeong.com/blog)
 - Releases: [GitHub releases](https://github.com/ComputelessComputer/philo/releases)
+- Source: [GitHub repository](https://github.com/ComputelessComputer/philo)
 
 ## Stack
 
