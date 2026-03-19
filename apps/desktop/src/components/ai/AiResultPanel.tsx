@@ -11,6 +11,7 @@ interface AiResultPanelProps {
   applyingDates: string[];
   canApplyPendingChanges: boolean;
   canStartNewChat: boolean;
+  onQuickAction: (prompt: string,) => void;
   onNewChat: () => void;
   onSelectChat: (id: string,) => void;
   onOpenDate: (date: string,) => void;
@@ -25,6 +26,7 @@ export function AiResultPanel({
   applyingDates,
   canApplyPendingChanges,
   canStartNewChat,
+  onQuickAction,
   onNewChat,
   onSelectChat,
   onOpenDate,
@@ -40,6 +42,12 @@ export function AiResultPanel({
   const [historyOpen, setHistoryOpen,] = useState(false,);
   const scrollRef = useRef<HTMLDivElement>(null,);
   const panelTitle = title || activeChat?.title || "New chat";
+  const quickActions = [
+    "Help me figure out what to do today",
+    "/todo organize",
+    "Find any overdue tasks in my notes",
+    "Summarize the most relevant notes from the last week",
+  ];
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -120,6 +128,32 @@ export function AiResultPanel({
       </div>
 
       <div className="space-y-6 px-4 pt-4 pb-3">
+        {!hasTurns && (
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <p className="text-lg text-gray-900" style={{ fontFamily: '"Instrument Serif", serif', }}>
+                Hi, I&apos;m Sophia.
+              </p>
+              <p className="max-w-[36rem] text-sm leading-6 text-gray-600">
+                I can help you sort tasks, pull context from recent notes, and prepare edits for review before anything
+                gets applied.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {quickActions.map((action,) => (
+                <button
+                  key={action}
+                  type="button"
+                  onClick={() => onQuickAction(action,)}
+                  className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:border-gray-300 hover:bg-white hover:text-gray-900"
+                >
+                  {action}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {turns.map((turn, turnIndex,) => {
           const canManagePendingChanges = canApplyPendingChanges && turnIndex === turns.length - 1;
           return (

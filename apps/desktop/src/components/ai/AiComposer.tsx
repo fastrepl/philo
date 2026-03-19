@@ -101,6 +101,10 @@ export function AiComposer({
                     applyingDates={applyingDates}
                     canApplyPendingChanges={canApplyPendingChanges}
                     canStartNewChat={!isSubmitting}
+                    onQuickAction={(value,) => {
+                      onPromptChange(value,);
+                      window.setTimeout(() => inputRef.current?.focus(), 0,);
+                    }}
                     onNewChat={() => {
                       onNewChat();
                       window.setTimeout(() => inputRef.current?.focus(), 0,);
