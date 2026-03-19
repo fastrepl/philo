@@ -1,6 +1,5 @@
 import { ChevronDown, Plus, } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, } from "react";
-import type { AssistantCitation, AssistantPendingChange, } from "../../services/assistant";
 import type { ChatHistoryEntry, } from "../../services/chats";
 import { AiDiffPreview, } from "./AiDiffPreview";
 import { AiMarkdown, } from "./AiMarkdown";
@@ -9,9 +8,6 @@ interface AiResultPanelProps {
   title: string | null;
   activeChatId: string | null;
   chatHistory: ChatHistoryEntry[];
-  answer: string | null;
-  citations: AssistantCitation[];
-  pendingChanges: AssistantPendingChange[];
   applyingDates: string[];
   canApplyPendingChanges: boolean;
   canStartNewChat: boolean;
@@ -26,9 +22,6 @@ export function AiResultPanel({
   title,
   activeChatId,
   chatHistory,
-  answer,
-  citations,
-  pendingChanges,
   applyingDates,
   canApplyPendingChanges,
   canStartNewChat,
@@ -42,24 +35,23 @@ export function AiResultPanel({
     () => chatHistory.find((chat,) => chat.id === activeChatId) ?? null,
     [activeChatId, chatHistory,],
   );
-  const prompt = activeChat?.prompt?.trim() ?? "";
-  const hasPrompt = prompt.length > 0;
-  const hasContent = Boolean(answer,) || citations.length > 0 || pendingChanges.length > 0;
+  const turns = activeChat?.turns ?? [];
+  const hasTurns = turns.length > 0;
   const [historyOpen, setHistoryOpen,] = useState(false,);
   const scrollRef = useRef<HTMLDivElement>(null,);
   const panelTitle = title || activeChat?.title || "New chat";
 
   useEffect(() => {
     const container = scrollRef.current;
-    if (!container || (!hasPrompt && !hasContent)) return;
+    if (!container || !hasTurns) return;
     container.scrollTop = container.scrollHeight;
-  }, [answer, citations.length, hasContent, hasPrompt, pendingChanges.length, prompt,],);
+  }, [activeChat?.updatedAt, hasTurns,],);
 
   useEffect(() => {
     setHistoryOpen(false,);
   }, [activeChatId,],);
 
-  if (!hasPrompt && !hasContent && chatHistory.length === 0 && !title) {
+  if (!hasTurns && chatHistory.length === 0 && !title) {
     return null;
   }
 
@@ -118,7 +110,7 @@ export function AiResultPanel({
                     className="mt-1 text-[11px] uppercase tracking-[0.18em] text-gray-400"
                     style={{ fontFamily: "'IBM Plex Mono', monospace", }}
                   >
-                    {formatChatTimestamp(chat.createdAt,)}
+                    {formatChatTimestamp(chat.updatedAt,)}
                   </p>
                 </button>
               ))}
@@ -127,125 +119,132 @@ export function AiResultPanel({
         </div>
       </div>
 
-      <div className="space-y-4 px-4 pt-4 pb-3">
-        {hasPrompt && (
-          <div className="flex justify-end">
-            <div className="max-w-[85%] rounded-[20px] bg-gray-900 px-4 py-3 text-sm leading-6 text-white">
-              <p className="whitespace-pre-wrap">{prompt}</p>
-            </div>
-          </div>
-        )}
+      <div className="space-y-6 px-4 pt-4 pb-3">
+        {turns.map((turn, turnIndex,) => {
+          const canManagePendingChanges = canApplyPendingChanges && turnIndex === turns.length - 1;
+          return (
+            <div key={turn.createdAt} className="space-y-4">
+              {turn.prompt.trim() && (
+                <div className="flex justify-end">
+                  <div className="max-w-[85%] rounded-[20px] bg-gray-900 px-4 py-3 text-sm leading-6 text-white">
+                    <p className="whitespace-pre-wrap">{turn.prompt}</p>
+                  </div>
+                </div>
+              )}
 
-        {answer && (
-          <div className="space-y-2">
-            <AiMarkdown markdown={answer} />
-          </div>
-        )}
+              {turn.answer && (
+                <div className="space-y-2">
+                  <AiMarkdown markdown={turn.answer} />
+                </div>
+              )}
 
-        {citations.length > 0 && (
-          <div className="space-y-2">
-            <p
-              className="text-[11px] uppercase tracking-[0.22em] text-gray-400"
-              style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-            >
-              note citations
-            </p>
-            <div className="space-y-2">
-              {citations.map((citation,) => (
-                <button
-                  key={citation.date}
-                  onClick={() => onOpenDate(citation.date,)}
-                  className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-3 text-left transition-colors hover:border-gray-300"
-                >
-                  <p className="text-sm font-medium text-gray-900">{citation.title}</p>
+              {turn.citations.length > 0 && (
+                <div className="space-y-2">
                   <p
-                    className="mt-1 text-[11px] uppercase tracking-[0.18em] text-gray-400"
+                    className="text-[11px] uppercase tracking-[0.22em] text-gray-400"
                     style={{ fontFamily: "'IBM Plex Mono', monospace", }}
                   >
-                    {citation.date}
+                    note citations
                   </p>
-                  {citation.snippet && (
-                    <p className="mt-2 text-sm leading-5 text-gray-600">
-                      {citation.snippet}
-                    </p>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {pendingChanges.length > 0 && (
-          <div className="space-y-3">
-            <p
-              className="text-[11px] uppercase tracking-[0.22em] text-gray-400"
-              style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-            >
-              pending changes
-            </p>
-            {pendingChanges.map((change,) => {
-              const isApplying = applyingDates.includes(change.date,);
-
-              return (
-                <div
-                  key={change.date}
-                  className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50/80 px-3 py-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{change.date}</p>
-                      <p
-                        className="text-[11px] uppercase tracking-[0.18em] text-gray-400"
-                        style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                  <div className="space-y-2">
+                    {turn.citations.map((citation,) => (
+                      <button
+                        key={`${turn.createdAt}-${citation.date}`}
+                        onClick={() => onOpenDate(citation.date,)}
+                        className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-3 text-left transition-colors hover:border-gray-300"
                       >
-                        {canApplyPendingChanges ? "dry run" : "history snapshot"}
-                      </p>
-                    </div>
-                    {canApplyPendingChanges
-                      ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => onOpenDate(change.date,)}
-                            className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
-                            style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                          >
-                            Open note
-                          </button>
-                          <button
-                            onClick={() => onDiscardChange(change.date,)}
-                            disabled={isApplying}
-                            className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
-                            style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                          >
-                            Discard
-                          </button>
-                          <button
-                            onClick={() => onApplyChange(change.date,)}
-                            disabled={isApplying}
-                            className="rounded-full bg-gray-900 px-3 py-1.5 text-xs text-white transition-colors disabled:cursor-not-allowed disabled:bg-gray-300"
-                            style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                          >
-                            {isApplying ? "Applying..." : "Apply"}
-                          </button>
-                        </div>
-                      )
-                      : (
-                        <button
-                          onClick={() => onOpenDate(change.date,)}
-                          className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+                        <p className="text-sm font-medium text-gray-900">{citation.title}</p>
+                        <p
+                          className="mt-1 text-[11px] uppercase tracking-[0.18em] text-gray-400"
                           style={{ fontFamily: "'IBM Plex Mono', monospace", }}
                         >
-                          Open note
-                        </button>
-                      )}
+                          {citation.date}
+                        </p>
+                        {citation.snippet && (
+                          <p className="mt-2 text-sm leading-5 text-gray-600">
+                            {citation.snippet}
+                          </p>
+                        )}
+                      </button>
+                    ))}
                   </div>
-
-                  <AiDiffPreview unifiedDiff={change.unifiedDiff} />
                 </div>
-              );
-            },)}
-          </div>
-        )}
+              )}
+
+              {turn.pendingChanges.length > 0 && (
+                <div className="space-y-3">
+                  <p
+                    className="text-[11px] uppercase tracking-[0.22em] text-gray-400"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                  >
+                    pending changes
+                  </p>
+                  {turn.pendingChanges.map((change,) => {
+                    const isApplying = applyingDates.includes(change.date,);
+
+                    return (
+                      <div
+                        key={`${turn.createdAt}-${change.date}`}
+                        className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50/80 px-3 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{change.date}</p>
+                            <p
+                              className="text-[11px] uppercase tracking-[0.18em] text-gray-400"
+                              style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                            >
+                              {canManagePendingChanges ? "dry run" : "history snapshot"}
+                            </p>
+                          </div>
+                          {canManagePendingChanges
+                            ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => onOpenDate(change.date,)}
+                                  className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+                                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                                >
+                                  Open note
+                                </button>
+                                <button
+                                  onClick={() => onDiscardChange(change.date,)}
+                                  disabled={isApplying}
+                                  className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                                >
+                                  Discard
+                                </button>
+                                <button
+                                  onClick={() => onApplyChange(change.date,)}
+                                  disabled={isApplying}
+                                  className="rounded-full bg-gray-900 px-3 py-1.5 text-xs text-white transition-colors disabled:cursor-not-allowed disabled:bg-gray-300"
+                                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                                >
+                                  {isApplying ? "Applying..." : "Apply"}
+                                </button>
+                              </div>
+                            )
+                            : (
+                              <button
+                                onClick={() => onOpenDate(change.date,)}
+                                className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+                                style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                              >
+                                Open note
+                              </button>
+                            )}
+                        </div>
+
+                        <AiDiffPreview unifiedDiff={change.unifiedDiff} />
+                      </div>
+                    );
+                  },)}
+                </div>
+              )}
+            </div>
+          );
+        },)}
       </div>
     </div>
   );

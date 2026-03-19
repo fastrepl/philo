@@ -1,6 +1,5 @@
 import { ArrowUp, LoaderCircle, Square, } from "lucide-react";
 import { useEffect, useRef, } from "react";
-import type { AssistantCitation, AssistantPendingChange, } from "../../services/assistant";
 import type { ChatHistoryEntry, } from "../../services/chats";
 import { AiResultPanel, } from "./AiResultPanel";
 
@@ -12,9 +11,6 @@ interface AiComposerProps {
   title: string | null;
   activeChatId: string | null;
   chatHistory: ChatHistoryEntry[];
-  answer: string | null;
-  citations: AssistantCitation[];
-  pendingChanges: AssistantPendingChange[];
   applyingDates: string[];
   canApplyPendingChanges: boolean;
   hasAiConfigured: boolean;
@@ -42,9 +38,6 @@ export function AiComposer({
   title,
   activeChatId,
   chatHistory,
-  answer,
-  citations,
-  pendingChanges,
   applyingDates,
   canApplyPendingChanges,
   hasAiConfigured,
@@ -63,10 +56,9 @@ export function AiComposer({
   onDiscardChange,
 }: AiComposerProps,) {
   const inputRef = useRef<HTMLInputElement>(null,);
-  const hasResult = Boolean(answer,) || citations.length > 0 || pendingChanges.length > 0;
   const visibleSelectedLabel = selectedLabel ?? (selectedText ? formatSelectedLabel(selectedText,) : null);
   const widgetEditLabel = parseWidgetEditLabel(visibleSelectedLabel,);
-  const hasPanel = !widgetEditLabel && (hasResult || Boolean(title,) || Boolean(activeChatId,));
+  const hasPanel = !widgetEditLabel && (chatHistory.length > 0 || Boolean(title,) || Boolean(activeChatId,));
 
   useEffect(() => {
     if (!open || !hasAiConfigured) return;
@@ -105,9 +97,6 @@ export function AiComposer({
                     title={title}
                     activeChatId={activeChatId}
                     chatHistory={chatHistory}
-                    answer={answer}
-                    citations={citations}
-                    pendingChanges={pendingChanges}
                     applyingDates={applyingDates}
                     canApplyPendingChanges={canApplyPendingChanges}
                     canStartNewChat={!isSubmitting}

@@ -17,10 +17,13 @@ import {
   runAssistant,
 } from "../../services/assistant";
 import {
+  appendChatHistoryTurn,
   buildChatHistoryEntry,
   type ChatHistoryEntry,
   deriveChatTitle,
+  getLatestChatTurn,
   loadChatHistory,
+  replaceLatestChatHistoryTurnResult,
   saveChatHistoryEntry,
 } from "../../services/chats";
 import { syncGoogleImports, } from "../../services/google-imports";
@@ -325,7 +328,7 @@ export default function AppLayout() {
   const upsertAiChatHistoryEntry = useCallback((entry: ChatHistoryEntry, persist = true,) => {
     setAiChatHistory((current,) => {
       const next = [entry, ...current.filter((item,) => item.id !== entry.id),];
-      next.sort((left, right,) => right.createdAt.localeCompare(left.createdAt,));
+      next.sort((left, right,) => right.updatedAt.localeCompare(left.updatedAt,));
       return next;
     },);
     if (persist) {
@@ -337,42 +340,22 @@ export default function AppLayout() {
     () => aiChatHistory.find((chat,) => chat.id === aiActiveChatId) ?? null,
     [aiActiveChatId, aiChatHistory,],
   );
-  const displayedAiResult = useMemo(() => {
-    if (aiRunning || aiResult) {
-      return aiResult;
-    }
-
-    if (!activeAiChat) {
-      return null;
-    }
-
-    return {
-      answer: activeAiChat.answer,
-      citations: activeAiChat.citations,
-      pendingChanges: activeAiChat.pendingChanges,
-    } satisfies AssistantResult;
-  }, [activeAiChat, aiResult, aiRunning,],);
   const canApplyPendingChanges = !aiRunning && !!aiResult && !!activeAiChat && activeAiChat.id === aiLatestChatId;
   const aiPanelTitle = useMemo(() => {
-    if (aiRunning || aiResult) {
-      const sourcePrompt = aiLastSubmittedPromptRef.current || aiPrompt;
-      return sourcePrompt.trim() ? deriveChatTitle(sourcePrompt, aiResult?.answer ?? null,) : null;
-    }
-
-    return activeAiChat?.title ?? null;
-  }, [activeAiChat?.title, aiPrompt, aiResult, aiRunning,],);
+    if (activeAiChat) return activeAiChat.title;
+    return aiPrompt.trim() ? deriveChatTitle(aiPrompt, null,) : null;
+  }, [activeAiChat, aiPrompt,],);
 
   const syncLatestAiChatHistory = useCallback((result: AssistantResult | null,) => {
     if (!aiLatestChatId) return;
     const existing = aiChatHistory.find((chat,) => chat.id === aiLatestChatId);
     if (!existing) return;
 
-    upsertAiChatHistoryEntry({
-      ...existing,
+    upsertAiChatHistoryEntry(replaceLatestChatHistoryTurnResult(existing, {
       answer: result?.answer ?? "",
       citations: result?.citations ?? [],
       pendingChanges: result?.pendingChanges ?? [],
-    },);
+    },),);
   }, [aiChatHistory, aiLatestChatId, upsertAiChatHistoryEntry,],);
 
   const clearWidgetEditSession = useCallback(() => {
@@ -858,25 +841,33 @@ export default function AppLayout() {
     if (!todayNoteValue || aiRunning || !normalizedPrompt) return;
     const previousActiveChatId = aiActiveChatId;
     const previousLatestChatId = aiLatestChatId;
-    const draftEntry = buildChatHistoryEntry({
-      prompt: normalizedPrompt,
-      selectedText: aiSelectedText ?? null,
-      scope: aiScope,
-      result: {
-        answer: "",
-        citations: [],
-        pendingChanges: [],
-      },
-    },);
+    const currentChat = aiActiveChatId
+      ? aiChatHistory.find((chat,) => chat.id === aiActiveChatId) ?? null
+      : null;
+    const draftEntry = currentChat
+      ? appendChatHistoryTurn(currentChat, {
+        prompt: normalizedPrompt,
+        selectedText: aiSelectedText ?? null,
+        result: {
+          answer: "",
+          citations: [],
+          pendingChanges: [],
+        },
+      },)
+      : buildChatHistoryEntry({
+        prompt: normalizedPrompt,
+        selectedText: aiSelectedText ?? null,
+        scope: aiScope,
+        result: {
+          answer: "",
+          citations: [],
+          pendingChanges: [],
+        },
+      },);
     let latestResult: AssistantResult | null = null;
 
     const syncDraftEntry = (result: AssistantResult, persist = false,) => {
-      const nextEntry = {
-        ...draftEntry,
-        answer: result.answer,
-        citations: result.citations,
-        pendingChanges: result.pendingChanges,
-      };
+      const nextEntry = replaceLatestChatHistoryTurnResult(draftEntry, result,);
       upsertAiChatHistoryEntry(nextEntry, persist,);
       return nextEntry;
     };
@@ -896,6 +887,12 @@ export default function AppLayout() {
       const result = await runAssistant({
         prompt: normalizedPrompt,
         selectedText: aiSelectedText,
+        history: (currentChat?.turns ?? []).map((turn,) => ({
+          prompt: turn.prompt,
+          answer: turn.answer,
+          selectedText: turn.selectedText,
+          createdAt: turn.createdAt,
+        })),
         scope: aiScope,
         context: {
           today: todayNoteValue,
@@ -924,7 +921,11 @@ export default function AppLayout() {
           || latestResult.pendingChanges.length > 0
         );
       if (!hasDraftContent) {
-        setAiChatHistory((current,) => current.filter((item,) => item.id !== draftEntry.id));
+        if (currentChat) {
+          upsertAiChatHistoryEntry(currentChat, false,);
+        } else {
+          setAiChatHistory((current,) => current.filter((item,) => item.id !== draftEntry.id));
+        }
         setAiActiveChatId(previousActiveChatId,);
         setAiLatestChatId(previousLatestChatId,);
       } else if (latestResult) {
@@ -947,6 +948,7 @@ export default function AppLayout() {
     }
   }, [
     aiActiveChatId,
+    aiChatHistory,
     aiLatestChatId,
     aiRunning,
     aiScope,
@@ -1019,13 +1021,24 @@ export default function AppLayout() {
   const handleSelectAiChat = useCallback((id: string,) => {
     const chat = aiChatHistory.find((item,) => item.id === id);
     if (!chat) return;
+    const latestTurn = getLatestChatTurn(chat,);
     setAiActiveChatId(chat.id,);
-    setAiPrompt(chat.prompt,);
-    setAiSelectedText(chat.selectedText,);
+    setAiPrompt("",);
+    setAiResult(
+      chat.id === aiLatestChatId && latestTurn
+        ? {
+          answer: latestTurn.answer,
+          citations: latestTurn.citations,
+          pendingChanges: latestTurn.pendingChanges,
+        }
+        : null,
+    );
+    setAiError(null,);
+    setAiSelectedText(null,);
     setAiSelectionHighlight(null,);
     setAiScope(chat.scope,);
-    aiLastSubmittedPromptRef.current = chat.prompt;
-  }, [aiChatHistory,],);
+    aiLastSubmittedPromptRef.current = latestTurn?.prompt ?? "";
+  }, [aiChatHistory, aiLatestChatId,],);
 
   const handleStartNewAiChat = useCallback(() => {
     const selection = currentSelectionRef.current;
@@ -1395,14 +1408,11 @@ export default function AppLayout() {
       <AiComposer
         open={aiComposerOpen}
         prompt={aiPrompt}
-        selectedText={aiSelectedText ?? activeAiChat?.selectedText ?? null}
+        selectedText={aiSelectedText}
         selectedLabel={aiSelectedLabel}
         title={aiPanelTitle}
         activeChatId={aiActiveChatId}
         chatHistory={aiChatHistory}
-        answer={displayedAiResult?.answer ?? null}
-        citations={displayedAiResult?.citations ?? []}
-        pendingChanges={displayedAiResult?.pendingChanges ?? []}
         applyingDates={aiApplyingDates}
         canApplyPendingChanges={canApplyPendingChanges}
         hasAiConfigured={hasAiConfigured}

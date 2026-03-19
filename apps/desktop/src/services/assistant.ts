@@ -15,9 +15,17 @@ interface AssistantContext {
   recentNotes: DailyNote[];
 }
 
+export interface AssistantConversationTurn {
+  prompt: string;
+  answer: string;
+  selectedText?: string | null;
+  createdAt?: string;
+}
+
 interface AssistantRequest {
   prompt: string;
   selectedText?: string | null;
+  history?: AssistantConversationTurn[];
   scope: AssistantScope;
   context: AssistantContext;
 }
@@ -151,6 +159,7 @@ Rules:
 - Use tools instead of guessing.
 - The currently open note is already included in the request as \`openNoteSnapshot\`. Treat it as accessible source material.
 - If \`selectedText\` is present in the request, treat it as the user's current focus.
+- If \`conversationHistory\` is present in the request, treat it as the current chat thread and answer follow-up questions in that context.
 - For information requests, search first and only read the most relevant notes.
 - Read at most 5 notes unless the user explicitly names dates.
 - Cite note dates in your final answer when making claims.
@@ -176,6 +185,12 @@ function buildInitialPrompt(
     {
       prompt: request.prompt,
       selectedText: request.selectedText?.trim() || null,
+      conversationHistory: (request.history ?? []).map((turn,) => ({
+        prompt: turn.prompt,
+        answer: turn.answer,
+        selectedText: turn.selectedText?.trim() || null,
+        createdAt: turn.createdAt ?? null,
+      })),
       scope: request.scope,
       temporalContext: temporal,
       openNoteSnapshot: {

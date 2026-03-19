@@ -4,11 +4,21 @@ import type { AssistantCitation, AssistantPendingChange, AssistantResult, Assist
 import { getChatsDir, } from "./paths";
 
 const CHAT_FILE_SUFFIX = ".json";
-const CHAT_FILE_VERSION = 1;
+const CHAT_FILE_VERSION = 2;
+
+export interface ChatTurn {
+  prompt: string;
+  selectedText: string | null;
+  answer: string;
+  citations: AssistantCitation[];
+  pendingChanges: AssistantPendingChange[];
+  createdAt: string;
+}
 
 export interface ChatHistoryEntry {
   id: string;
   title: string;
+  turns: ChatTurn[];
   prompt: string;
   selectedText: string | null;
   scope: AssistantScope;
@@ -16,6 +26,7 @@ export interface ChatHistoryEntry {
   citations: AssistantCitation[];
   pendingChanges: AssistantPendingChange[];
   createdAt: string;
+  updatedAt: string;
 }
 
 function normalizeTitleSource(value: string,) {
@@ -76,37 +87,110 @@ function isPendingChange(value: unknown,): value is AssistantPendingChange {
   );
 }
 
+function isChatTurn(value: unknown,): value is ChatTurn {
+  if (!value || typeof value !== "object") return false;
+  const turn = value as ChatTurn;
+  return (
+    typeof turn.prompt === "string"
+    && typeof turn.answer === "string"
+    && typeof turn.createdAt === "string"
+    && (turn.selectedText === null || turn.selectedText === undefined || typeof turn.selectedText === "string")
+    && Array.isArray(turn.citations,)
+    && turn.citations.every(isCitation,)
+    && Array.isArray(turn.pendingChanges,)
+    && turn.pendingChanges.every(isPendingChange,)
+  );
+}
+
+function getLatestTurn(turns: ChatTurn[],) {
+  return turns[turns.length - 1] ?? null;
+}
+
+function materializeChatHistoryEntry(input: {
+  id: string;
+  title: string;
+  turns: ChatTurn[];
+  scope: AssistantScope;
+  createdAt: string;
+  updatedAt: string;
+},): ChatHistoryEntry | null {
+  if (input.turns.length === 0) return null;
+  const latestTurn = getLatestTurn(input.turns,);
+  if (!latestTurn) return null;
+
+  return {
+    id: input.id,
+    title: input.title,
+    turns: input.turns,
+    prompt: latestTurn.prompt,
+    selectedText: latestTurn.selectedText,
+    scope: input.scope,
+    answer: latestTurn.answer,
+    citations: latestTurn.citations,
+    pendingChanges: latestTurn.pendingChanges,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+  };
+}
+
 function parseChatHistoryEntry(raw: string,): ChatHistoryEntry | null {
   try {
     const value = JSON.parse(raw,) as Partial<ChatHistoryEntry> & { version?: number; };
-    if (value.version !== CHAT_FILE_VERSION) return null;
+    if (value.version === 1) {
+      if (
+        typeof value.id !== "string"
+        || typeof value.title !== "string"
+        || typeof value.prompt !== "string"
+        || typeof value.answer !== "string"
+        || typeof value.createdAt !== "string"
+        || (value.selectedText !== null && value.selectedText !== undefined && typeof value.selectedText !== "string")
+        || (value.scope !== "today" && value.scope !== "recent")
+        || !Array.isArray(value.citations,)
+        || !value.citations.every(isCitation,)
+        || !Array.isArray(value.pendingChanges,)
+        || !value.pendingChanges.every(isPendingChange,)
+      ) {
+        return null;
+      }
+
+      return materializeChatHistoryEntry({
+        id: value.id,
+        title: value.title,
+        turns: [{
+          prompt: value.prompt,
+          selectedText: value.selectedText ?? null,
+          answer: value.answer,
+          citations: value.citations,
+          pendingChanges: value.pendingChanges,
+          createdAt: value.createdAt,
+        },],
+        scope: value.scope,
+        createdAt: value.createdAt,
+        updatedAt: value.createdAt,
+      },);
+    }
+
     if (
-      typeof value.id !== "string"
+      value.version !== CHAT_FILE_VERSION
+      || typeof value.id !== "string"
       || typeof value.title !== "string"
-      || typeof value.prompt !== "string"
-      || typeof value.answer !== "string"
       || typeof value.createdAt !== "string"
-      || (value.selectedText !== null && value.selectedText !== undefined && typeof value.selectedText !== "string")
+      || typeof value.updatedAt !== "string"
       || (value.scope !== "today" && value.scope !== "recent")
-      || !Array.isArray(value.citations,)
-      || !value.citations.every(isCitation,)
-      || !Array.isArray(value.pendingChanges,)
-      || !value.pendingChanges.every(isPendingChange,)
+      || !Array.isArray(value.turns,)
+      || !value.turns.every(isChatTurn,)
     ) {
       return null;
     }
 
-    return {
+    return materializeChatHistoryEntry({
       id: value.id,
       title: value.title,
-      prompt: value.prompt,
-      selectedText: value.selectedText ?? null,
+      turns: value.turns,
       scope: value.scope,
-      answer: value.answer,
-      citations: value.citations,
-      pendingChanges: value.pendingChanges,
       createdAt: value.createdAt,
-    };
+      updatedAt: value.updatedAt,
+    },);
   } catch {
     return null;
   }
@@ -128,18 +212,75 @@ export function buildChatHistoryEntry(input: {
 },): ChatHistoryEntry {
   const createdAt = input.createdAt ?? new Date().toISOString();
   const title = deriveChatTitle(input.prompt, input.result.answer,);
-
-  return {
+  return materializeChatHistoryEntry({
     id: buildChatId(title, createdAt,),
     title,
-    prompt: input.prompt.trim(),
-    selectedText: input.selectedText?.trim() || null,
+    turns: [{
+      prompt: input.prompt.trim(),
+      selectedText: input.selectedText?.trim() || null,
+      answer: input.result.answer,
+      citations: input.result.citations,
+      pendingChanges: input.result.pendingChanges,
+      createdAt,
+    },],
     scope: input.scope,
-    answer: input.result.answer,
-    citations: input.result.citations,
-    pendingChanges: input.result.pendingChanges,
     createdAt,
-  };
+    updatedAt: createdAt,
+  },)!;
+}
+
+export function appendChatHistoryTurn(entry: ChatHistoryEntry, input: {
+  prompt: string;
+  selectedText: string | null;
+  result: AssistantResult;
+  createdAt?: string;
+},): ChatHistoryEntry {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  return materializeChatHistoryEntry({
+    id: entry.id,
+    title: entry.title,
+    turns: [
+      ...entry.turns,
+      {
+        prompt: input.prompt.trim(),
+        selectedText: input.selectedText?.trim() || null,
+        answer: input.result.answer,
+        citations: input.result.citations,
+        pendingChanges: input.result.pendingChanges,
+        createdAt,
+      },
+    ],
+    scope: entry.scope,
+    createdAt: entry.createdAt,
+    updatedAt: createdAt,
+  },)!;
+}
+
+export function replaceLatestChatHistoryTurnResult(entry: ChatHistoryEntry, result: AssistantResult,) {
+  if (entry.turns.length === 0) return entry;
+  const lastIndex = entry.turns.length - 1;
+  const nextTurns = entry.turns.map((turn, index,) =>
+    index === lastIndex
+      ? {
+        ...turn,
+        answer: result.answer,
+        citations: result.citations,
+        pendingChanges: result.pendingChanges,
+      }
+      : turn
+  );
+  return materializeChatHistoryEntry({
+    id: entry.id,
+    title: entry.title,
+    turns: nextTurns,
+    scope: entry.scope,
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt,
+  },)!;
+}
+
+export function getLatestChatTurn(entry: ChatHistoryEntry,) {
+  return getLatestTurn(entry.turns,);
 }
 
 async function ensureChatsDir() {
@@ -192,5 +333,5 @@ export async function loadChatHistory(): Promise<ChatHistoryEntry[]> {
 
   return chats
     .filter((entry,): entry is ChatHistoryEntry => entry !== null)
-    .sort((left, right,) => right.createdAt.localeCompare(left.createdAt,));
+    .sort((left, right,) => right.updatedAt.localeCompare(left.updatedAt,));
 }
