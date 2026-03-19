@@ -462,6 +462,21 @@ export default function AppLayout() {
     refreshAiAvailability();
   }, [clearWidgetEditSession, refreshAiAvailability,],);
 
+  const handleStartNewAiChat = useCallback(() => {
+    const selection = currentSelectionRef.current;
+    setAiActiveChatId(null,);
+    setAiPrompt("",);
+    setAiResult(null,);
+    setAiError(null,);
+    setAiSelectedLabel(null,);
+    setAiSelectedText(selection?.text ?? null,);
+    setAiSelectionHighlight(
+      selection ? { noteDate: selection.noteDate, from: selection.from, to: selection.to, } : null,
+    );
+    setAiScope("recent",);
+    aiLastSubmittedPromptRef.current = "";
+  }, [],);
+
   const closeAiComposer = useCallback(() => {
     clearWidgetEditSession();
     setAiComposerOpen(false,);
@@ -588,6 +603,12 @@ export default function AppLayout() {
 
   useEffect(() => {
     const handleHotkey = (event: KeyboardEvent,) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n" && aiComposerOpen) {
+        event.preventDefault();
+        handleStartNewAiChat();
+        return;
+      }
+
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "j") {
         event.preventDefault();
         if (aiComposerOpen) {
@@ -659,6 +680,7 @@ export default function AppLayout() {
     globalSearchResults,
     globalSearchSelectedIndex,
     getCurrentSelectionText,
+    handleStartNewAiChat,
     openAiComposer,
     openGlobalSearch,
     openGlobalSearchResult,
@@ -1064,21 +1086,6 @@ export default function AppLayout() {
     setAiScope(chat.scope,);
     aiLastSubmittedPromptRef.current = latestTurn?.prompt ?? "";
   }, [aiChatHistory, aiLatestChatId,],);
-
-  const handleStartNewAiChat = useCallback(() => {
-    const selection = currentSelectionRef.current;
-    setAiActiveChatId(null,);
-    setAiPrompt("",);
-    setAiResult(null,);
-    setAiError(null,);
-    setAiSelectedLabel(null,);
-    setAiSelectedText(selection?.text ?? null,);
-    setAiSelectionHighlight(
-      selection ? { noteDate: selection.noteDate, from: selection.from, to: selection.to, } : null,
-    );
-    setAiScope("recent",);
-    aiLastSubmittedPromptRef.current = "";
-  }, [],);
 
   const handleEditorInteract = useCallback(() => {
     if (!aiComposerOpen) return;
