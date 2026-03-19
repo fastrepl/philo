@@ -64,8 +64,8 @@ Philo is built to make daily notes lighter, not turn them into another subscript
 
 ## Links
 
-- Website: [philo.johnjeong.com](https://philo.johnjeong.com)
-- Blog: [Notes from the team](https://philo.johnjeong.com/blog)
+- Website: [philo.so](https://philo.so)
+- Blog: [Notes from the team](https://philo.so/blog)
 - Releases: [GitHub releases](https://github.com/ComputelessComputer/philo/releases)
 - Source: [GitHub repository](https://github.com/ComputelessComputer/philo)
 
