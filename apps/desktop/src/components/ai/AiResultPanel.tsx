@@ -37,26 +37,28 @@ export function AiResultPanel({
   onApplyChange,
   onDiscardChange,
 }: AiResultPanelProps,) {
-  const hasContent = Boolean(answer,) || citations.length > 0 || pendingChanges.length > 0;
-  const [historyOpen, setHistoryOpen,] = useState(false,);
-  const scrollRef = useRef<HTMLDivElement>(null,);
   const activeChat = useMemo(
     () => chatHistory.find((chat,) => chat.id === activeChatId) ?? null,
     [activeChatId, chatHistory,],
   );
+  const prompt = activeChat?.prompt?.trim() ?? "";
+  const hasPrompt = prompt.length > 0;
+  const hasContent = Boolean(answer,) || citations.length > 0 || pendingChanges.length > 0;
+  const [historyOpen, setHistoryOpen,] = useState(false,);
+  const scrollRef = useRef<HTMLDivElement>(null,);
   const panelTitle = title || activeChat?.title || "New chat";
 
   useEffect(() => {
     const container = scrollRef.current;
-    if (!container || !hasContent) return;
+    if (!container || (!hasPrompt && !hasContent)) return;
     container.scrollTop = container.scrollHeight;
-  }, [answer, citations.length, hasContent, pendingChanges.length,],);
+  }, [answer, citations.length, hasContent, hasPrompt, pendingChanges.length, prompt,],);
 
   useEffect(() => {
     setHistoryOpen(false,);
   }, [activeChatId,],);
 
-  if (!hasContent && chatHistory.length === 0 && !title) {
+  if (!hasPrompt && !hasContent && chatHistory.length === 0 && !title) {
     return null;
   }
 
@@ -125,6 +127,14 @@ export function AiResultPanel({
       </div>
 
       <div className="space-y-4 px-4 pt-4 pb-3">
+        {hasPrompt && (
+          <div className="flex justify-end">
+            <div className="max-w-[85%] rounded-[20px] bg-gray-900 px-4 py-3 text-sm leading-6 text-white">
+              <p className="whitespace-pre-wrap">{prompt}</p>
+            </div>
+          </div>
+        )}
+
         {answer && (
           <div className="space-y-2">
             <p className="whitespace-pre-wrap text-sm leading-6 text-gray-900">
