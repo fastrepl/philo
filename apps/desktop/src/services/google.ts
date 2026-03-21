@@ -50,6 +50,67 @@ export function isGoogleAccountConnected(settings: Settings,) {
   return settings.googleAccounts.length > 0;
 }
 
+function createAbortError() {
+  return new DOMException("Google authorization cancelled.", "AbortError",);
+}
+
+function throwIfAborted(signal?: AbortSignal,) {
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
+}
+
+async function cancelGoogleOAuthCallback(sessionId: string,) {
+  await invoke("cancel_google_oauth_callback", { sessionId, },);
+}
+
+async function waitForGoogleOAuthCallback(sessionId: string, timeoutMs: number, signal?: AbortSignal,) {
+  throwIfAborted(signal,);
+
+  if (!signal) {
+    return await invoke<GoogleOAuthCallback>("wait_for_google_oauth_callback", {
+      sessionId,
+      timeoutMs,
+    },);
+  }
+
+  return await new Promise<GoogleOAuthCallback>((resolve, reject,) => {
+    let settled = false;
+
+    const cleanup = () => {
+      signal.removeEventListener("abort", handleAbort,);
+    };
+
+    const settle = (callback: () => void,) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    };
+
+    const handleAbort = () => {
+      void cancelGoogleOAuthCallback(sessionId,)
+        .catch(() => undefined)
+        .finally(() => {
+          settle(() => reject(createAbortError(),));
+        },);
+    };
+
+    signal.addEventListener("abort", handleAbort, { once: true, },);
+
+    invoke<GoogleOAuthCallback>("wait_for_google_oauth_callback", {
+      sessionId,
+      timeoutMs,
+    },)
+      .then((callback,) => {
+        settle(() => resolve(callback,));
+      },)
+      .catch((error,) => {
+        settle(() => reject(error,));
+      },);
+  },);
+}
+
 export function hasGoogleAccess(settings: Settings, scope: string, accountEmail?: string,) {
   const normalizedScope = scope.trim();
   if (!normalizedScope) return false;
@@ -166,7 +227,7 @@ async function saveGoogleFields(currentSettings: Settings, partial: Partial<Sett
 
 export async function connectGoogleAccount(
   settings: Settings,
-  options?: { expectedAccountEmail?: string; },
+  options?: { expectedAccountEmail?: string; signal?: AbortSignal; },
 ) {
   const clientId = settings.googleOAuthClientId.trim();
   if (!clientId) {
@@ -193,12 +254,19 @@ export async function connectGoogleAccount(
     authUrl.searchParams.set("login_hint", options.expectedAccountEmail,);
   }
 
-  await openUrl(authUrl.toString(),);
+  try {
+    throwIfAborted(options?.signal,);
+    await openUrl(authUrl.toString(),);
+  } catch (error) {
+    await cancelGoogleOAuthCallback(session.sessionId,).catch(() => undefined);
+    throw error;
+  }
 
-  const callback = await invoke<GoogleOAuthCallback>("wait_for_google_oauth_callback", {
-    sessionId: session.sessionId,
-    timeoutMs: GOOGLE_CONNECT_TIMEOUT_MS,
-  },);
+  const callback = await waitForGoogleOAuthCallback(
+    session.sessionId,
+    GOOGLE_CONNECT_TIMEOUT_MS,
+    options?.signal,
+  );
 
   if (callback.error) {
     throw new Error(callback.error,);
@@ -209,6 +277,8 @@ export async function connectGoogleAccount(
   if (callback.state !== state) {
     throw new Error("Google OAuth state mismatch. Please try again.",);
   }
+
+  throwIfAborted(options?.signal,);
 
   const result = await invoke<GoogleOAuthConnectionResult>("complete_google_oauth", {
     input: {
@@ -221,6 +291,8 @@ export async function connectGoogleAccount(
       redirectUri: session.redirectUri,
     },
   },);
+
+  throwIfAborted(options?.signal,);
 
   const account = buildGoogleAccount(
     result.accessTokenExpiresAtMs,

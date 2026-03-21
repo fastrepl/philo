@@ -465,11 +465,19 @@ export const SlashCommandExtension = Extension.create<{
 
         const $from = state.selection.$from;
         if ($from.parent.type.spec.code) return false;
+        if ($from.marks().some((mark,) => mark.type.name === "link")) return false;
 
         const textBefore = $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc",);
-        const activeText = textBefore.slice(Math.max(0, range.from - $from.start(),),);
+        const slashOffset = Math.max(0, range.from - $from.start(),);
+        const charBeforeSlash = textBefore.slice(Math.max(0, slashOffset - 1,), slashOffset,);
 
-        return /(?:^|\s)\/[^\s/]*$/.test(activeText,);
+        if (charBeforeSlash && !/\s/.test(charBeforeSlash,)) {
+          return false;
+        }
+
+        const activeText = textBefore.slice(slashOffset,);
+
+        return /^\/[^\s/]*$/.test(activeText,);
       },
       items: ({ query, },) => {
         const normalizedQuery = query.trim().toLowerCase();

@@ -311,6 +311,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const settingsRef = useRef<Settings | null>(null,);
   const lastSavedSettingsRef = useRef<Settings | null>(null,);
   const activeSaveRef = useRef<Promise<void> | null>(null,);
+  const googleAbortControllerRef = useRef<AbortController | null>(null,);
 
   useEffect(() => {
     if (open) {
@@ -329,6 +330,12 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       getJournalDir().then(setDefaultJournalDir,);
       setTimeout(() => inputRef.current?.focus(), 100,);
     }
+  }, [open,],);
+
+  useEffect(() => {
+    if (open) return;
+    googleAbortControllerRef.current?.abort();
+    googleAbortControllerRef.current = null;
   }, [open,],);
 
   useEffect(() => {
@@ -385,6 +392,9 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const filenamePreview = applyFilenamePattern(effectivePattern, getToday(),) + ".md";
   const googleConnected = isGoogleAccountConnected(settings,);
   const googleAccounts = settings.googleAccounts;
+  const isGoogleConnecting = googleAction?.type === "connecting";
+  const refreshingGoogleAccount = googleAction?.type === "refreshing" ? googleAction.email : null;
+  const isGoogleBusy = googleAction !== null;
 
   const buildPersistedSettings = async (current: Settings,) => {
     const normalizedVault = current.vaultDir.trim();
@@ -522,35 +532,65 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   };
 
   const handleConnectGoogle = async () => {
+    const controller = new AbortController();
+    googleAbortControllerRef.current = controller;
     setGoogleAction({ type: "connecting", },);
     setGoogleError("",);
     try {
       const currentSettings = settingsRef.current;
       if (!currentSettings) return;
-      const googlePatch = await connectGoogleAccount(currentSettings,);
+      const googlePatch = await connectGoogleAccount(currentSettings, { signal: controller.signal, },);
+      if (controller.signal.aborted) return;
       await persistGooglePatch(googlePatch,);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
       const message = getErrorMessage(err, "Failed to connect Google account.",);
       setGoogleError(message,);
     } finally {
-      setGoogleAction(null,);
+      if (googleAbortControllerRef.current === controller) {
+        googleAbortControllerRef.current = null;
+        setGoogleAction(null,);
+      }
     }
   };
 
   const handleRefreshGoogle = async (accountEmail: string,) => {
+    const controller = new AbortController();
+    googleAbortControllerRef.current = controller;
     setGoogleAction({ type: "refreshing", email: accountEmail, },);
     setGoogleError("",);
     try {
       const currentSettings = settingsRef.current;
       if (!currentSettings) return;
-      const googlePatch = await connectGoogleAccount(currentSettings, { expectedAccountEmail: accountEmail, },);
+      const googlePatch = await connectGoogleAccount(currentSettings, {
+        expectedAccountEmail: accountEmail,
+        signal: controller.signal,
+      },);
+      if (controller.signal.aborted) return;
       await persistGooglePatch(googlePatch,);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
       const message = getErrorMessage(err, "Failed to refresh Google account.",);
       setGoogleError(message,);
     } finally {
-      setGoogleAction(null,);
+      if (googleAbortControllerRef.current === controller) {
+        googleAbortControllerRef.current = null;
+        setGoogleAction(null,);
+      }
     }
+  };
+
+  const cancelGoogleConnect = () => {
+    const controller = googleAbortControllerRef.current;
+    if (!controller) return;
+    googleAbortControllerRef.current = null;
+    controller.abort();
+    setGoogleAction(null,);
+    setGoogleError("",);
   };
 
   const handleDisconnectGoogle = async (accountEmail: string,) => {
@@ -642,6 +682,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   };
 
   const handleRequestClose = async () => {
+    cancelGoogleConnect();
     const nextSettings = settingsRef.current;
     if (!nextSettings) {
       onClose();
@@ -784,10 +825,11 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             ? (
               <div className="space-y-1.5">
                 {googleAccounts.map((account,) => {
-                  const isRefreshing = googleAction?.type === "refreshing" && googleAction.email === account.email;
+                  const isRefreshing = refreshingGoogleAccount === account.email;
                   const isDisconnecting = googleAction?.type === "disconnecting"
                     && googleAction.email === account.email;
                   const hasSecureSession = googleSessionAccounts.includes(account.email.trim().toLowerCase(),);
+                  const isRefreshDisabled = isGoogleBusy && !isRefreshing;
                   return (
                     <div key={account.email} className="flex min-w-0 items-start gap-1">
                       <div className="min-w-0 flex-1">
@@ -805,18 +847,28 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                         )}
                       </div>
                       <button
-                        onClick={() => handleRefreshGoogle(account.email,)}
-                        disabled={googleAction !== null}
+                        onClick={() => {
+                          if (isRefreshing) {
+                            cancelGoogleConnect();
+                            return;
+                          }
+                          void handleRefreshGoogle(account.email,);
+                        }}
+                        disabled={isRefreshDisabled}
                         className={`group relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-none transition-colors cursor-pointer focus:outline-none focus:ring-2 disabled:cursor-default disabled:opacity-60 ${
                           hasSecureSession
                             ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 focus:ring-emerald-300/40"
                             : "text-amber-600 hover:bg-amber-50 hover:text-amber-700 focus:ring-amber-300/40"
                         }`}
-                        title={`${hasSecureSession ? "Refresh" : "Reconnect"} ${account.email}`}
-                        aria-label={`${hasSecureSession ? "Refresh" : "Reconnect"} ${account.email}`}
+                        title={isRefreshing
+                          ? `Cancel reconnect for ${account.email}`
+                          : `${hasSecureSession ? "Refresh" : "Reconnect"} ${account.email}`}
+                        aria-label={isRefreshing
+                          ? `Cancel reconnect for ${account.email}`
+                          : `${hasSecureSession ? "Refresh" : "Reconnect"} ${account.email}`}
                       >
                         {isRefreshing
-                          ? <RefreshCw className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
+                          ? <X className="h-3.5 w-3.5" strokeWidth={2.1} />
                           : (
                             <>
                               {hasSecureSession
@@ -841,7 +893,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                       </button>
                       <button
                         onClick={() => handleDisconnectGoogle(account.email,)}
-                        disabled={googleAction !== null}
+                        disabled={isGoogleBusy}
                         className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-none text-gray-400 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300/40 disabled:cursor-default disabled:opacity-60"
                         title={`Disconnect ${account.email}`}
                         aria-label={`Disconnect ${account.email}`}
@@ -865,8 +917,14 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           )}
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={handleConnectGoogle}
-              disabled={googleAction !== null}
+              onClick={() => {
+                if (isGoogleConnecting) {
+                  cancelGoogleConnect();
+                  return;
+                }
+                void handleConnectGoogle();
+              }}
+              disabled={isGoogleBusy && !isGoogleConnecting}
               className="inline-flex min-h-10 items-center gap-3 rounded-none border px-3 pr-4 text-[14px] leading-5 font-medium text-[#1f1f1f] transition-colors cursor-pointer hover:bg-[#e8eaed] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/20 disabled:cursor-default disabled:opacity-60"
               style={{
                 ...googleButtonText,
@@ -876,8 +934,8 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
             >
               <GoogleMark />
               <span>
-                {googleAction?.type === "connecting"
-                  ? "Waiting for Google..."
+                {isGoogleConnecting
+                  ? "Cancel"
                   : googleConnected
                   ? "Connect more"
                   : "Continue with Google"}

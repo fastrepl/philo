@@ -64,7 +64,12 @@ const GOOGLE_OAUTH_KEYRING_ACCOUNT: &str = "session";
 
 #[derive(Default)]
 struct GoogleOAuthState {
-    sessions: Mutex<HashMap<String, mpsc::Receiver<GoogleOAuthCallbackPayload>>>,
+    sessions: Mutex<HashMap<String, Arc<GoogleOAuthPendingSession>>>,
+}
+
+struct GoogleOAuthPendingSession {
+    cancelled: AtomicBool,
+    receiver: Mutex<mpsc::Receiver<GoogleOAuthCallbackPayload>>,
 }
 
 #[derive(Default)]
@@ -724,7 +729,13 @@ fn start_google_oauth_callback(
         .sessions
         .lock()
         .map_err(|_| "Google OAuth state is unavailable.".to_string())?
-        .insert(session_id.clone(), receiver);
+        .insert(
+            session_id.clone(),
+            Arc::new(GoogleOAuthPendingSession {
+                cancelled: AtomicBool::new(false),
+                receiver: Mutex::new(receiver),
+            }),
+        );
 
     std::thread::spawn(move || {
         let payload = receive_google_oauth_callback(listener);
@@ -744,18 +755,84 @@ fn wait_for_google_oauth_callback(
     timeout_ms: Option<u64>,
     state: State<GoogleOAuthState>,
 ) -> Result<GoogleOAuthCallbackPayload, String> {
-    let receiver = state
+    let session = state
         .sessions
         .lock()
         .map_err(|_| "Google OAuth state is unavailable.".to_string())?
-        .remove(&session_id)
+        .get(&session_id)
+        .cloned()
         .ok_or("Google OAuth session not found.".to_string())?;
 
-    receiver
-        .recv_timeout(Duration::from_millis(
-            timeout_ms.unwrap_or(GOOGLE_OAUTH_DEFAULT_TIMEOUT_MS),
-        ))
-        .map_err(|_| "Timed out waiting for Google authorization.".to_string())
+    let started_at = SystemTime::now();
+    let timeout = Duration::from_millis(timeout_ms.unwrap_or(GOOGLE_OAUTH_DEFAULT_TIMEOUT_MS));
+
+    loop {
+        if session.cancelled.load(Ordering::Relaxed) {
+            let _ = state
+                .sessions
+                .lock()
+                .map_err(|_| "Google OAuth state is unavailable.".to_string())?
+                .remove(&session_id);
+            return Err("Google authorization cancelled.".to_string());
+        }
+
+        if started_at.elapsed().map_err(|e| e.to_string())? >= timeout {
+            let _ = state
+                .sessions
+                .lock()
+                .map_err(|_| "Google OAuth state is unavailable.".to_string())?
+                .remove(&session_id);
+            return Err("Timed out waiting for Google authorization.".to_string());
+        }
+
+        let callback = {
+            let receiver = session
+                .receiver
+                .lock()
+                .map_err(|_| "Google OAuth state is unavailable.".to_string())?;
+            receiver.recv_timeout(Duration::from_millis(250))
+        };
+
+        match callback {
+            Ok(payload) => {
+                let _ = state
+                    .sessions
+                    .lock()
+                    .map_err(|_| "Google OAuth state is unavailable.".to_string())?
+                    .remove(&session_id);
+                return Ok(payload);
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                let _ = state
+                    .sessions
+                    .lock()
+                    .map_err(|_| "Google OAuth state is unavailable.".to_string())?
+                    .remove(&session_id);
+                return Err(
+                    "Google OAuth session ended before authorization completed.".to_string()
+                );
+            }
+        }
+    }
+}
+
+#[tauri::command]
+fn cancel_google_oauth_callback(
+    session_id: String,
+    state: State<GoogleOAuthState>,
+) -> Result<(), String> {
+    let session = state
+        .sessions
+        .lock()
+        .map_err(|_| "Google OAuth state is unavailable.".to_string())?
+        .remove(&session_id);
+
+    if let Some(session) = session {
+        session.cancelled.store(true, Ordering::Relaxed);
+    }
+
+    Ok(())
 }
 
 fn google_oauth_client_secret() -> Option<String> {
@@ -3502,6 +3579,7 @@ pub fn run() {
             write_markdown_file,
             start_google_oauth_callback,
             wait_for_google_oauth_callback,
+            cancel_google_oauth_callback,
             complete_google_oauth,
             ensure_google_access_token,
             clear_google_oauth_session,
