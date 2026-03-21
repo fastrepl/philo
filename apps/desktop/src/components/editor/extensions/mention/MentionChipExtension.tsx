@@ -322,8 +322,16 @@ export function buildMentionChipSuggestion(referenceDate?: string,): Omit<Sugges
             size({
               padding: 8,
               apply: ({ availableHeight, availableWidth, elements, },) => {
-                elements.floating.style.maxHeight = `${Math.max(availableHeight, 0,)}px`;
-                elements.floating.style.maxWidth = `${Math.max(availableWidth, 0,)}px`;
+                const maxHeight = `${Math.max(availableHeight, 0,)}px`;
+                const maxWidth = `${Math.max(availableWidth, 0,)}px`;
+                elements.floating.style.maxHeight = maxHeight;
+                elements.floating.style.maxWidth = maxWidth;
+
+                const popoverRoot = elements.floating.firstElementChild;
+                if (popoverRoot instanceof HTMLElement) {
+                  popoverRoot.style.maxHeight = maxHeight;
+                  popoverRoot.style.maxWidth = maxWidth;
+                }
               },
             },),
           ],
