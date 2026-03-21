@@ -475,6 +475,15 @@
   padding: 0.4rem;
 }
 
+.slash-menu-section {
+  padding: 0.5rem 0.65rem 0.35rem;
+  color: #6b7280;
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .slash-menu-item {
   display: flex;
   align-items: flex-start;

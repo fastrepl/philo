@@ -8,21 +8,52 @@ import {
   size,
   type VirtualElement,
 } from "@floating-ui/dom";
-import { Extension, } from "@tiptap/core";
+import { type Editor, Extension, } from "@tiptap/core";
 import { PluginKey, } from "@tiptap/pm/state";
 import { ReactRenderer, } from "@tiptap/react";
 import Suggestion, { type SuggestionOptions, } from "@tiptap/suggestion";
-import { CalendarDays, FilePlus2, } from "lucide-react";
+import {
+  CalendarDays,
+  Code2,
+  FileImage,
+  FilePlus2,
+  Hash,
+  List,
+  ListOrdered,
+  ListTodo,
+  Minus,
+  Quote,
+  Table2,
+  Text,
+} from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useState, } from "react";
+import { resolveAssetUrl, saveImage, } from "../../../../services/images";
 import { createDateMention, createRecurringMention, type MentionSuggestion, } from "../../../../services/mentions";
 import { getToday, } from "../../../../types/note";
 
+type SlashCommandSection = "formatting" | "insert" | "media";
+
 interface SlashCommandItem {
   id: string;
+  section: SlashCommandSection;
   title: string;
   subtitle: string;
   keywords: string[];
-  action: "attach_page" | "open_date_picker";
+  action:
+    | "attach_page"
+    | "open_date_picker"
+    | "set_paragraph"
+    | "heading_1"
+    | "heading_2"
+    | "heading_3"
+    | "bullet_list"
+    | "ordered_list"
+    | "task_list"
+    | "blockquote"
+    | "code_block"
+    | "divider"
+    | "table"
+    | "image";
 }
 
 function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (date: string,) => void; },) {
@@ -179,27 +210,65 @@ const SlashCommandMenu = forwardRef<
       {!showDatePicker && (
         <div className="slash-menu-items">
           {items.map((item, index,) => {
-            const Icon = item.action === "attach_page" ? FilePlus2 : CalendarDays;
+            const previous = index > 0 ? items[index - 1] : null;
+            const showSection = !previous || previous.section !== item.section;
+            const Icon = (() => {
+              switch (item.action) {
+                case "attach_page":
+                  return FilePlus2;
+                case "open_date_picker":
+                  return CalendarDays;
+                case "set_paragraph":
+                  return Text;
+                case "heading_1":
+                case "heading_2":
+                case "heading_3":
+                  return Hash;
+                case "bullet_list":
+                  return List;
+                case "ordered_list":
+                  return ListOrdered;
+                case "task_list":
+                  return ListTodo;
+                case "blockquote":
+                  return Quote;
+                case "code_block":
+                  return Code2;
+                case "divider":
+                  return Minus;
+                case "table":
+                  return Table2;
+                case "image":
+                  return FileImage;
+              }
+            })();
+            const sectionTitle = item.section === "formatting"
+              ? "Formatting"
+              : item.section === "insert"
+              ? "Insert"
+              : "Media";
 
             return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  if (item.action === "open_date_picker") {
-                    setShowDatePicker(true,);
-                    return;
-                  }
-                  runCommand(item,);
-                }}
-                className={`slash-menu-item ${index === selectedIndex ? "is-selected" : ""}`}
-              >
-                <Icon className="slash-menu-icon" size={15} />
-                <span className="slash-menu-copy">
-                  <span className="slash-menu-title">{item.title}</span>
-                  <span className="slash-menu-subtitle">{item.subtitle}</span>
-                </span>
-              </button>
+              <div key={item.id}>
+                {showSection && <div className="slash-menu-section">{sectionTitle}</div>}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (item.action === "open_date_picker") {
+                      setShowDatePicker(true,);
+                      return;
+                    }
+                    runCommand(item,);
+                  }}
+                  className={`slash-menu-item ${index === selectedIndex ? "is-selected" : ""}`}
+                >
+                  <Icon className="slash-menu-icon" size={15} />
+                  <span className="slash-menu-copy">
+                    <span className="slash-menu-title">{item.title}</span>
+                    <span className="slash-menu-subtitle">{item.subtitle}</span>
+                  </span>
+                </button>
+              </div>
             );
           },)}
         </div>
@@ -262,6 +331,81 @@ export const SlashCommandExtension = Extension.create<{
   },
 
   addProseMirrorPlugins() {
+    const pickImage = async (editor: Editor,) => {
+      const input = document.createElement("input",);
+      input.type = "file";
+      input.accept = "image/*";
+      input.multiple = false;
+
+      input.addEventListener("change", () => {
+        const file = input.files?.[0];
+        if (!file) return;
+
+        (async () => {
+          const relativePath = await saveImage(file,);
+          const assetUrl = await resolveAssetUrl(relativePath,);
+          editor.chain().focus().setImage({ src: assetUrl, alt: file.name, },).run();
+        })().catch(console.error,);
+      }, { once: true, },);
+
+      input.click();
+    };
+
+    const runSlashCommand = (
+      editor: Editor,
+      range: Parameters<NonNullable<SuggestionOptions["command"]>>[0]["range"],
+      item: SlashCommandItem,
+    ) => {
+      const chain = editor.chain().focus().deleteRange(range,);
+
+      switch (item.action) {
+        case "attach_page":
+          chain.run();
+          this.options.onAttachPage?.();
+          break;
+        case "set_paragraph":
+          chain.clearNodes().run();
+          break;
+        case "heading_1":
+          chain.toggleHeading({ level: 1, },).run();
+          break;
+        case "heading_2":
+          chain.toggleHeading({ level: 2, },).run();
+          break;
+        case "heading_3":
+          chain.toggleHeading({ level: 3, },).run();
+          break;
+        case "bullet_list":
+          chain.toggleBulletList().run();
+          break;
+        case "ordered_list":
+          chain.toggleOrderedList().run();
+          break;
+        case "task_list":
+          chain.toggleTaskList().run();
+          break;
+        case "blockquote":
+          chain.toggleBlockquote().run();
+          break;
+        case "code_block":
+          chain.toggleCodeBlock().run();
+          break;
+        case "divider":
+          chain.setHorizontalRule().run();
+          break;
+        case "table":
+          chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true, },).run();
+          break;
+        case "image":
+          chain.run();
+          void pickImage(editor,);
+          break;
+        case "open_date_picker":
+          chain.run();
+          break;
+      }
+    };
+
     const insertMentionItems = (
       editor: Parameters<NonNullable<SuggestionOptions["command"]>>[0]["editor"],
       range: Parameters<NonNullable<SuggestionOptions["command"]>>[0]["range"],
@@ -307,17 +451,115 @@ export const SlashCommandExtension = Extension.create<{
         const normalizedQuery = query.trim().toLowerCase();
         const items: SlashCommandItem[] = [
           {
+            id: "set-paragraph",
+            section: "formatting",
+            title: "Text",
+            subtitle: "Turn this block into plain text",
+            keywords: ["text", "paragraph", "plain",],
+            action: "set_paragraph",
+          },
+          {
+            id: "heading-1",
+            section: "formatting",
+            title: "Heading 1",
+            subtitle: "Large section heading",
+            keywords: ["heading", "h1", "title",],
+            action: "heading_1",
+          },
+          {
+            id: "heading-2",
+            section: "formatting",
+            title: "Heading 2",
+            subtitle: "Medium section heading",
+            keywords: ["heading", "h2", "subtitle",],
+            action: "heading_2",
+          },
+          {
+            id: "heading-3",
+            section: "formatting",
+            title: "Heading 3",
+            subtitle: "Small section heading",
+            keywords: ["heading", "h3",],
+            action: "heading_3",
+          },
+          {
+            id: "bullet-list",
+            section: "formatting",
+            title: "Bullet list",
+            subtitle: "Start a bulleted list",
+            keywords: ["list", "bullet", "unordered",],
+            action: "bullet_list",
+          },
+          {
+            id: "ordered-list",
+            section: "formatting",
+            title: "Numbered list",
+            subtitle: "Start an ordered list",
+            keywords: ["list", "numbered", "ordered",],
+            action: "ordered_list",
+          },
+          {
+            id: "task-list",
+            section: "formatting",
+            title: "Task list",
+            subtitle: "Start a checklist",
+            keywords: ["task", "todo", "checklist",],
+            action: "task_list",
+          },
+          {
+            id: "blockquote",
+            section: "formatting",
+            title: "Quote",
+            subtitle: "Insert a quoted block",
+            keywords: ["quote", "blockquote",],
+            action: "blockquote",
+          },
+          {
+            id: "code-block",
+            section: "formatting",
+            title: "Code block",
+            subtitle: "Insert a fenced code block",
+            keywords: ["code", "snippet", "pre",],
+            action: "code_block",
+          },
+          {
             id: "insert-date-mention",
+            section: "insert",
             title: "Date mention",
             subtitle: "Insert a date or repeating date chip",
             keywords: ["date", "chip", "mention", "deadline", "schedule",],
             action: "open_date_picker",
+          },
+          {
+            id: "divider",
+            section: "insert",
+            title: "Divider",
+            subtitle: "Insert a horizontal rule",
+            keywords: ["divider", "rule", "line", "hr",],
+            action: "divider",
+          },
+          {
+            id: "table",
+            section: "insert",
+            title: "Table",
+            subtitle: "Insert a 3x3 table",
+            keywords: ["table", "grid", "columns", "rows",],
+            action: "table",
+          },
+          {
+            id: "image",
+            section: "media",
+            title: "Image",
+            subtitle: "Upload and insert an image",
+            keywords: ["image", "photo", "media", "upload",],
+            action: "image",
           },
         ];
 
         if (this.options.onAttachPage) {
           items.unshift({
             id: "attach-page",
+            section: "insert",
             title: "Attach page",
             subtitle: "Create a page attached to this daily note",
             keywords: ["page", "attach", "meeting", "note",],
@@ -334,10 +576,7 @@ export const SlashCommandExtension = Extension.create<{
       },
       command: ({ editor, range, props, },) => {
         const item = props as SlashCommandItem;
-        editor.chain().focus().deleteRange(range,).run();
-        if (item.action === "attach_page") {
-          this.options.onAttachPage?.();
-        }
+        runSlashCommand(editor, range, item,);
       },
       render: () => {
         let renderer: ReactRenderer;
