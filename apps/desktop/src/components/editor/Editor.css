@@ -410,6 +410,13 @@
   flex-wrap: wrap;
 }
 
+.mention-recurrence-description {
+  margin-top: 0.45rem;
+  color: #6b7280;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 .mention-recurrence-option {
   height: 1.55rem;
   padding: 0 0.55rem;

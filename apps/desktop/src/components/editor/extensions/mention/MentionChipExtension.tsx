@@ -27,6 +27,19 @@ import {
 } from "../../../../services/mentions";
 import { getToday, } from "../../../../types/note";
 
+function formatRecurrenceDescriptionDate(date: string,) {
+  return new Date(`${date}T00:00:00`,).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  },);
+}
+
+function getRecurrenceDescription(date: string, recurrence: string,) {
+  if (!recurrence) return null;
+  return `Starting from ${formatRecurrenceDescriptionDate(date,)} this will show up on a ${recurrence} basis.`;
+}
+
 function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (date: string,) => void; },) {
   const todayStr = (() => {
     const d = new Date();
@@ -227,6 +240,11 @@ const MentionMenu = forwardRef<
                 </button>
               ))}
             </div>
+            {recurrence && (
+              <div className="mention-recurrence-description">
+                {getRecurrenceDescription(selectedDate, recurrence,)}
+              </div>
+            )}
           </div>
           <div className="mention-date-picker-actions">
             <button

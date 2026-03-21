@@ -31,6 +31,19 @@ import { resolveAssetUrl, saveImage, } from "../../../../services/images";
 import { createDateMention, createRecurringMention, type MentionSuggestion, } from "../../../../services/mentions";
 import { getToday, } from "../../../../types/note";
 
+function formatRecurrenceDescriptionDate(date: string,) {
+  return new Date(`${date}T00:00:00`,).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  },);
+}
+
+function getRecurrenceDescription(date: string, recurrence: string,) {
+  if (!recurrence) return null;
+  return `Starting from ${formatRecurrenceDescriptionDate(date,)} this will show up on a ${recurrence} basis.`;
+}
+
 type SlashCommandSection = "formatting" | "insert" | "media";
 
 interface SlashCommandItem {
@@ -261,6 +274,9 @@ const SlashCommandMenu = forwardRef<
                 {showSection && <div className="slash-menu-section">{sectionTitle}</div>}
                 <button
                   type="button"
+                  onMouseDown={(event,) => {
+                    event.preventDefault();
+                  }}
                   onClick={() => {
                     if (item.action === "open_date_picker") {
                       setShowDatePicker(true,);
@@ -303,11 +319,19 @@ const SlashCommandMenu = forwardRef<
                 </button>
               ))}
             </div>
+            {recurrence && (
+              <div className="mention-recurrence-description">
+                {getRecurrenceDescription(selectedDate, recurrence,)}
+              </div>
+            )}
           </div>
           <div className="mention-date-picker-actions">
             <button
               className="mention-date-picker-btn"
               disabled={!selectedDate}
+              onMouseDown={(event,) => {
+                event.preventDefault();
+              }}
               onClick={applyCustomDate}
               type="button"
             >
