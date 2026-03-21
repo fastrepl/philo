@@ -306,13 +306,6 @@ const SlashCommandMenu = forwardRef<
           </div>
           <div className="mention-date-picker-actions">
             <button
-              className="mention-date-picker-btn mention-date-picker-btn-muted"
-              onClick={() => setShowDatePicker(false,)}
-              type="button"
-            >
-              Back
-            </button>
-            <button
               className="mention-date-picker-btn"
               disabled={!selectedDate}
               onClick={applyCustomDate}
