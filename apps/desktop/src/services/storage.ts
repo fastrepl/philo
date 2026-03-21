@@ -11,7 +11,12 @@ import {
   type PageType,
 } from "../types/note";
 import { resolveExcalidrawEmbeds, } from "./excalidraw";
-import { resolveMarkdownImages, unresolveMarkdownImages, } from "./images";
+import {
+  resolveMarkdownAssetLinks,
+  resolveMarkdownImages,
+  unresolveMarkdownAssetLinks,
+  unresolveMarkdownImages,
+} from "./images";
 import { convertAtMentionsToWikiLinks, replaceMentionWikiLinksWithChips, } from "./mentions";
 import {
   getNoteLinkTarget,
@@ -265,6 +270,7 @@ export async function saveDailyNote(note: DailyNote,): Promise<void> {
   const json = parseJsonContent(note.content,);
   const indentation = await getMarkdownIndentation();
   let body = unresolveMarkdownImages(json2md(json, { indentation, },),);
+  body = unresolveMarkdownAssetLinks(body,);
   body = convertAtMentionsToWikiLinks(body, note.date,);
   body = await rewriteDateMentionLinksToNoteLinks(body,);
   await invoke("write_markdown_file", {
@@ -284,7 +290,8 @@ export async function loadDailyNote(date: string,): Promise<DailyNote | null> {
   const withEmbeds = await resolveExcalidrawEmbeds(withDateMentionLinks,);
   const withWidgets = await resolveWidgetEmbeds(withEmbeds,);
   const withMentionChips = replaceMentionWikiLinksWithChips(withWidgets, date,);
-  const resolved = await resolveMarkdownImages(withMentionChips,);
+  const withAssetLinks = await resolveMarkdownAssetLinks(withMentionChips,);
+  const resolved = await resolveMarkdownImages(withAssetLinks,);
   const indentation = await getMarkdownIndentation();
   const content = JSON.stringify(md2json(resolved, { indentation, },),);
   return { date, content, city, };
@@ -303,7 +310,8 @@ export async function loadPage(title: string,): Promise<PageNote | null> {
   const withEmbeds = await resolveExcalidrawEmbeds(withDateMentionLinks,);
   const withWidgets = await resolveWidgetEmbeds(withEmbeds,);
   const withMentionChips = replaceMentionWikiLinksWithChips(withWidgets, referenceDate,);
-  const resolved = await resolveMarkdownImages(withMentionChips,);
+  const withAssetLinks = await resolveMarkdownAssetLinks(withMentionChips,);
+  const resolved = await resolveMarkdownImages(withAssetLinks,);
   const indentation = await getMarkdownIndentation();
   const content = JSON.stringify(md2json(resolved, { indentation, },),);
 
@@ -327,6 +335,7 @@ export async function savePage(page: PageNote,): Promise<void> {
   const json = parseJsonContent(page.content,);
   const indentation = await getMarkdownIndentation();
   let body = unresolveMarkdownImages(json2md(json, { indentation, },),);
+  body = unresolveMarkdownAssetLinks(body,);
   body = convertAtMentionsToWikiLinks(body, page.attachedTo ?? getToday(),);
   body = await rewriteDateMentionLinksToNoteLinks(body,);
   await invoke("write_markdown_file", {

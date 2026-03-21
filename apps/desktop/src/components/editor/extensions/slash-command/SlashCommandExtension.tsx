@@ -15,19 +15,19 @@ import Suggestion, { type SuggestionOptions, } from "@tiptap/suggestion";
 import {
   CalendarDays,
   Code2,
-  FileImage,
   FilePlus2,
   Hash,
   List,
   ListOrdered,
   ListTodo,
   Minus,
+  Paperclip,
   Quote,
   Table2,
   Text,
 } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useState, } from "react";
-import { resolveAssetUrl, saveImage, } from "../../../../services/images";
+import { resolveAssetUrl, saveAsset, } from "../../../../services/images";
 import { createDateMention, createRecurringMention, type MentionSuggestion, } from "../../../../services/mentions";
 import { getToday, } from "../../../../types/note";
 
@@ -66,7 +66,7 @@ interface SlashCommandItem {
     | "code_block"
     | "divider"
     | "table"
-    | "image";
+    | "attach_file";
 }
 
 function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (date: string,) => void; },) {
@@ -259,8 +259,8 @@ const SlashCommandMenu = forwardRef<
                   return Minus;
                 case "table":
                   return Table2;
-                case "image":
-                  return FileImage;
+                case "attach_file":
+                  return Paperclip;
               }
             })();
             const sectionTitle = item.section === "block"
@@ -355,10 +355,9 @@ export const SlashCommandExtension = Extension.create<{
   },
 
   addProseMirrorPlugins() {
-    const pickImage = async (editor: Editor,) => {
+    const attachFile = async (editor: Editor,) => {
       const input = document.createElement("input",);
       input.type = "file";
-      input.accept = "image/*";
       input.multiple = false;
 
       input.addEventListener("change", () => {
@@ -366,9 +365,13 @@ export const SlashCommandExtension = Extension.create<{
         if (!file) return;
 
         (async () => {
-          const relativePath = await saveImage(file,);
+          const relativePath = await saveAsset(file,);
           const assetUrl = await resolveAssetUrl(relativePath,);
-          editor.chain().focus().setImage({ src: assetUrl, alt: file.name, },).run();
+          editor.chain().focus().insertContent({
+            type: "text",
+            text: file.name,
+            marks: [{ type: "link", attrs: { href: assetUrl, }, },],
+          },).run();
         })().catch(console.error,);
       }, { once: true, },);
 
@@ -420,9 +423,9 @@ export const SlashCommandExtension = Extension.create<{
         case "table":
           chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true, },).run();
           break;
-        case "image":
+        case "attach_file":
           chain.run();
-          void pickImage(editor,);
+          void attachFile(editor,);
           break;
         case "open_date_picker":
           chain.run();
@@ -579,12 +582,12 @@ export const SlashCommandExtension = Extension.create<{
             action: "table",
           },
           {
-            id: "image",
-            section: "media",
-            title: "Image",
-            subtitle: "Upload and insert an image",
-            keywords: ["image", "photo", "media", "upload",],
-            action: "image",
+            id: "attach-file",
+            section: "inline",
+            title: "Attach file",
+            subtitle: "Upload and insert a file link",
+            keywords: ["file", "attach", "upload", "asset", "document", "audio",],
+            action: "attach_file",
           },
         ];
 

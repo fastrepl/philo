@@ -56,14 +56,14 @@ async function resolveAssetAbsolutePath(relativePath: string,): Promise<string> 
   return await join(journalDir, normalizeRelativeAssetPath(relativePath,),);
 }
 
-export async function saveImage(file: File,): Promise<string> {
+export async function saveAsset(file: File,): Promise<string> {
   const assetsDir = await getAssetsDir();
   const dirExists = await exists(assetsDir,);
   if (!dirExists) {
     await mkdir(assetsDir, { recursive: true, },);
   }
 
-  const ext = file.name.split(".",).pop() || "png";
+  const ext = file.name.split(".",).pop() || "bin";
   const filename = generateFilename(ext,);
   const fullPath = await join(assetsDir, filename,);
 
@@ -73,6 +73,10 @@ export async function saveImage(file: File,): Promise<string> {
   await writeFile(fullPath, uint8Array,);
 
   return filename;
+}
+
+export async function saveImage(file: File,): Promise<string> {
+  return await saveAsset(file,);
 }
 
 export async function resolveAssetUrl(relativePath: string,): Promise<string> {
@@ -134,5 +138,55 @@ export function unresolveMarkdownImages(markdown: string,): string {
     return title
       ? `![${alt}](${filename} "${title}")`
       : `![${alt}](${filename})`;
+  },);
+}
+
+export async function resolveMarkdownAssetLinks(markdown: string,): Promise<string> {
+  const linkPattern = /\[([^\]]+)\]\(([^)\s"]+)(?:\s+"([^"]*)")?\)/g;
+  const matches = [...markdown.matchAll(linkPattern,),];
+  if (matches.length === 0) return markdown;
+
+  let result = markdown;
+
+  for (const match of matches) {
+    const [full, label, path, title,] = match;
+    if (isNonAssetUrl(path,)) continue;
+
+    const relativePath = normalizeRelativeAssetPath(path,);
+    const absolutePath = await resolveAssetAbsolutePath(relativePath,);
+    if (!(await exists(absolutePath,))) continue;
+
+    const assetUrl = convertFileSrc(absolutePath,);
+    const replacement = title
+      ? `[${label}](${assetUrl} "${title}")`
+      : `[${label}](${assetUrl})`;
+    result = result.replace(full, replacement,);
+  }
+
+  return result;
+}
+
+export function unresolveMarkdownAssetLinks(markdown: string,): string {
+  const assetUrlPattern =
+    /\[([^\]]+)\]\(((?:http:\/\/asset\.localhost|asset:\/\/localhost)[^)\s"]+)(?:\s+"([^"]*)")?\)/g;
+
+  return markdown.replace(assetUrlPattern, (_full, label, url, title,) => {
+    let filename = "";
+    try {
+      const parsed = new URL(url,);
+      const segments = decodeURIComponent(parsed.pathname,).split("/",).filter(Boolean,);
+      filename = segments[segments.length - 1] || "";
+    } catch {
+      const match = String(url,).match(/\/([^/]+)$/,);
+      filename = match ? match[1] : "";
+    }
+    if (!filename) {
+      return title
+        ? `[${label}](${url} "${title}")`
+        : `[${label}](${url})`;
+    }
+    return title
+      ? `[${label}](${filename} "${title}")`
+      : `[${label}](${filename})`;
   },);
 }
