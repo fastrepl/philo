@@ -19,7 +19,7 @@ import { openGoogleMentionChip, } from "../../services/google-open";
 import { resolveAssetUrl, saveImage, } from "../../services/images";
 import { getMentionChipDate, getMentionChipHref, type MentionKind, } from "../../services/mentions";
 import { saveDailyNote, } from "../../services/storage";
-import type { DailyNote, } from "../../types/note";
+import { getToday, type DailyNote, type PageNote, } from "../../types/note";
 import { EditorBubbleMenu, } from "../editor/EditorBubbleMenu";
 import { ClipboardTextSerializer, } from "../editor/extensions/clipboard";
 import { ExcalidrawExtension, } from "../editor/extensions/excalidraw/ExcalidrawExtension";
@@ -51,9 +51,9 @@ export interface EditableNoteSelection {
 }
 
 interface EditableNoteProps {
-  note: DailyNote;
+  note: DailyNote | PageNote;
   placeholder?: string;
-  onSave?: (note: DailyNote,) => void;
+  onSave?: (note: DailyNote | PageNote,) => void;
   onOpenDate?: (date: string,) => void;
   onInteract?: () => void;
   onChatSelection?: (selection: EditableNoteSelection,) => void;
@@ -63,6 +63,11 @@ interface EditableNoteProps {
 }
 
 const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp",];
+
+function getReferenceDate(note: DailyNote | PageNote,) {
+  if ("date" in note) return note.date;
+  return note.attachedTo ?? getToday();
+}
 
 function moveSelectedNode(view: import("@tiptap/pm/view").EditorView, direction: "up" | "down",): boolean {
   const { state, } = view;
@@ -131,7 +136,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
       selfUpdateRef.current = true;
       if (onSaveRef.current) {
         onSaveRef.current(updated,);
-      } else {
+      } else if ("date" in updated) {
         saveDailyNote(updated,).catch(console.error,);
       }
     }, 500,);
@@ -166,7 +171,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
                         id: chip.getAttribute("data-id",) ?? "",
                         kind: (chip.getAttribute("data-kind",) ?? "tag") as MentionKind,
                       };
-                      const date = onOpenDate ? getMentionChipDate(chipData, noteRef.current.date,) : null;
+                      const date = onOpenDate ? getMentionChipDate(chipData, getReferenceDate(noteRef.current,),) : null;
                       if (date) {
                         event.preventDefault();
                         onOpenDate?.(date,);
@@ -208,7 +213,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         TableHeader,
         TableCell,
         Highlight,
-        MentionChipExtension.configure({ suggestion: buildMentionChipSuggestion(note.date,), },),
+        MentionChipExtension.configure({ suggestion: buildMentionChipSuggestion(getReferenceDate(note,),), },),
         HashtagExtension,
         ExcalidrawExtension,
         WidgetExtension,
@@ -354,7 +359,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           selectedText
             ? {
               editor,
-              noteDate: noteRef.current.date,
+              noteDate: getReferenceDate(noteRef.current,),
               from,
               to,
               text: selectedText,
@@ -400,7 +405,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
               const { from, to, } = editor.state.selection;
               onChatSelection({
                 editor,
-                noteDate: noteRef.current.date,
+                noteDate: getReferenceDate(noteRef.current,),
                 from,
                 to,
                 text: selectedText,

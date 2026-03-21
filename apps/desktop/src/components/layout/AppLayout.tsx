@@ -4,7 +4,7 @@ import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { watch, } from "@tauri-apps/plugin-fs";
 import { openPath, } from "@tauri-apps/plugin-opener";
 import type { Editor as TiptapEditor, } from "@tiptap/core";
-import { MapPin, } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, House, MapPin, Plus, } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, } from "react";
 import { useCurrentDate, } from "../../hooks/useCurrentDate";
 import { useCurrentCity, } from "../../hooks/useTimezoneCity";
@@ -30,9 +30,18 @@ import {
 import { syncGoogleImports, } from "../../services/google-imports";
 import type { LibraryItem, } from "../../services/library";
 import { cleanupLegacyLibraryState, } from "../../services/library";
-import { getJournalDir, initJournalScope, parseDateFromNoteLinkTarget, } from "../../services/paths";
+import { getJournalDir, initJournalScope, parseDateFromNoteLinkTarget, sanitizePageTitle, } from "../../services/paths";
 import { getFilenamePattern, hasActiveAiProvider, loadSettings, } from "../../services/settings";
-import { getOrCreateDailyNote, loadDailyNote, loadPastNotes, saveDailyNote, } from "../../services/storage";
+import {
+  createAttachedPage,
+  getOrCreateDailyNote,
+  listPagesAttachedTo,
+  loadDailyNote,
+  loadPage,
+  loadPastNotes,
+  saveDailyNote,
+  savePage,
+} from "../../services/storage";
 import { rolloverTasks, } from "../../services/tasks";
 import {
   checkForUpdate,
@@ -43,7 +52,7 @@ import {
 import { createWidgetFile, } from "../../services/widget-files";
 import { recordWidgetGitRevision, } from "../../services/widget-git-history";
 import { stringifyStorageSchema, } from "../../services/widget-storage";
-import { DailyNote, formatDate, getDaysAgo, isToday, } from "../../types/note";
+import { type AttachedPage, DailyNote, formatDate, getDaysAgo, isToday, type PageNote, } from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
 import {
   WIDGET_BUILD_STATE_EVENT,
@@ -68,6 +77,7 @@ function noteChanged(current: DailyNote | null, incoming: DailyNote,): boolean {
 }
 
 interface GlobalSearchResult {
+  kind: "daily" | "page";
   path: string;
   relativePath: string;
   title: string;
@@ -79,6 +89,8 @@ interface AiSelectionHighlight {
   from: number;
   to: number;
 }
+
+type AppView = { kind: "home"; } | { kind: "page"; title: string; };
 
 function renderSearchSnippet(snippet: string,) {
   const parts = snippet.split(/(\[[^\]]+\])/,);
@@ -204,9 +216,58 @@ function DateHeader({
   );
 }
 
+function AttachedPagesRow({
+  pages,
+  onCreatePage,
+  onOpenPage,
+}: {
+  pages: AttachedPage[];
+  onCreatePage?: () => void;
+  onOpenPage?: (title: string,) => void;
+},) {
+  if (pages.length === 0 && !onCreatePage) return null;
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      {pages.map((page,) => (
+        <button
+          key={page.path}
+          type="button"
+          onClick={() => onOpenPage?.(page.title,)}
+          className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 transition-colors hover:border-gray-300 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-white"
+        >
+          <FileText className="h-3.5 w-3.5" strokeWidth={2} />
+          <span>{page.title}</span>
+          {page.type === "meeting" && (
+            <span
+              className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+              style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+            >
+              meeting
+            </span>
+          )}
+        </button>
+      ))}
+      {onCreatePage && (
+        <button
+          type="button"
+          onClick={onCreatePage}
+          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-sm text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-200"
+        >
+          <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+          <span>Page</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 function LazyNote({
   date,
+  pagesRevision,
   onOpenDate,
+  onOpenPage,
+  onCreatePage,
   onInteract,
   onChatSelection,
   onSelectionChange,
@@ -214,7 +275,10 @@ function LazyNote({
   persistentSelectionRange,
 }: {
   date: string;
+  pagesRevision: number;
   onOpenDate?: (date: string,) => void;
+  onOpenPage?: (title: string,) => void;
+  onCreatePage?: (date: string,) => void;
   onInteract?: () => void;
   onChatSelection?: (selection: EditableNoteSelection,) => void;
   onSelectionChange?: (selection: EditableNoteSelection | null,) => void;
@@ -222,6 +286,7 @@ function LazyNote({
   persistentSelectionRange?: { from: number; to: number; } | null;
 },) {
   const [note, setNote,] = useState<DailyNote | null>(null,);
+  const [attachedPages, setAttachedPages,] = useState<AttachedPage[]>([],);
   const containerRef = useRef<HTMLDivElement>(null,);
 
   useEffect(() => {
@@ -231,7 +296,12 @@ function LazyNote({
     const observer = new IntersectionObserver(
       ([entry,],) => {
         if (entry.isIntersecting) {
-          loadDailyNote(date,).then(setNote,).catch(console.error,);
+          Promise.all([loadDailyNote(date,), listPagesAttachedTo(date,),])
+            .then(([loadedNote, pages,]) => {
+              setNote(loadedNote,);
+              setAttachedPages(pages,);
+            },)
+            .catch(console.error,);
         }
       },
       { rootMargin: "400px", },
@@ -239,7 +309,7 @@ function LazyNote({
 
     observer.observe(el,);
     return () => observer.disconnect();
-  }, [date,],);
+  }, [date, pagesRevision,],);
 
   const handleCityChange = useCallback((city: string | null,) => {
     if (!note || note.city === city) return;
@@ -254,6 +324,11 @@ function LazyNote({
         <>
           <div className="px-6 pt-12 pb-4">
             <DateHeader date={note.date} city={note.city} onCityChange={handleCityChange} />
+            <AttachedPagesRow
+              pages={attachedPages}
+              onOpenPage={onOpenPage}
+              onCreatePage={onCreatePage ? () => onCreatePage(date,) : undefined}
+            />
           </div>
           <EditableNote
             note={note}
@@ -270,16 +345,88 @@ function LazyNote({
   );
 }
 
+function PageView({
+  title,
+  pagesRevision,
+  onOpenDate,
+  onInteract,
+}: {
+  title: string;
+  pagesRevision: number;
+  onOpenDate?: (date: string,) => void;
+  onInteract?: () => void;
+},) {
+  const [page, setPage,] = useState<PageNote | null>(null,);
+
+  useEffect(() => {
+    loadPage(title,).then(setPage,).catch(console.error,);
+  }, [pagesRevision, title,],);
+
+  const handleSave = useCallback((note: DailyNote | PageNote,) => {
+    if ("date" in note) return;
+    setPage(note,);
+    savePage(note,).catch(console.error,);
+  }, [],);
+
+  if (!page) {
+    return (
+      <div className="w-full max-w-3xl px-6 pt-12 pb-10">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Page not found.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-3xl">
+      <div className="px-6 pt-12 pb-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1
+            className="text-2xl italic text-gray-900 dark:text-white"
+            style={{ fontFamily: '"Instrument Serif", serif', }}
+          >
+            {page.title}
+          </h1>
+          {page.type === "meeting" && (
+            <span
+              className="text-xs font-medium uppercase tracking-wide px-3 py-1 rounded-md text-white font-sans"
+              style={{ background: "linear-gradient(to bottom, #4b5563, #1f2937)", }}
+            >
+              meeting
+            </span>
+          )}
+        </div>
+        {page.attachedTo && (
+          <button
+            type="button"
+            onClick={() => onOpenDate?.(page.attachedTo!,)}
+            className="mt-3 text-sm text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          >
+            Attached to {formatDate(page.attachedTo,)}
+          </button>
+        )}
+      </div>
+      <EditableNote
+        note={page}
+        onSave={handleSave}
+        onOpenDate={onOpenDate}
+        onInteract={onInteract}
+      />
+    </div>
+  );
+}
+
 export default function AppLayout() {
   const today = useCurrentDate();
   const currentCity = useCurrentCity();
   const [todayNote, setTodayNote,] = useState<DailyNote | null>(null,);
+  const [todayAttachedPages, setTodayAttachedPages,] = useState<AttachedPage[]>([],);
   const pastDates = useMemo(() => Array.from({ length: 30, }, (_, i,) => getDaysAgo(i + 1,),), [today,],);
   const [settingsOpen, setSettingsOpen,] = useState(false,);
   const [libraryOpen, setLibraryOpen,] = useState(false,);
   const [onboardingOpen, setOnboardingOpen,] = useState(false,);
   const [isConfigured, setIsConfigured,] = useState(false,);
   const [storageRevision, setStorageRevision,] = useState(0,);
+  const [pagesRevision, setPagesRevision,] = useState(0,);
   const [updateInfo, setUpdateInfo,] = useState<UpdateInfo | null>(null,);
   const [postUpdateInfo, setPostUpdateInfo,] = useState<PostUpdateInfo | null>(null,);
   const [isPinned, setIsPinned,] = useState(false,);
@@ -308,17 +455,26 @@ export default function AppLayout() {
   const [aiApplyingDates, setAiApplyingDates,] = useState<string[]>([],);
   const [widgetEditSession, setWidgetEditSession,] = useState<WidgetEditRequestDetail | null>(null,);
   const [widgetEditSubmitting, setWidgetEditSubmitting,] = useState(false,);
+  const [viewState, setViewState,] = useState<{ history: AppView[]; index: number; }>({
+    history: [{ kind: "home", }],
+    index: 0,
+  },);
   const aiAbortControllerRef = useRef<AbortController | null>(null,);
   const currentSelectionRef = useRef<EditableNoteSelection | null>(null,);
   const aiLastSubmittedPromptRef = useRef("",);
   const widgetEditSessionRef = useRef<WidgetEditRequestDetail | null>(null,);
   const todayNoteRef = useRef<DailyNote | null>(null,);
   const todayEditorRef = useRef<EditableNoteHandle>(null,);
+  const homeScrollTopRef = useRef(0,);
+  const restoreHomeScrollTopRef = useRef<number | null>(null,);
   const googleSyncRef = useRef<Promise<boolean> | null>(null,);
   const suppressWatcherUntilRef = useRef(0,);
   const searchInputRef = useRef<HTMLInputElement>(null,);
   const searchResultRefs = useRef<(HTMLButtonElement | null)[]>([],);
   const searchNavigationModeRef = useRef<"mouse" | "keyboard">("mouse",);
+  const currentView = viewState.history[viewState.index] ?? { kind: "home", };
+  const canGoBack = viewState.index > 0;
+  const canGoForward = viewState.index < viewState.history.length - 1;
   useEffect(() => {
     todayNoteRef.current = todayNote;
   }, [todayNote,],);
@@ -385,6 +541,61 @@ export default function AppLayout() {
       },)
       .catch(console.error,);
   }, [today,],);
+
+  const syncTodayAttachedPages = useCallback(() => {
+    listPagesAttachedTo(today,).then(setTodayAttachedPages,).catch(console.error,);
+  }, [today,],);
+
+  const handleViewTransition = useCallback((from: AppView, to: AppView,) => {
+    if (from.kind === "home" && to.kind === "page") {
+      homeScrollTopRef.current = scrollRef.current?.scrollTop ?? 0;
+    }
+
+    if (from.kind === "page" && to.kind === "home") {
+      restoreHomeScrollTopRef.current = homeScrollTopRef.current;
+    }
+  }, [],);
+
+  const pushView = useCallback((nextView: AppView,) => {
+    setViewState((current,) => {
+      const activeView = current.history[current.index] ?? { kind: "home", };
+      if (JSON.stringify(activeView,) === JSON.stringify(nextView,)) {
+        return current;
+      }
+
+      handleViewTransition(activeView, nextView,);
+      return {
+        history: [...current.history.slice(0, current.index + 1,), nextView,],
+        index: current.index + 1,
+      };
+    },);
+  }, [handleViewTransition,],);
+
+  const goBack = useCallback(() => {
+    setViewState((current,) => {
+      if (current.index === 0) return current;
+      handleViewTransition(current.history[current.index], current.history[current.index - 1],);
+      return { ...current, index: current.index - 1, };
+    },);
+  }, [handleViewTransition,],);
+
+  const goForward = useCallback(() => {
+    setViewState((current,) => {
+      if (current.index >= current.history.length - 1) return current;
+      handleViewTransition(current.history[current.index], current.history[current.index + 1],);
+      return { ...current, index: current.index + 1, };
+    },);
+  }, [handleViewTransition,],);
+
+  const goHome = useCallback(() => {
+    pushView({ kind: "home", },);
+  }, [pushView,],);
+
+  const openPageView = useCallback((title: string,) => {
+    const normalizedTitle = sanitizePageTitle(title,);
+    if (!normalizedTitle) return;
+    pushView({ kind: "page", title: normalizedTitle, },);
+  }, [pushView,],);
 
   const runGoogleSync = useCallback(async () => {
     if (googleSyncRef.current) {
@@ -513,10 +724,13 @@ export default function AppLayout() {
 
   const navigateToDate = useCallback((date: string,) => {
     closeGlobalSearch();
+    if (currentView.kind !== "home") {
+      goHome();
+    }
     const isVisibleInFeed = date === today || pastDates.includes(date,);
     setFocusedDate(isVisibleInFeed ? null : date,);
     setPendingScrollDate(date,);
-  }, [closeGlobalSearch, pastDates, today,],);
+  }, [closeGlobalSearch, currentView.kind, goHome, pastDates, today,],);
 
   const openGlobalSearchResult = useCallback(async (result: GlobalSearchResult | undefined,) => {
     if (!result) return;
@@ -729,7 +943,7 @@ export default function AppLayout() {
             limit: 120,
           },);
           if (!cancelled) {
-            setGlobalSearchResults(results,);
+            setGlobalSearchResults(results.map((result,) => ({ ...result, kind: "daily", })),);
             setGlobalSearchSelectedIndex(results.length > 0 ? 0 : -1,);
           }
         } catch (error) {
@@ -804,10 +1018,12 @@ export default function AppLayout() {
       await rolloverTasks(30,);
       await runGoogleSync();
       const note = await getOrCreateDailyNote(today,);
+      const pages = await listPagesAttachedTo(today,);
       setTodayNote(note,);
+      setTodayAttachedPages(pages,);
     }
     load().catch(console.error,);
-  }, [isConfigured, runGoogleSync, storageRevision, today,],);
+  }, [isConfigured, pagesRevision, runGoogleSync, storageRevision, today,],);
 
   useEffect(() => {
     if (!isConfigured) return;
@@ -853,7 +1069,8 @@ export default function AppLayout() {
   }, [isConfigured, storageRevision, syncTodayNoteFromDisk,],);
 
   const handleTodaySave = useCallback(
-    (note: DailyNote,) => {
+    (note: DailyNote | PageNote,) => {
+      if (!("date" in note)) return;
       suppressWatcherUntilRef.current = Date.now() + LOCAL_SAVE_WATCH_SUPPRESSION_MS;
       setTodayNote(note,);
       saveDailyNote(note,).catch(console.error,);
@@ -869,6 +1086,18 @@ export default function AppLayout() {
     setTodayNote(updated,);
     saveDailyNote(updated,).catch(console.error,);
   }, [],);
+
+  const handleCreateAttachedPage = useCallback(async (date: string,) => {
+    const title = window.prompt("Page title",);
+    if (!title?.trim()) return;
+
+    const page = await createAttachedPage({ title, attachedTo: date, },);
+    setPagesRevision((value,) => value + 1);
+    if (date === today) {
+      syncTodayAttachedPages();
+    }
+    openPageView(page.title,);
+  }, [openPageView, syncTodayAttachedPages, today,],);
 
   const runAiPrompt = useCallback(async (promptText: string,) => {
     const todayNoteValue = getCurrentTodayNoteForAi();
@@ -1151,6 +1380,7 @@ export default function AppLayout() {
   useEffect(() => {
     const todayEl = todayRef.current;
     const scrollEl = scrollRef.current;
+    if (currentView.kind !== "home") return;
     if (!todayEl || !scrollEl) return;
 
     const observer = new IntersectionObserver(
@@ -1169,7 +1399,7 @@ export default function AppLayout() {
 
     observer.observe(todayEl,);
     return () => observer.disconnect();
-  }, [],);
+  }, [currentView.kind,],);
 
   function scrollToToday() {
     const todayEl = todayRef.current;
@@ -1186,30 +1416,37 @@ export default function AppLayout() {
   }
 
   const scrollToDate = useCallback((date: string,) => {
+    navigateToDate(date,);
+  }, [navigateToDate,],);
+
+  useEffect(() => {
+    if (currentView.kind !== "home") return;
+    if (!pendingScrollDate || globalSearchOpen) return;
     const scrollEl = scrollRef.current;
-    const target = date === today
+    const target = pendingScrollDate === today
       ? todayRef.current
-      : document.querySelector<HTMLElement>(`[data-note-date="${date}"]`,);
-    if (!target || !scrollEl) {
-      target?.scrollIntoView({ behavior: "smooth", block: "start", },);
-      return;
-    }
+      : document.querySelector<HTMLElement>(`[data-note-date="${pendingScrollDate}"]`,);
+    if (!target || !scrollEl) return;
 
     const scrollBounds = scrollEl.getBoundingClientRect();
     const targetBounds = target.getBoundingClientRect();
     const top = scrollEl.scrollTop + targetBounds.top - scrollBounds.top - NOTE_SCROLL_OFFSET_PX;
     scrollEl.scrollTo({ top: Math.max(0, top,), behavior: "smooth", },);
-  }, [today,],);
+    setPendingScrollDate(null,);
+  }, [currentView.kind, focusedDate, globalSearchOpen, pendingScrollDate, today,],);
 
   useEffect(() => {
-    if (!pendingScrollDate || globalSearchOpen) return;
-    const target = pendingScrollDate === today
-      ? todayRef.current
-      : document.querySelector<HTMLElement>(`[data-note-date="${pendingScrollDate}"]`,);
-    if (!target) return;
-    scrollToDate(pendingScrollDate,);
-    setPendingScrollDate(null,);
-  }, [focusedDate, globalSearchOpen, pendingScrollDate, scrollToDate, today,],);
+    if (currentView.kind !== "home") return;
+    if (restoreHomeScrollTopRef.current === null) return;
+
+    const targetTop = restoreHomeScrollTopRef.current;
+    const frameId = window.requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: targetTop, behavior: "auto", });
+      restoreHomeScrollTopRef.current = null;
+    },);
+
+    return () => window.cancelAnimationFrame(frameId,);
+  }, [currentView.kind,],);
 
   return (
     <div
@@ -1218,7 +1455,7 @@ export default function AppLayout() {
     >
       {/* Titlebar: drag region + pin button */}
       <div
-        className="sticky top-0 z-50 h-[38px] w-full flex items-center justify-end shrink-0"
+        className="sticky top-0 z-50 h-[38px] w-full flex items-center justify-between shrink-0 px-3"
         onMouseDown={(e,) => {
           if (e.buttons === 1 && !(e.target as HTMLElement).closest("button, input",)) {
             e.detail === 2
@@ -1227,13 +1464,55 @@ export default function AppLayout() {
           }
         }}
       >
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={goHome}
+            disabled={currentView.kind === "home"}
+            className={`p-1 rounded-md transition-colors ${
+              currentView.kind === "home"
+                ? "text-gray-300 dark:text-gray-700"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800"
+            }`}
+            title="Home"
+          >
+            <House className="h-4 w-4" strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={!canGoBack}
+            className={`p-1 rounded-md transition-colors ${
+              canGoBack
+                ? "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800"
+                : "text-gray-300 dark:text-gray-700"
+            }`}
+            title="Back"
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            onClick={goForward}
+            disabled={!canGoForward}
+            className={`p-1 rounded-md transition-colors ${
+              canGoForward
+                ? "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800"
+                : "text-gray-300 dark:text-gray-700"
+            }`}
+            title="Forward"
+          >
+            <ChevronRight className="h-4 w-4" strokeWidth={2} />
+          </button>
+        </div>
+
         <button
           onClick={async () => {
             const next = !isPinned;
             await getCurrentWindow().setAlwaysOnTop(next,);
             setIsPinned(next,);
           }}
-          className={`mr-3 p-1 rounded-md transition-colors cursor-default ${
+          className={`p-1 rounded-md transition-colors cursor-default ${
             isPinned
               ? "text-gray-900 dark:text-white bg-gray-200/60 dark:bg-gray-700/60"
               : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -1354,85 +1633,109 @@ export default function AppLayout() {
                 />
               )
               : updateInfo && <UpdateBanner update={updateInfo} onDismiss={() => setUpdateInfo(null,)} />}
-            <div className="w-full max-w-3xl">
-              {focusedDate && focusedDate !== today && !pastDates.includes(focusedDate,) && (
-                <div key={`${focusedDate}-${storageRevision}`} data-note-date={focusedDate}>
-                  <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />
-                  <LazyNote
-                    date={focusedDate}
-                    onOpenDate={scrollToDate}
-                    onInteract={handleEditorInteract}
-                    onChatSelection={openAiComposer}
-                    onSelectionChange={handleAiSelectionChange}
-                    onSelectionBlur={handleAiSelectionBlur}
-                    persistentSelectionRange={aiSelectionHighlight?.noteDate === focusedDate
-                      ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
-                      : null}
-                  />
-                </div>
+            {currentView.kind === "page"
+              ? (
+                <PageView
+                  title={currentView.title}
+                  pagesRevision={pagesRevision}
+                  onOpenDate={scrollToDate}
+                  onInteract={handleEditorInteract}
+                />
+              )
+              : (
+                <>
+                  <div className="w-full max-w-3xl">
+                    {focusedDate && focusedDate !== today && !pastDates.includes(focusedDate,) && (
+                      <div key={`${focusedDate}-${storageRevision}-${pagesRevision}`} data-note-date={focusedDate}>
+                        <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />
+                        <LazyNote
+                          date={focusedDate}
+                          pagesRevision={pagesRevision}
+                          onOpenDate={scrollToDate}
+                          onOpenPage={openPageView}
+                          onCreatePage={handleCreateAttachedPage}
+                          onInteract={handleEditorInteract}
+                          onChatSelection={openAiComposer}
+                          onSelectionChange={handleAiSelectionChange}
+                          onSelectionBlur={handleAiSelectionBlur}
+                          persistentSelectionRange={aiSelectionHighlight?.noteDate === focusedDate
+                            ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                            : null}
+                        />
+                      </div>
+                    )}
+
+                    <div
+                      ref={todayRef}
+                      data-note-date={today}
+                      className="min-h-[400px]"
+                      onClick={() => todayEditorRef.current?.focus()}
+                    >
+                      <div className="px-6 pt-6 pb-4">
+                        <DateHeader
+                          date={today}
+                          city={todayNote?.city}
+                          fallbackCity={currentCity}
+                          onCityChange={todayNote ? handleTodayCityChange : undefined}
+                        />
+                        <AttachedPagesRow
+                          pages={todayAttachedPages}
+                          onOpenPage={openPageView}
+                          onCreatePage={() => handleCreateAttachedPage(today,)}
+                        />
+                      </div>
+                      {todayNote && (
+                        <EditableNote
+                          ref={todayEditorRef}
+                          note={todayNote}
+                          onOpenDate={scrollToDate}
+                          onSave={handleTodaySave}
+                          onInteract={handleEditorInteract}
+                          onChatSelection={openAiComposer}
+                          onSelectionChange={handleAiSelectionChange}
+                          onSelectionBlur={handleAiSelectionBlur}
+                          persistentSelectionRange={aiSelectionHighlight?.noteDate === todayNote.date
+                            ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                            : null}
+                        />
+                      )}
+                    </div>
+
+                    {pastDates.map((date,) => (
+                      <div key={`${date}-${storageRevision}-${pagesRevision}`} data-note-date={date}>
+                        <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />
+                        <LazyNote
+                          date={date}
+                          pagesRevision={pagesRevision}
+                          onOpenDate={scrollToDate}
+                          onOpenPage={openPageView}
+                          onCreatePage={handleCreateAttachedPage}
+                          onInteract={handleEditorInteract}
+                          onChatSelection={openAiComposer}
+                          onSelectionChange={handleAiSelectionChange}
+                          onSelectionBlur={handleAiSelectionBlur}
+                          persistentSelectionRange={aiSelectionHighlight?.noteDate === date
+                            ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                            : null}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {todayDirection && (
+                    <button
+                      onClick={scrollToToday}
+                      className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-medium uppercase tracking-wide text-white font-sans shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                      style={{
+                        background: "linear-gradient(to bottom, #4b5563, #1f2937)",
+                        ...(todayDirection === "above" ? { top: 16, } : { bottom: 16, }),
+                      }}
+                    >
+                      {todayDirection === "above" ? "↑" : "↓"} today
+                    </button>
+                  )}
+                </>
               )}
-
-              <div
-                ref={todayRef}
-                data-note-date={today}
-                className="min-h-[400px]"
-                onClick={() => todayEditorRef.current?.focus()}
-              >
-                <div className="px-6 pt-6 pb-4">
-                  <DateHeader
-                    date={today}
-                    city={todayNote?.city}
-                    fallbackCity={currentCity}
-                    onCityChange={todayNote ? handleTodayCityChange : undefined}
-                  />
-                </div>
-                {todayNote && (
-                  <EditableNote
-                    ref={todayEditorRef}
-                    note={todayNote}
-                    onOpenDate={scrollToDate}
-                    onSave={handleTodaySave}
-                    onInteract={handleEditorInteract}
-                    onChatSelection={openAiComposer}
-                    onSelectionChange={handleAiSelectionChange}
-                    onSelectionBlur={handleAiSelectionBlur}
-                    persistentSelectionRange={aiSelectionHighlight?.noteDate === todayNote.date
-                      ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
-                      : null}
-                  />
-                )}
-              </div>
-
-              {pastDates.map((date,) => (
-                <div key={`${date}-${storageRevision}`} data-note-date={date}>
-                  <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />
-                  <LazyNote
-                    date={date}
-                    onOpenDate={scrollToDate}
-                    onInteract={handleEditorInteract}
-                    onChatSelection={openAiComposer}
-                    onSelectionChange={handleAiSelectionChange}
-                    onSelectionBlur={handleAiSelectionBlur}
-                    persistentSelectionRange={aiSelectionHighlight?.noteDate === date
-                      ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
-                      : null}
-                  />
-                </div>
-              ))}
-            </div>
-
-            {todayDirection && (
-              <button
-                onClick={scrollToToday}
-                className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-medium uppercase tracking-wide text-white font-sans shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                style={{
-                  background: "linear-gradient(to bottom, #4b5563, #1f2937)",
-                  ...(todayDirection === "above" ? { top: 16, } : { bottom: 16, }),
-                }}
-              >
-                {todayDirection === "above" ? "↑" : "↓"} today
-              </button>
-            )}
           </>
         )}
 
