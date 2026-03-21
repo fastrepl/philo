@@ -4,6 +4,41 @@ export interface DailyNote {
   city?: string | null;
 }
 
+export type PageType = "page" | "meeting";
+
+export interface PageFrontmatter {
+  type?: string;
+  attached_to?: string;
+  event_id?: string;
+  started_at?: string;
+  ended_at?: string;
+  participants?: unknown;
+  source?: string;
+  [key: string]: unknown;
+}
+
+export interface PageNote {
+  title: string;
+  path: string;
+  content: string; // TipTap JSON string (in-memory), markdown on disk
+  type: PageType;
+  attachedTo: string | null;
+  eventId: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  participants: string[];
+  source: string | null;
+  frontmatter: PageFrontmatter;
+  hasFrontmatter: boolean;
+}
+
+export interface AttachedPage {
+  title: string;
+  path: string;
+  type: PageType;
+  attachedTo: string | null;
+}
+
 function toLocalDateString(d: Date,): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1,).padStart(2, "0",)}-${String(d.getDate(),).padStart(2, "0",)}`;
 }

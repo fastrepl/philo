@@ -79,6 +79,7 @@ export async function initJournalScope(): Promise<void> {
   const customDir = await getJournalDirSetting();
   const journalDir = await getJournalDir();
   const vaultDir = await getVaultDirSetting();
+  const pagesDir = await getPagesDir();
   const excalidrawDir = await getExcalidrawDir();
   const assetsDir = await getAssetsDir();
   const widgetsDir = await getWidgetsDir();
@@ -86,6 +87,7 @@ export async function initJournalScope(): Promise<void> {
   if (customDir) paths.add(customDir,);
   if (journalDir) paths.add(journalDir,);
   if (vaultDir) paths.add(vaultDir,);
+  if (pagesDir) paths.add(pagesDir,);
   if (excalidrawDir) paths.add(excalidrawDir,);
   if (assetsDir) paths.add(assetsDir,);
   if (widgetsDir) paths.add(widgetsDir,);
@@ -132,6 +134,15 @@ export async function getChatsDir(): Promise<string> {
   return await join(journal, "chats",);
 }
 
+export async function getPagesDir(): Promise<string> {
+  const vaultDir = await getVaultDirSetting();
+  if (vaultDir) return await join(vaultDir, "pages",);
+
+  const journalDir = await getJournalDir();
+  const parentDir = await dirname(journalDir,);
+  return await join(parentDir, "pages",);
+}
+
 /**
  * Apply a filename pattern to a date string (YYYY-MM-DD).
  * Supported tokens: {YYYY}, {MM}, {DD}
@@ -151,6 +162,16 @@ function escapeRegex(value: string,): string {
 
 function stripMdExtension(target: string,): string {
   return target.replace(/\.md$/i, "",);
+}
+
+const INVALID_PAGE_TITLE_RE = /[\/\\\u0000-\u001F]+/g;
+
+export function sanitizePageTitle(title: string,): string {
+  return title
+    .replace(INVALID_PAGE_TITLE_RE, " ",)
+    .replace(/\s+/g, " ",)
+    .replace(/^\.+|\.+$/g, "",)
+    .trim();
 }
 
 function joinNoteLinkSegments(parts: string[],): string {
@@ -253,6 +274,22 @@ export async function getNotePath(date: string,): Promise<string> {
   const pattern = await getFilenamePattern();
   const relativePath = applyFilenamePattern(pattern, date,) + ".md";
   return await join(journalDir, relativePath,);
+}
+
+export async function getPagePath(title: string,): Promise<string> {
+  const normalizedTitle = sanitizePageTitle(title,);
+  if (!normalizedTitle) {
+    throw new Error("Page title is required.",);
+  }
+
+  const pagesDir = await getPagesDir();
+  return await join(pagesDir, `${normalizedTitle}.md`,);
+}
+
+export function parsePageTitleFromPath(path: string,): string | null {
+  const filename = path.split(/[\\/]/).pop();
+  if (!filename?.toLowerCase().endsWith(".md",)) return null;
+  return filename.slice(0, -3,);
 }
 
 /**
