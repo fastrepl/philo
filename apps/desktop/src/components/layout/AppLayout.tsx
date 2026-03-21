@@ -1171,8 +1171,9 @@ export default function AppLayout() {
     if (date === today) {
       syncTodayAttachedPages();
     }
+    openPageView(page.title,);
     return page.title;
-  }, [syncTodayAttachedPages, today,],);
+  }, [openPageView, syncTodayAttachedPages, today,],);
 
   const runAiPrompt = useCallback(async (promptText: string,) => {
     const todayNoteValue = getCurrentTodayNoteForAi();
