@@ -7,6 +7,14 @@ const GEOLOCATION_TIMEOUT_MS = 10_000;
 const GEOCODE_LOOKUP_TIMEOUT_MS = 4_000;
 const REVERSE_GEOCODE_URL = "https://nominatim.openstreetmap.org/reverse";
 
+type CurrentCitySource = "cache" | "geolocation" | "timezone";
+
+type CurrentCityState = {
+  city: string;
+  source: CurrentCitySource;
+  timezoneCity: string;
+};
+
 function getTimeZoneCity(): string {
   if (typeof Intl === "undefined") return "";
 
@@ -108,12 +116,29 @@ async function reverseGeocodeCity(latitude: number, longitude: number, signal: A
   return "";
 }
 
-export function useCurrentCity(): string {
-  const [city, setCity,] = useState(() => readCachedCity() || getTimeZoneCity());
+export function useCurrentCity(): CurrentCityState {
+  const [state, setState,] = useState<CurrentCityState>(() => {
+    const timezoneCity = getTimeZoneCity();
+    const cachedCity = readCachedCity();
+
+    if (cachedCity) {
+      return {
+        city: cachedCity,
+        source: "cache",
+        timezoneCity,
+      };
+    }
+
+    return {
+      city: timezoneCity,
+      source: "timezone",
+      timezoneCity,
+    };
+  },);
 
   useEffect(() => {
     let disposed = false;
-    const fallbackCity = getTimeZoneCity();
+    const timezoneCity = getTimeZoneCity();
 
     async function refresh() {
       try {
@@ -130,7 +155,15 @@ export function useCurrentCity(): string {
 
         if (permissions.location !== "granted") {
           clearCachedCity();
-          setCity(fallbackCity,);
+          setState((prev,) => (
+            prev.city === timezoneCity && prev.source === "timezone" && prev.timezoneCity === timezoneCity
+              ? prev
+              : {
+                city: timezoneCity,
+                source: "timezone",
+                timezoneCity,
+              }
+          ));
           return;
         }
 
@@ -154,7 +187,15 @@ export function useCurrentCity(): string {
 
           if (nextCity) {
             writeCachedCity(nextCity,);
-            setCity((prev,) => (prev !== nextCity ? nextCity : prev));
+            setState((prev,) => (
+              prev.city === nextCity && prev.source === "geolocation" && prev.timezoneCity === timezoneCity
+                ? prev
+                : {
+                  city: nextCity,
+                  source: "geolocation",
+                  timezoneCity,
+                }
+            ));
             return;
           }
         } finally {
@@ -162,11 +203,27 @@ export function useCurrentCity(): string {
         }
 
         clearCachedCity();
-        setCity(fallbackCity,);
+        setState((prev,) => (
+          prev.city === timezoneCity && prev.source === "timezone" && prev.timezoneCity === timezoneCity
+            ? prev
+            : {
+              city: timezoneCity,
+              source: "timezone",
+              timezoneCity,
+            }
+        ));
       } catch (error) {
         if ((error as Error).name === "AbortError" || disposed) return;
         clearCachedCity();
-        setCity(fallbackCity,);
+        setState((prev,) => (
+          prev.city === timezoneCity && prev.source === "timezone" && prev.timezoneCity === timezoneCity
+            ? prev
+            : {
+              city: timezoneCity,
+              source: "timezone",
+              timezoneCity,
+            }
+        ));
       }
     }
 
@@ -187,5 +244,5 @@ export function useCurrentCity(): string {
     };
   }, [],);
 
-  return city;
+  return state;
 }

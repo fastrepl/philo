@@ -1076,8 +1076,21 @@ export default function AppLayout() {
 
   useEffect(() => {
     const note = todayNoteRef.current;
-    if (!note || note.city?.trim() || !currentCity) return;
-    const updated = { ...note, city: currentCity, };
+    const confirmedCity = currentCity.city.trim();
+    const timezoneCity = currentCity.timezoneCity.trim();
+    if (!note || currentCity.source !== "geolocation" || !confirmedCity) return;
+
+    const existingCity = note.city?.trim() || "";
+    const shouldReplaceTimezoneFallback = Boolean(
+      existingCity
+        && timezoneCity
+        && existingCity === timezoneCity
+        && existingCity !== confirmedCity,
+    );
+
+    if (existingCity && !shouldReplaceTimezoneFallback) return;
+
+    const updated = { ...note, city: confirmedCity, };
     suppressWatcherUntilRef.current = Date.now() + LOCAL_SAVE_WATCH_SUPPRESSION_MS;
     setTodayNote(updated,);
     saveDailyNote(updated,).catch(console.error,);
@@ -1741,7 +1754,7 @@ export default function AppLayout() {
                         <DateHeader
                           date={today}
                           city={todayNote?.city}
-                          fallbackCity={currentCity}
+                          fallbackCity={currentCity.city}
                           onCityChange={todayNote ? handleTodayCityChange : undefined}
                         />
                         <AttachedPagesRow
