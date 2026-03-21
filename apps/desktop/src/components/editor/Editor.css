@@ -368,6 +368,10 @@
   cursor: default;
 }
 
+.mention-calendar-cell.is-outside-month {
+  color: #9ca3af;
+}
+
 .mention-calendar-cell.is-today {
   color: #2563eb;
   font-weight: 600;

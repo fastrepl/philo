@@ -39,13 +39,22 @@ function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (da
   const [viewMonth, setViewMonth,] = useState(init.getMonth(),);
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0,).getDate();
+  const daysInPreviousMonth = new Date(viewYear, viewMonth, 0,).getDate();
   const firstDay = (new Date(viewYear, viewMonth, 1,).getDay() + 6) % 7;
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null,);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d,);
+  const cells: { day: number; monthOffset: -1 | 0 | 1; }[] = [];
+  for (let i = firstDay - 1; i >= 0; i--) {
+    cells.push({ day: daysInPreviousMonth - i, monthOffset: -1, },);
+  }
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, monthOffset: 0, },);
+  while (cells.length % 7 !== 0) {
+    cells.push({ day: cells.length - (firstDay + daysInMonth) + 1, monthOffset: 1, },);
+  }
 
   const pad = (n: number,) => String(n,).padStart(2, "0",);
-  const toIso = (day: number,) => `${viewYear}-${pad(viewMonth + 1,)}-${pad(day,)}`;
+  const toIso = (day: number, monthOffset: -1 | 0 | 1,) => {
+    const date = new Date(viewYear, viewMonth + monthOffset, day,);
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1,)}-${pad(date.getDate(),)}`;
+  };
 
   const prevMonth = () => {
     if (viewMonth === 0) {
@@ -75,15 +84,14 @@ function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (da
         ))}
       </div>
       <div className="mention-calendar-grid">
-        {cells.map((day, i,) => {
-          if (day === null) return <span key={i} className="mention-calendar-cell mention-calendar-empty" />;
-          const iso = toIso(day,);
+        {cells.map(({ day, monthOffset, }, i,) => {
+          const iso = toIso(day, monthOffset,);
           return (
             <button
               key={i}
               className={`mention-calendar-cell${iso === todayStr ? " is-today" : ""}${
                 iso === selected ? " is-selected" : ""
-              }`}
+              }${monthOffset !== 0 ? " is-outside-month" : ""}`}
               onClick={() => onSelect(iso,)}
               type="button"
             >
