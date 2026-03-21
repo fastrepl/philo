@@ -33,6 +33,27 @@ use widget_git::{
     WidgetGitRestoreResult,
 };
 
+#[cfg(target_os = "macos")]
+#[repr(C)]
+struct NSPoint {
+    x: f64,
+    y: f64,
+}
+
+#[cfg(target_os = "macos")]
+#[repr(C)]
+struct NSSize {
+    width: f64,
+    height: f64,
+}
+
+#[cfg(target_os = "macos")]
+#[repr(C)]
+struct NSRect {
+    origin: NSPoint,
+    size: NSSize,
+}
+
 const GOOGLE_OAUTH_DEFAULT_TIMEOUT_MS: u64 = 180_000;
 const GOOGLE_OAUTH_ACCESS_TOKEN_BUFFER_MS: u64 = 60_000;
 const GOOGLE_OAUTH_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
@@ -225,6 +246,39 @@ fn set_macos_process_name(name: &str) {
             objc::msg_send![process_info_class, processInfo];
         let _: () = objc::msg_send![process_info, setProcessName: ns_name];
     }
+}
+
+#[cfg(target_os = "macos")]
+fn offset_macos_traffic_lights(window: &tauri::WebviewWindow, delta_y: f64) -> Result<(), String> {
+    let ns_win = window.ns_window().map_err(|e| e.to_string())?;
+    let ns_window = ns_win as *mut objc::runtime::Object;
+
+    unsafe {
+        let close_button: *mut objc::runtime::Object =
+            msg_send![ns_window, standardWindowButton: 0usize];
+        if close_button.is_null() {
+            return Ok(());
+        }
+
+        let title_bar_view: *mut objc::runtime::Object = msg_send![close_button, superview];
+        if title_bar_view.is_null() {
+            return Ok(());
+        }
+
+        let title_bar_container: *mut objc::runtime::Object = msg_send![title_bar_view, superview];
+        if title_bar_container.is_null() {
+            return Ok(());
+        }
+
+        let mut title_bar_rect: NSRect = msg_send![title_bar_container, frame];
+        let window_rect: NSRect = msg_send![ns_window, frame];
+        title_bar_rect.size.height += delta_y;
+        title_bar_rect.origin.y = window_rect.size.height - title_bar_rect.size.height;
+
+        let _: () = msg_send![title_bar_container, setFrame: title_bar_rect];
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -3466,6 +3520,11 @@ pub fn run() {
             app.deep_link().on_open_url(move |_| {
                 focus_main_window(&app_handle);
             });
+
+            #[cfg(target_os = "macos")]
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = offset_macos_traffic_lights(&window, 4.0);
+            }
 
             let app_name = if cfg!(debug_assertions) {
                 "Philo Dev"
