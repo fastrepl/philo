@@ -44,7 +44,7 @@ function getRecurrenceDescription(date: string, recurrence: string,) {
   return `Starting from ${formatRecurrenceDescriptionDate(date,)} this will show up on a ${recurrence} basis.`;
 }
 
-type SlashCommandSection = "formatting" | "insert" | "media";
+type SlashCommandSection = "block" | "inline" | "media";
 
 interface SlashCommandItem {
   id: string;
@@ -263,10 +263,10 @@ const SlashCommandMenu = forwardRef<
                   return FileImage;
               }
             })();
-            const sectionTitle = item.section === "formatting"
-              ? "Formatting"
-              : item.section === "insert"
-              ? "Insert"
+            const sectionTitle = item.section === "block"
+              ? "Block"
+              : item.section === "inline"
+              ? "Inline"
               : "Media";
 
             return (
@@ -484,7 +484,7 @@ export const SlashCommandExtension = Extension.create<{
         const items: SlashCommandItem[] = [
           {
             id: "set-paragraph",
-            section: "formatting",
+            section: "block",
             title: "Text",
             subtitle: "Turn this block into plain text",
             keywords: ["text", "paragraph", "plain",],
@@ -492,7 +492,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "heading-1",
-            section: "formatting",
+            section: "block",
             title: "Heading 1",
             subtitle: "Large section heading",
             keywords: ["heading", "h1", "title",],
@@ -500,7 +500,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "heading-2",
-            section: "formatting",
+            section: "block",
             title: "Heading 2",
             subtitle: "Medium section heading",
             keywords: ["heading", "h2", "subtitle",],
@@ -508,7 +508,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "heading-3",
-            section: "formatting",
+            section: "block",
             title: "Heading 3",
             subtitle: "Small section heading",
             keywords: ["heading", "h3",],
@@ -516,7 +516,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "bullet-list",
-            section: "formatting",
+            section: "block",
             title: "Bullet list",
             subtitle: "Start a bulleted list",
             keywords: ["list", "bullet", "unordered",],
@@ -524,7 +524,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "ordered-list",
-            section: "formatting",
+            section: "block",
             title: "Numbered list",
             subtitle: "Start an ordered list",
             keywords: ["list", "numbered", "ordered",],
@@ -532,7 +532,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "task-list",
-            section: "formatting",
+            section: "block",
             title: "Task list",
             subtitle: "Start a checklist",
             keywords: ["task", "todo", "checklist",],
@@ -540,7 +540,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "blockquote",
-            section: "formatting",
+            section: "block",
             title: "Quote",
             subtitle: "Insert a quoted block",
             keywords: ["quote", "blockquote",],
@@ -548,7 +548,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "code-block",
-            section: "formatting",
+            section: "block",
             title: "Code block",
             subtitle: "Insert a fenced code block",
             keywords: ["code", "snippet", "pre",],
@@ -556,7 +556,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "insert-date-mention",
-            section: "insert",
+            section: "inline",
             title: "Date mention",
             subtitle: "Insert a date or repeating date chip",
             keywords: ["date", "chip", "mention", "deadline", "schedule",],
@@ -564,7 +564,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "divider",
-            section: "insert",
+            section: "block",
             title: "Divider",
             subtitle: "Insert a horizontal rule",
             keywords: ["divider", "rule", "line", "hr",],
@@ -572,7 +572,7 @@ export const SlashCommandExtension = Extension.create<{
           },
           {
             id: "table",
-            section: "insert",
+            section: "block",
             title: "Table",
             subtitle: "Insert a 3x3 table",
             keywords: ["table", "grid", "columns", "rows",],
@@ -591,7 +591,7 @@ export const SlashCommandExtension = Extension.create<{
         if (this.options.onAttachPage) {
           items.unshift({
             id: "attach-page",
-            section: "insert",
+            section: "block",
             title: "Attach page",
             subtitle: "Create a page attached to this daily note",
             keywords: ["page", "attach", "meeting", "note",],
