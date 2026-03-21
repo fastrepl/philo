@@ -1547,7 +1547,7 @@ export default function AppLayout() {
           }
         }}
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 pl-20">
           <button
             type="button"
             onClick={goHome}
