@@ -34,7 +34,7 @@ import { syncGoogleImports, } from "../../services/google-imports";
 import type { LibraryItem, } from "../../services/library";
 import { cleanupLegacyLibraryState, } from "../../services/library";
 import {
-  buildPageMarkdownHref,
+  buildPageLinkTarget,
   getJournalDir,
   getPagePath,
   getPagesDir,
@@ -166,9 +166,12 @@ function createPageLinkParagraph(title: string,): JSONContent {
     type: "paragraph",
     content: [
       {
-        type: "text",
-        text: title,
-        marks: [{ type: "link", attrs: { href: buildPageMarkdownHref(title,), }, },],
+        type: "mentionChip",
+        attrs: {
+          id: buildPageLinkTarget(title,),
+          kind: "page",
+          label: title,
+        },
       },
     ],
   };
