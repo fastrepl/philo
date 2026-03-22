@@ -330,7 +330,7 @@ function PageView({
 
   if (!page) {
     return (
-      <div className="w-full max-w-3xl px-6 pt-12 pb-10">
+      <div className="w-full max-w-3xl px-6 pt-6 pb-10">
         <p className="text-sm text-gray-500 dark:text-gray-400">Page not found.</p>
       </div>
     );
@@ -338,7 +338,7 @@ function PageView({
 
   return (
     <div className="w-full max-w-3xl">
-      <div className="px-6 pt-12 pb-4">
+      <div className="px-6 pt-6 pb-4">
         <div className="flex flex-wrap items-center gap-3">
           <h1
             className="text-2xl italic text-gray-900 dark:text-white"
