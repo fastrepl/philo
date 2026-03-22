@@ -180,6 +180,14 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
                         id: chip.getAttribute("data-id",) ?? "",
                         kind: (chip.getAttribute("data-kind",) ?? "tag") as MentionKind,
                       };
+                      const pageTitle = onOpenPage && chipData.kind === "page"
+                        ? parsePageTitleFromLinkTarget(chipData.id,)
+                        : null;
+                      if (pageTitle) {
+                        event.preventDefault();
+                        onOpenPage?.(pageTitle,);
+                        return true;
+                      }
                       const date = onOpenDate
                         ? getMentionChipDate(chipData, getReferenceDate(noteRef.current,),)
                         : null;

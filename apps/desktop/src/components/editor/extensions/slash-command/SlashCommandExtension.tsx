@@ -493,7 +493,17 @@ export const SlashCommandExtension = Extension.create<{
           void Promise.resolve(this.options.onAttachPage?.(item.pageTitle.trim(),),)
             .then((pageTitle,) => {
               if (!pageTitle || editor.isDestroyed) return;
-              editor.chain().focus().insertContent(`[[${buildPageLinkTarget(pageTitle,)}]] `,).run();
+              editor.chain().focus().insertContent([
+                {
+                  type: "mentionChip",
+                  attrs: {
+                    id: buildPageLinkTarget(pageTitle,),
+                    label: pageTitle,
+                    kind: "page",
+                  },
+                },
+                { type: "text", text: " ", },
+              ],).run();
             },)
             .catch(console.error,);
           break;

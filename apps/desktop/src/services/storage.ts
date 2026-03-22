@@ -333,11 +333,11 @@ export async function loadDailyNote(date: string,): Promise<DailyNote | null> {
   }
   const { city, body, } = parseFrontmatter(raw,);
   const withDateMentionLinks = await rewriteNoteLinksToDateMentionLinks(body,);
-  const withPageLinks = rewriteWikiPageLinksToMarkdownLinks(withDateMentionLinks,);
-  const withEmbeds = await resolveExcalidrawEmbeds(withPageLinks,);
+  const withEmbeds = await resolveExcalidrawEmbeds(withDateMentionLinks,);
   const withWidgets = await resolveWidgetEmbeds(withEmbeds,);
   const withMentionChips = replaceMentionWikiLinksWithChips(withWidgets, date,);
-  const withAssetLinks = await resolveMarkdownAssetLinks(withMentionChips,);
+  const withPageLinks = rewriteWikiPageLinksToMarkdownLinks(withMentionChips,);
+  const withAssetLinks = await resolveMarkdownAssetLinks(withPageLinks,);
   const resolved = await resolveMarkdownImages(withAssetLinks,);
   const indentation = await getMarkdownIndentation();
   const content = JSON.stringify(md2json(resolved, { indentation, },),);
@@ -354,11 +354,11 @@ export async function loadPage(title: string,): Promise<PageNote | null> {
   const { frontmatter, body, hasFrontmatter, } = parseMarkdownFrontmatter(raw,);
   const referenceDate = toOptionalString(frontmatter.attached_to,) ?? getToday();
   const withDateMentionLinks = await rewriteNoteLinksToDateMentionLinks(body,);
-  const withPageLinks = rewriteWikiPageLinksToMarkdownLinks(withDateMentionLinks,);
-  const withEmbeds = await resolveExcalidrawEmbeds(withPageLinks,);
+  const withEmbeds = await resolveExcalidrawEmbeds(withDateMentionLinks,);
   const withWidgets = await resolveWidgetEmbeds(withEmbeds,);
   const withMentionChips = replaceMentionWikiLinksWithChips(withWidgets, referenceDate,);
-  const withAssetLinks = await resolveMarkdownAssetLinks(withMentionChips,);
+  const withPageLinks = rewriteWikiPageLinksToMarkdownLinks(withMentionChips,);
+  const withAssetLinks = await resolveMarkdownAssetLinks(withPageLinks,);
   const resolved = await resolveMarkdownImages(withAssetLinks,);
   const indentation = await getMarkdownIndentation();
   const content = JSON.stringify(md2json(resolved, { indentation, },),);

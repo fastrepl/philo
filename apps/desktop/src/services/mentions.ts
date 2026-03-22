@@ -1,4 +1,5 @@
 import { getToday, } from "../types/note";
+import { buildPageLinkTarget, isExplicitPageLinkTarget, parsePageTitleFromLinkTarget, } from "./paths";
 
 const RECURRENCE_TOKEN_RE = /^(daily|weekly|monthly|(\d+)(days?|weeks?|months?))$/i;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -47,7 +48,7 @@ const WEEKDAYS = [
   "saturday",
 ];
 
-export type MentionKind = "date" | "recurring" | "tag" | "gmail" | "google_calendar";
+export type MentionKind = "date" | "recurring" | "tag" | "page" | "gmail" | "google_calendar";
 export type MentionGroup = "action" | "date" | "recurring";
 
 export interface MentionChipData {
@@ -522,6 +523,16 @@ function parseMentionTarget(
     };
   }
 
+  if (isExplicitPageLinkTarget(target,)) {
+    const pageTitle = parsePageTitleFromLinkTarget(target,);
+    if (!pageTitle) return null;
+    return {
+      id: buildPageLinkTarget(pageTitle,),
+      kind: "page",
+      label: label?.trim() || pageTitle,
+    };
+  }
+
   return null;
 }
 
@@ -563,6 +574,9 @@ export function getMentionChipLabel(
 
   const parsed = parseMentionId(data.id,);
   if (!parsed) {
+    if (data.kind === "page" || isExplicitPageLinkTarget(data.id,)) {
+      return data.label || parsePageTitleFromLinkTarget(data.id,) || String(data.id ?? "",);
+    }
     return data.label || String(data.id ?? "",);
   }
 
@@ -612,6 +626,15 @@ export function getMentionChipState(
 export function renderMentionMarkdown(
   data: Pick<MentionChipData, "id" | "kind" | "label">,
 ): string {
+  if (data.kind === "page" || isExplicitPageLinkTarget(data.id,)) {
+    const pageTitle = parsePageTitleFromLinkTarget(String(data.id ?? "",),);
+    if (!pageTitle) return "";
+
+    const target = buildPageLinkTarget(pageTitle,);
+    const label = String(data.label ?? "",).trim();
+    return !label || label === pageTitle ? `[[${target}]]` : `[[${target}|${label}]]`;
+  }
+
   if (parseExternalChipId(data.id,)) {
     const id = String(data.id ?? "",);
     const label = String(data.label ?? "",);

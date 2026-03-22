@@ -56,7 +56,8 @@
 }
 
 .tiptap .mention-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   max-width: 16rem;
   height: 20px;
   margin: 0 0.125rem;
@@ -74,6 +75,33 @@
   box-sizing: border-box;
   overflow: hidden;
   cursor: pointer;
+}
+
+.tiptap .mention-chip-page {
+  max-width: none;
+  height: auto;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #111827;
+  font-size: inherit;
+  font-weight: 500;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+.tiptap .mention-chip-page::before {
+  content: "";
+  width: 0.9em;
+  height: 0.9em;
+  flex: 0 0 auto;
+  background-color: currentColor;
+  opacity: 0.7;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M16 13H8'/%3E%3Cpath d='M16 17H8'/%3E%3Cpath d='M10 9H8'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M16 13H8'/%3E%3Cpath d='M16 17H8'/%3E%3Cpath d='M10 9H8'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .tiptap .mention-chip-recurring {
