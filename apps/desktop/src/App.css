@@ -11,6 +11,10 @@ html, body {
   overscroll-behavior: none;
 }
 
+button:not(:disabled):hover {
+  cursor: pointer;
+}
+
 .vault-path {
   position: relative;
   display: block;
