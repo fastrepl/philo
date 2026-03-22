@@ -185,7 +185,7 @@ function normalizeDocContent(doc: JSONContent,): JSONContent[] {
 function appendAttachedPageLink(doc: JSONContent, title: string,): JSONContent {
   return {
     type: "doc",
-    content: [...normalizeDocContent(doc,), createPageLinkParagraph(title,),],
+    content: [createPageLinkParagraph(title,), ...normalizeDocContent(doc,),],
   };
 }
 
@@ -985,6 +985,7 @@ export default function AppLayout() {
     adHocMeetingPageRef.current = page;
     attachAdHocMeetingPageToTodayNote(page.title,);
     setPagesRevision((value,) => value + 1);
+    openPageView(page.title,);
 
     adHocMeetingPageTitleRef.current = page.title;
     adHocMeetingFinalTranscriptRef.current = "";
@@ -1072,6 +1073,7 @@ export default function AppLayout() {
     closeGlobalSearch,
     createAdHocMeetingPage,
     isAdHocMeetingListening,
+    openPageView,
     setAdHocMeetingPageTranscript,
     stopAdHocMeetingListening,
     today,
