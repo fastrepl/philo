@@ -42,6 +42,12 @@
   display: none;
 }
 
+.tiptap .suggestion {
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+}
+
 .tiptap .persistent-selection-highlight {
   background: rgba(191, 219, 254, 0.72);
   border-radius: 0.28rem;
