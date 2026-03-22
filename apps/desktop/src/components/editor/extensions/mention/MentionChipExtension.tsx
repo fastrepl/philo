@@ -444,7 +444,12 @@ export const MentionChipExtension = Mention.extend({
               .filter(Boolean,)
               .join(" ",),
           },),
-          label,
+          ...(chip.kind === "page"
+            ? [
+              ["span", { class: "mention-chip-page-icon", "aria-hidden": "true", contenteditable: "false", },],
+              ["span", { class: "mention-chip-page-label", }, label,],
+            ]
+            : [label,]),
         ];
       },
       suggestions: [],
