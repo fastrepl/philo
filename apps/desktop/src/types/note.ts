@@ -8,7 +8,6 @@ export type PageType = "page" | "meeting";
 
 export interface PageFrontmatter {
   type?: string;
-  attached_to?: string;
   event_id?: string;
   started_at?: string;
   ended_at?: string;
@@ -36,7 +35,6 @@ export interface AttachedPage {
   title: string;
   path: string;
   type: PageType;
-  attachedTo: string | null;
 }
 
 function toLocalDateString(d: Date,): string {

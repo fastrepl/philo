@@ -1188,8 +1188,8 @@ export default function AppLayout() {
     saveDailyNote(updated,).catch(console.error,);
   }, [],);
 
-  const handleCreateAttachedPage = useCallback(async (date: string,) => {
-    const page = await createUntitledAttachedPage(date,);
+  const handleCreateAttachedPage = useCallback(async () => {
+    const page = await createUntitledAttachedPage();
     setPagesRevision((value,) => value + 1);
     openPageView(page.title,);
     return page.title;

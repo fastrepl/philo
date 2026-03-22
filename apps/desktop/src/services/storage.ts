@@ -1,5 +1,5 @@
 import { invoke, } from "@tauri-apps/api/core";
-import { exists, readDir, readTextFile, } from "@tauri-apps/plugin-fs";
+import { exists, } from "@tauri-apps/plugin-fs";
 import { EMPTY_DOC, json2md, md2json, parseJsonContent, } from "../lib/markdown";
 import {
   AttachedPage,
@@ -21,10 +21,10 @@ import { convertAtMentionsToWikiLinks, replaceMentionWikiLinksWithChips, } from 
 import {
   buildPageLinkTarget,
   buildPageMarkdownHref,
+  getJournalDir,
   getNoteLinkTarget,
   getNotePath,
   getPagePath,
-  getPagesDir,
   isExplicitPageLinkTarget,
   parseDateFromNoteLinkTarget,
   parsePageTitleFromLinkTarget,
@@ -55,6 +55,12 @@ const PAGE_FRONTMATTER_KEYS = new Set([
 
 type FrontmatterValue = unknown;
 type FrontmatterRecord = Record<string, FrontmatterValue>;
+interface MarkdownSearchResult {
+  path: string;
+  relativePath: string;
+  title: string;
+  snippet: string;
+}
 
 function mapMarkdownOutsideCode(markdown: string, transform: (value: string,) => string,): string {
   return markdown
@@ -257,13 +263,14 @@ function buildPageNote(
   content: string,
   frontmatter: PageFrontmatter,
   hasFrontmatter: boolean,
+  attachedTo: string | null,
 ): PageNote {
   return {
     title,
     path,
     content,
     type: isPageType(frontmatter.type,) ? frontmatter.type : "page",
-    attachedTo: toOptionalString(frontmatter.attached_to,),
+    attachedTo,
     eventId: toOptionalString(frontmatter.event_id,),
     startedAt: toOptionalString(frontmatter.started_at,),
     endedAt: toOptionalString(frontmatter.ended_at,),
@@ -278,7 +285,6 @@ function buildPageFrontmatter(page: PageNote,): FrontmatterRecord {
   const frontmatter: FrontmatterRecord = {};
 
   const hasKnownMetadata = page.hasFrontmatter
-    || !!page.attachedTo
     || page.type !== "page"
     || !!page.eventId
     || !!page.startedAt
@@ -288,7 +294,6 @@ function buildPageFrontmatter(page: PageNote,): FrontmatterRecord {
 
   if (hasKnownMetadata) {
     frontmatter.type = page.type;
-    if (page.attachedTo) frontmatter.attached_to = page.attachedTo;
     if (page.eventId) frontmatter.event_id = page.eventId;
     if (page.startedAt) frontmatter.started_at = page.startedAt;
     if (page.endedAt) frontmatter.ended_at = page.endedAt;
@@ -302,6 +307,66 @@ function buildPageFrontmatter(page: PageNote,): FrontmatterRecord {
   }
 
   return frontmatter;
+}
+
+function extractLinkedPageTitles(markdown: string,): string[] {
+  const titles = new Set<string>();
+
+  mapMarkdownOutsideCode(markdown, (part,) => {
+    part.replace(WIKI_LINK_RE, (full, target: string, _label: string | undefined, offset: number, source: string,) => {
+      if (offset > 0 && source[offset - 1] === "!") return full;
+      if (target.includes("(due date)",)) return full;
+      const title = parsePageTitleFromLinkTarget(target,);
+      if (title) titles.add(title,);
+      return full;
+    },);
+
+    part.replace(
+      MARKDOWN_LINK_RE,
+      (full, _label: string, target: string, _titleAttr: string | undefined, offset: number, source: string,) => {
+        if (offset > 0 && source[offset - 1] === "!") return full;
+        const title = parsePageTitleFromLinkTarget(target,);
+        if (title) titles.add(title,);
+        return full;
+      },
+    );
+
+    return part;
+  },);
+
+  return [...titles,];
+}
+
+async function findDateLinkingToPage(title: string,): Promise<string | null> {
+  const normalizedTitle = sanitizePageTitle(title,);
+  if (!normalizedTitle) return null;
+
+  const journalDir = await getJournalDir();
+  const results = await invoke<MarkdownSearchResult[]>("search_markdown_files", {
+    rootDir: journalDir,
+    query: normalizedTitle,
+    limit: 200,
+  },);
+
+  const pattern = await getFilenamePattern().catch(() => DEFAULT_FILENAME_PATTERN);
+  const dailyLogsFolder = await getDailyLogsFolderSetting().catch(() => "");
+  const linkedDates = new Set<string>();
+
+  for (const result of results) {
+    const date = parseDateFromNoteLinkTarget(result.relativePath, pattern, dailyLogsFolder,);
+    if (!date || linkedDates.has(date,)) continue;
+
+    const raw = await invoke<string | null>("read_markdown_file", { path: result.path, },);
+    if (!raw) continue;
+
+    const { body, } = parseFrontmatter(raw,);
+    if (!extractLinkedPageTitles(body,).includes(normalizedTitle,)) continue;
+
+    linkedDates.add(date,);
+  }
+
+  const sortedDates = [...linkedDates,].sort();
+  return sortedDates.length > 0 ? sortedDates[sortedDates.length - 1] : null;
 }
 
 async function getMarkdownIndentation() {
@@ -352,7 +417,8 @@ export async function loadPage(title: string,): Promise<PageNote | null> {
   }
 
   const { frontmatter, body, hasFrontmatter, } = parseMarkdownFrontmatter(raw,);
-  const referenceDate = toOptionalString(frontmatter.attached_to,) ?? getToday();
+  const attachedTo = await findDateLinkingToPage(title,) ?? toOptionalString(frontmatter.attached_to,);
+  const referenceDate = attachedTo ?? getToday();
   const withDateMentionLinks = await rewriteNoteLinksToDateMentionLinks(body,);
   const withEmbeds = await resolveExcalidrawEmbeds(withDateMentionLinks,);
   const withWidgets = await resolveWidgetEmbeds(withEmbeds,);
@@ -369,6 +435,7 @@ export async function loadPage(title: string,): Promise<PageNote | null> {
     content,
     frontmatter as PageFrontmatter,
     hasFrontmatter,
+    attachedTo,
   );
 }
 
@@ -395,10 +462,8 @@ export async function savePage(page: PageNote,): Promise<void> {
 
 export async function createAttachedPage({
   title,
-  attachedTo,
 }: {
   title: string;
-  attachedTo: string;
 },): Promise<PageNote> {
   const normalizedTitle = sanitizePageTitle(title.replace(/\.md$/i, "",),);
   if (!normalizedTitle) {
@@ -421,15 +486,15 @@ export async function createAttachedPage({
     JSON.stringify(EMPTY_DOC,),
     {
       type: "page",
-      attached_to: attachedTo,
     },
     true,
+    null,
   );
   await savePage(page,);
   return page;
 }
 
-export async function createUntitledAttachedPage(attachedTo: string,): Promise<PageNote> {
+export async function createUntitledAttachedPage(): Promise<PageNote> {
   const baseTitle = "Untitled";
   let candidate = baseTitle;
   let suffix = 2;
@@ -439,39 +504,28 @@ export async function createUntitledAttachedPage(attachedTo: string,): Promise<P
     suffix += 1;
   }
 
-  return await createAttachedPage({ title: candidate, attachedTo, },);
+  return await createAttachedPage({ title: candidate, },);
 }
 
 export async function listPagesAttachedTo(date: string,): Promise<AttachedPage[]> {
-  const pagesDir = await getPagesDir();
-  if (!(await exists(pagesDir,))) return [];
+  const raw = await invoke<string | null>("read_markdown_file", { path: await getNotePath(date,), },);
+  if (!raw) return [];
 
-  const entries = await readDir(pagesDir,);
-  const pages: Array<AttachedPage | null> = await Promise.all(
-    entries
-      .filter((entry,) => entry.isFile && typeof entry.name === "string" && entry.name.toLowerCase().endsWith(".md",))
-      .map(async (entry,) => {
-        const path = `${pagesDir}/${entry.name}`;
-        try {
-          const raw = await readTextFile(path,);
-          const { frontmatter, } = parseMarkdownFrontmatter(raw,);
-          if (toOptionalString(frontmatter.attached_to,) !== date) {
-            return null;
-          }
+  const { body, } = parseFrontmatter(raw,);
+  const titles = extractLinkedPageTitles(body,);
+  const pages = await Promise.all(
+    titles.map(async (title,) => {
+      const path = await getPagePath(title,);
+      const pageRaw = await invoke<string | null>("read_markdown_file", { path, },);
+      if (!pageRaw) return null;
+      const { frontmatter, } = parseMarkdownFrontmatter(pageRaw,);
 
-          const title = parsePageTitleFromPath(path,);
-          if (!title) return null;
-
-          return {
-            title,
-            path,
-            type: isPageType(frontmatter.type,) ? frontmatter.type : "page",
-            attachedTo: date,
-          } satisfies AttachedPage;
-        } catch {
-          return null;
-        }
-      },),
+      return {
+        title,
+        path,
+        type: isPageType(frontmatter.type,) ? frontmatter.type : "page",
+      } satisfies AttachedPage;
+    },),
   );
 
   return pages.filter((page,): page is AttachedPage => page !== null);
