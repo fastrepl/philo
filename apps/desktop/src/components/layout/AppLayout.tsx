@@ -5,7 +5,7 @@ import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { exists, watch, } from "@tauri-apps/plugin-fs";
 import { openPath, } from "@tauri-apps/plugin-opener";
 import type { Editor as TiptapEditor, } from "@tiptap/core";
-import { ChevronLeft, ChevronRight, FileText, House, MapPin, } from "lucide-react";
+import { ChevronLeft, ChevronRight, House, MapPin, } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, } from "react";
 import { useCurrentDate, } from "../../hooks/useCurrentDate";
 import { useCurrentCity, } from "../../hooks/useTimezoneCity";
@@ -43,7 +43,6 @@ import { getFilenamePattern, hasActiveAiProvider, loadSettings, } from "../../se
 import {
   createUntitledAttachedPage,
   getOrCreateDailyNote,
-  listPagesAttachedTo,
   loadDailyNote,
   loadPage,
   loadPastNotes,
@@ -60,7 +59,7 @@ import {
 import { createWidgetFile, } from "../../services/widget-files";
 import { recordWidgetGitRevision, } from "../../services/widget-git-history";
 import { stringifyStorageSchema, } from "../../services/widget-storage";
-import { type AttachedPage, DailyNote, formatDate, getDaysAgo, isToday, type PageNote, } from "../../types/note";
+import { DailyNote, formatDate, getDaysAgo, isToday, type PageNote, } from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
 import {
   WIDGET_BUILD_STATE_EVENT,
@@ -224,40 +223,6 @@ function DateHeader({
   );
 }
 
-function AttachedPagesRow({
-  pages,
-  onOpenPage,
-}: {
-  pages: AttachedPage[];
-  onOpenPage?: (title: string,) => void;
-},) {
-  if (pages.length === 0) return null;
-
-  return (
-    <div className="mt-4 flex flex-wrap items-center gap-2">
-      {pages.map((page,) => (
-        <button
-          key={page.path}
-          type="button"
-          onClick={() => onOpenPage?.(page.title,)}
-          className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 transition-colors hover:border-gray-300 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-white"
-        >
-          <FileText className="h-3.5 w-3.5" strokeWidth={2} />
-          <span>{page.title}</span>
-          {page.type === "meeting" && (
-            <span
-              className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-              style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-            >
-              meeting
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function LazyNote({
   date,
   pagesRevision,
@@ -282,7 +247,6 @@ function LazyNote({
   persistentSelectionRange?: { from: number; to: number; } | null;
 },) {
   const [note, setNote,] = useState<DailyNote | null>(null,);
-  const [attachedPages, setAttachedPages,] = useState<AttachedPage[]>([],);
   const containerRef = useRef<HTMLDivElement>(null,);
 
   useEffect(() => {
@@ -292,12 +256,7 @@ function LazyNote({
     const observer = new IntersectionObserver(
       ([entry,],) => {
         if (entry.isIntersecting) {
-          Promise.all([loadDailyNote(date,), listPagesAttachedTo(date,),],)
-            .then(([loadedNote, pages,],) => {
-              setNote(loadedNote,);
-              setAttachedPages(pages,);
-            },)
-            .catch(console.error,);
+          loadDailyNote(date,).then(setNote,).catch(console.error,);
         }
       },
       { rootMargin: "400px", },
@@ -320,10 +279,6 @@ function LazyNote({
         <>
           <div className="px-6 pt-12 pb-4">
             <DateHeader date={note.date} city={note.city} onCityChange={handleCityChange} />
-            <AttachedPagesRow
-              pages={attachedPages}
-              onOpenPage={onOpenPage}
-            />
           </div>
           <EditableNote
             note={note}
@@ -430,7 +385,6 @@ export default function AppLayout() {
       && todayNote.city.trim() === currentCity.timezoneCity.trim()
     ? null
     : todayNote?.city;
-  const [todayAttachedPages, setTodayAttachedPages,] = useState<AttachedPage[]>([],);
   const pastDates = useMemo(() => Array.from({ length: 30, }, (_, i,) => getDaysAgo(i + 1,),), [today,],);
   const [settingsOpen, setSettingsOpen,] = useState(false,);
   const [libraryOpen, setLibraryOpen,] = useState(false,);
@@ -551,10 +505,6 @@ export default function AppLayout() {
         }
       },)
       .catch(console.error,);
-  }, [today,],);
-
-  const syncTodayAttachedPages = useCallback(() => {
-    listPagesAttachedTo(today,).then(setTodayAttachedPages,).catch(console.error,);
   }, [today,],);
 
   const handleViewTransition = useCallback((from: AppView, to: AppView,) => {
@@ -1037,13 +987,12 @@ export default function AppLayout() {
     const handleFocus = () => {
       runGoogleSync().finally(() => {
         syncTodayNoteFromDisk();
-        syncTodayAttachedPages();
         setPagesRevision((value,) => value + 1);
       },);
     };
     window.addEventListener("focus", handleFocus,);
     return () => window.removeEventListener("focus", handleFocus,);
-  }, [isConfigured, runGoogleSync, syncTodayAttachedPages, syncTodayNoteFromDisk,],);
+  }, [isConfigured, runGoogleSync, syncTodayNoteFromDisk,],);
 
   // Roll over unchecked tasks from past days, then load today's note
   useEffect(() => {
@@ -1052,9 +1001,7 @@ export default function AppLayout() {
       await rolloverTasks(30,);
       await runGoogleSync();
       const note = await getOrCreateDailyNote(today,);
-      const pages = await listPagesAttachedTo(today,);
       setTodayNote(note,);
-      setTodayAttachedPages(pages,);
     }
     load().catch(console.error,);
   }, [isConfigured, pagesRevision, runGoogleSync, storageRevision, today,],);
@@ -1126,7 +1073,6 @@ export default function AppLayout() {
         (event,) => {
           if (Date.now() < suppressWatcherUntilRef.current) return;
           if (!event.paths.some((path,) => path.startsWith(pagesDir,) && path.endsWith(".md",))) return;
-          syncTodayAttachedPages();
           setPagesRevision((value,) => value + 1);
         },
         { recursive: true, },
@@ -1136,7 +1082,7 @@ export default function AppLayout() {
     return () => {
       unwatch?.();
     };
-  }, [isConfigured, syncTodayAttachedPages,],);
+  }, [isConfigured,],);
 
   const handleTodaySave = useCallback(
     (note: DailyNote | PageNote,) => {
@@ -1165,12 +1111,9 @@ export default function AppLayout() {
   const handleCreateAttachedPage = useCallback(async (date: string,) => {
     const page = await createUntitledAttachedPage(date,);
     setPagesRevision((value,) => value + 1);
-    if (date === today) {
-      syncTodayAttachedPages();
-    }
     openPageView(page.title,);
     return page.title;
-  }, [openPageView, syncTodayAttachedPages, today,],);
+  }, [openPageView,],);
 
   const runAiPrompt = useCallback(async (promptText: string,) => {
     const todayNoteValue = getCurrentTodayNoteForAi();
@@ -1752,10 +1695,6 @@ export default function AppLayout() {
                           city={todayCity}
                           fallbackCity={currentCity.city}
                           onCityChange={todayNote ? handleTodayCityChange : undefined}
-                        />
-                        <AttachedPagesRow
-                          pages={todayAttachedPages}
-                          onOpenPage={openPageView}
                         />
                       </div>
                       {todayNote && (
