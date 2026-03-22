@@ -10,7 +10,7 @@ import { ChevronLeft, ChevronRight, House, MapPin, } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, } from "react";
 import { useCurrentDate, } from "../../hooks/useCurrentDate";
 import { useCurrentCity, } from "../../hooks/useTimezoneCity";
-import { parseJsonContent, } from "../../lib/markdown";
+import { EMPTY_DOC, parseJsonContent, } from "../../lib/markdown";
 import { getAiConfigurationMessage, } from "../../services/ai";
 import { runAiSlashCommand, } from "../../services/ai-slash-commands";
 import {
@@ -34,7 +34,9 @@ import { syncGoogleImports, } from "../../services/google-imports";
 import type { LibraryItem, } from "../../services/library";
 import { cleanupLegacyLibraryState, } from "../../services/library";
 import {
+  buildPageMarkdownHref,
   getJournalDir,
+  getPagePath,
   getPagesDir,
   initJournalScope,
   parseDateFromNoteLinkTarget,
@@ -159,11 +161,16 @@ function createParagraph(text = "",): JSONContent {
     : { type: "paragraph", };
 }
 
-function createHeading(text: string,): JSONContent {
+function createPageLinkParagraph(title: string,): JSONContent {
   return {
-    type: "heading",
-    attrs: { level: 2, },
-    content: [{ type: "text", text, },],
+    type: "paragraph",
+    content: [
+      {
+        type: "text",
+        text: title,
+        marks: [{ type: "link", attrs: { href: buildPageMarkdownHref(title,), }, },],
+      },
+    ],
   };
 }
 
@@ -175,31 +182,18 @@ function normalizeDocContent(doc: JSONContent,): JSONContent[] {
   return [];
 }
 
-function appendAdHocMeetingSection(doc: JSONContent, title: string, transcript = "",): JSONContent {
+function appendAttachedPageLink(doc: JSONContent, title: string,): JSONContent {
   return {
     type: "doc",
-    content: [...normalizeDocContent(doc,), createHeading(title,), createParagraph(transcript,),],
+    content: [...normalizeDocContent(doc,), createPageLinkParagraph(title,),],
   };
 }
 
-function updateAdHocMeetingTranscript(doc: JSONContent, title: string, transcript: string,): JSONContent {
-  const content = normalizeDocContent(doc,);
-
-  for (let index = 0; index < content.length; index += 1) {
-    if (content[index]?.type !== "heading") continue;
-    if (getNodeText(content[index],) !== title) continue;
-
-    const nextParagraph = createParagraph(transcript,);
-    if (content[index + 1]?.type === "paragraph") {
-      content[index + 1] = nextParagraph;
-    } else {
-      content.splice(index + 1, 0, nextParagraph,);
-    }
-
-    return { type: "doc", content, };
-  }
-
-  return appendAdHocMeetingSection(doc, title, transcript,);
+function buildTranscriptDoc(transcript: string,): JSONContent {
+  return {
+    type: "doc",
+    content: [createParagraph(transcript,),],
+  };
 }
 
 function formatAdHocMeetingTitle(date: Date,) {
@@ -547,8 +541,9 @@ export default function AppLayout() {
   const widgetEditSessionRef = useRef<WidgetEditRequestDetail | null>(null,);
   const todayNoteRef = useRef<DailyNote | null>(null,);
   const todayEditorRef = useRef<EditableNoteHandle>(null,);
+  const adHocMeetingPageRef = useRef<PageNote | null>(null,);
   const adHocMeetingRecognitionRef = useRef<SpeechRecognitionLike | null>(null,);
-  const adHocMeetingTitleRef = useRef<string | null>(null,);
+  const adHocMeetingPageTitleRef = useRef<string | null>(null,);
   const adHocMeetingFinalTranscriptRef = useRef("",);
   const adHocMeetingDisplayedTranscriptRef = useRef("",);
   const homeScrollTopRef = useRef(0,);
@@ -788,44 +783,81 @@ export default function AppLayout() {
     };
   }, [],);
 
-  const waitForTodayEditor = useCallback(async () => {
-    const startedAt = Date.now();
-
-    while (Date.now() - startedAt < 2000) {
-      const editor = todayEditorRef.current?.editor;
-      if (editor && !editor.isDestroyed) {
-        return editor;
-      }
-      await new Promise((resolve,) => window.setTimeout(resolve, 16,));
-    }
-
-    return null;
-  }, [],);
-
   const replaceTodayNoteContent = useCallback((content: JSONContent,) => {
     const note = todayNoteRef.current;
     if (!note) return;
     const updated = { ...note, content: JSON.stringify(content,), };
     suppressWatcherUntilRef.current = Date.now() + LOCAL_SAVE_WATCH_SUPPRESSION_MS;
+    todayNoteRef.current = updated;
     setTodayNote(updated,);
     saveDailyNote(updated,).catch(console.error,);
   }, [],);
 
-  const setAdHocMeetingTranscript = useCallback((title: string, transcript: string,) => {
+  const attachAdHocMeetingPageToTodayNote = useCallback((title: string,) => {
     const editor = todayEditorRef.current?.editor;
     if (editor && !editor.isDestroyed) {
-      editor.commands.setContent(updateAdHocMeetingTranscript(editor.getJSON(), title, transcript,), {
+      editor.commands.setContent(appendAttachedPageLink(editor.getJSON(), title,), {
         emitUpdate: true,
       },);
-      editor.commands.focus("end", { scrollIntoView: true, },);
       return;
     }
 
     const note = todayNoteRef.current;
     if (!note) return;
-    const nextContent = updateAdHocMeetingTranscript(parseJsonContent(note.content,), title, transcript,);
-    replaceTodayNoteContent(nextContent,);
+    replaceTodayNoteContent(appendAttachedPageLink(parseJsonContent(note.content,), title,),);
   }, [replaceTodayNoteContent,],);
+
+  const createAdHocMeetingPage = useCallback(async () => {
+    const startedAt = new Date();
+    const baseTitle = formatAdHocMeetingTitle(startedAt,);
+    let candidate = baseTitle;
+    let suffix = 2;
+
+    while (await exists(await getPagePath(candidate,),)) {
+      candidate = `${baseTitle} ${suffix}`;
+      suffix += 1;
+    }
+
+    const page: PageNote = {
+      title: candidate,
+      path: await getPagePath(candidate,),
+      content: JSON.stringify(EMPTY_DOC,),
+      type: "meeting",
+      attachedTo: today,
+      eventId: null,
+      startedAt: startedAt.toISOString(),
+      endedAt: null,
+      participants: [],
+      source: "ad-hoc",
+      frontmatter: {
+        type: "meeting",
+        started_at: startedAt.toISOString(),
+        source: "ad-hoc",
+      },
+      hasFrontmatter: true,
+    };
+
+    await savePage(page,);
+    return page;
+  }, [today,],);
+
+  const setAdHocMeetingPageTranscript = useCallback((title: string, transcript: string, endedAt?: string | null,) => {
+    const page = adHocMeetingPageRef.current;
+    if (!page || page.title !== title) return;
+
+    const updated: PageNote = {
+      ...page,
+      content: JSON.stringify(buildTranscriptDoc(transcript,),),
+      endedAt: endedAt ?? page.endedAt,
+      frontmatter: {
+        ...page.frontmatter,
+        ended_at: endedAt ?? page.endedAt ?? undefined,
+      },
+    };
+
+    adHocMeetingPageRef.current = updated;
+    savePage(updated,).catch(console.error,);
+  }, [],);
 
   const openGlobalSearch = useCallback(() => {
     clearWidgetEditSession();
@@ -944,38 +976,24 @@ export default function AppLayout() {
     }
 
     closeGlobalSearch();
-    if (currentView.kind !== "home") {
-      goHome();
-    }
-    setFocusedDate(null,);
-    setPendingScrollDate(today,);
-
     const ensuredTodayNote = todayNoteRef.current ?? await getOrCreateDailyNote(today,);
     if (!todayNoteRef.current) {
+      todayNoteRef.current = ensuredTodayNote;
       setTodayNote(ensuredTodayNote,);
     }
+    const page = await createAdHocMeetingPage();
+    adHocMeetingPageRef.current = page;
+    attachAdHocMeetingPageToTodayNote(page.title,);
+    setPagesRevision((value,) => value + 1);
 
-    const editor = await waitForTodayEditor();
-    const title = formatAdHocMeetingTitle(new Date(),);
-    const baseDoc = editor && !editor.isDestroyed
-      ? editor.getJSON()
-      : parseJsonContent((todayNoteRef.current ?? ensuredTodayNote).content,);
-    const nextDoc = appendAdHocMeetingSection(baseDoc, title, "",);
-
-    if (editor && !editor.isDestroyed) {
-      editor.commands.setContent(nextDoc, { emitUpdate: true, },);
-      editor.commands.focus("end", { scrollIntoView: true, },);
-    } else {
-      replaceTodayNoteContent(nextDoc,);
-    }
-
-    adHocMeetingTitleRef.current = title;
+    adHocMeetingPageTitleRef.current = page.title;
     adHocMeetingFinalTranscriptRef.current = "";
     adHocMeetingDisplayedTranscriptRef.current = "";
 
     const Recognition = getSpeechRecognitionConstructor();
     if (!Recognition) {
-      adHocMeetingTitleRef.current = null;
+      adHocMeetingPageRef.current = null;
+      adHocMeetingPageTitleRef.current = null;
       adHocMeetingFinalTranscriptRef.current = "";
       adHocMeetingDisplayedTranscriptRef.current = "";
       console.error("Speech recognition is not available in this environment.",);
@@ -1012,7 +1030,7 @@ export default function AppLayout() {
         ? [nextFinalTranscript, interimTranscript,].filter(Boolean,).join("\n",)
         : nextFinalTranscript;
       adHocMeetingDisplayedTranscriptRef.current = displayedTranscript;
-      setAdHocMeetingTranscript(title, displayedTranscript,);
+      setAdHocMeetingPageTranscript(page.title, displayedTranscript,);
     };
 
     recognition.onerror = (event,) => {
@@ -1023,13 +1041,14 @@ export default function AppLayout() {
       adHocMeetingRecognitionRef.current = null;
       setIsAdHocMeetingListening(false,);
 
-      const activeTitle = adHocMeetingTitleRef.current;
+      const activeTitle = adHocMeetingPageTitleRef.current;
       const finalTranscript = adHocMeetingDisplayedTranscriptRef.current.trim();
       if (activeTitle) {
-        setAdHocMeetingTranscript(activeTitle, finalTranscript,);
+        setAdHocMeetingPageTranscript(activeTitle, finalTranscript, new Date().toISOString(),);
       }
 
-      adHocMeetingTitleRef.current = null;
+      adHocMeetingPageRef.current = null;
+      adHocMeetingPageTitleRef.current = null;
       adHocMeetingFinalTranscriptRef.current = "";
       adHocMeetingDisplayedTranscriptRef.current = "";
     };
@@ -1041,22 +1060,21 @@ export default function AppLayout() {
       recognition.start();
     } catch (error) {
       adHocMeetingRecognitionRef.current = null;
-      adHocMeetingTitleRef.current = null;
+      adHocMeetingPageRef.current = null;
+      adHocMeetingPageTitleRef.current = null;
       adHocMeetingFinalTranscriptRef.current = "";
       adHocMeetingDisplayedTranscriptRef.current = "";
       setIsAdHocMeetingListening(false,);
       console.error("Could not start ad-hoc meeting listening:", error,);
     }
   }, [
+    attachAdHocMeetingPageToTodayNote,
     closeGlobalSearch,
-    currentView.kind,
-    goHome,
+    createAdHocMeetingPage,
     isAdHocMeetingListening,
-    replaceTodayNoteContent,
-    setAdHocMeetingTranscript,
+    setAdHocMeetingPageTranscript,
     stopAdHocMeetingListening,
     today,
-    waitForTodayEditor,
   ],);
 
   const openGlobalSearchResult = useCallback(async (result: GlobalSearchResult | undefined,) => {
