@@ -113,6 +113,43 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
     }
   };
 
+  const shouldShowBubbleMenu = ({
+    from,
+    to,
+  }: {
+    from: number;
+    to: number;
+  },) => {
+    if (from === to) return false;
+
+    let hasContent = false;
+    let hasOnlyMentionChips = true;
+
+    editor.state.doc.nodesBetween(from, to, (node,) => {
+      if (node.isText && node.text?.trim()) {
+        hasContent = true;
+        hasOnlyMentionChips = false;
+        return false;
+      }
+
+      if (node.type.name === "mentionChip") {
+        hasContent = true;
+        return false;
+      }
+
+      if (node.isLeaf) {
+        hasContent = true;
+        hasOnlyMentionChips = false;
+        return false;
+      }
+
+      return true;
+    },);
+
+    if (!hasContent) return false;
+    return !hasOnlyMentionChips;
+  };
+
   return (
     <BubbleMenu
       editor={editor}
@@ -122,7 +159,7 @@ export function EditorBubbleMenu({ editor, onChatSelection, }: EditorBubbleMenuP
         flip: { padding: 12, },
         shift: { padding: 12, },
       }}
-      shouldShow={({ from, to, }: { from: number; to: number; },) => from !== to}
+      shouldShow={shouldShowBubbleMenu}
     >
       <div className="bubble-menu">
         <button
