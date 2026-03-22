@@ -5,10 +5,12 @@ import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { exists, watch, } from "@tauri-apps/plugin-fs";
 import { openPath, } from "@tauri-apps/plugin-opener";
 import type { Editor as TiptapEditor, } from "@tiptap/core";
+import type { JSONContent, } from "@tiptap/react";
 import { ChevronLeft, ChevronRight, House, MapPin, } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, } from "react";
 import { useCurrentDate, } from "../../hooks/useCurrentDate";
 import { useCurrentCity, } from "../../hooks/useTimezoneCity";
+import { parseJsonContent, } from "../../lib/markdown";
 import { getAiConfigurationMessage, } from "../../services/ai";
 import { runAiSlashCommand, } from "../../services/ai-slash-commands";
 import {
@@ -98,6 +100,120 @@ interface AiSelectionHighlight {
 }
 
 type AppView = { kind: "home"; } | { kind: "page"; title: string; };
+
+interface SpeechRecognitionAlternativeLike {
+  transcript: string;
+}
+
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  0: SpeechRecognitionAlternativeLike;
+}
+
+interface SpeechRecognitionResultListLike {
+  [index: number]: SpeechRecognitionResultLike;
+  length: number;
+}
+
+interface SpeechRecognitionEventLike extends Event {
+  resultIndex: number;
+  results: SpeechRecognitionResultListLike;
+}
+
+interface SpeechRecognitionErrorEventLike extends Event {
+  error?: string;
+}
+
+interface SpeechRecognitionLike extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onend: ((event: Event,) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike,) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike,) => void) | null;
+  start(): void;
+  stop(): void;
+}
+
+interface SpeechRecognitionConstructorLike {
+  new(): SpeechRecognitionLike;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructorLike;
+    webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
+  }
+}
+
+function getNodeText(node: JSONContent | undefined,): string {
+  if (!node) return "";
+  if (typeof node.text === "string") return node.text;
+  if (!Array.isArray(node.content,)) return "";
+  return node.content.map((child,) => getNodeText(child,)).join("",);
+}
+
+function createParagraph(text = "",): JSONContent {
+  return text
+    ? { type: "paragraph", content: [{ type: "text", text, },], }
+    : { type: "paragraph", };
+}
+
+function createHeading(text: string,): JSONContent {
+  return {
+    type: "heading",
+    attrs: { level: 2, },
+    content: [{ type: "text", text, },],
+  };
+}
+
+function normalizeDocContent(doc: JSONContent,): JSONContent[] {
+  const content = Array.isArray(doc.content,) ? [...doc.content,] : [];
+  if (content.length !== 1 || content[0]?.type !== "paragraph" || getNodeText(content[0],).trim()) {
+    return content;
+  }
+  return [];
+}
+
+function appendAdHocMeetingSection(doc: JSONContent, title: string, transcript = "",): JSONContent {
+  return {
+    type: "doc",
+    content: [...normalizeDocContent(doc,), createHeading(title,), createParagraph(transcript,),],
+  };
+}
+
+function updateAdHocMeetingTranscript(doc: JSONContent, title: string, transcript: string,): JSONContent {
+  const content = normalizeDocContent(doc,);
+
+  for (let index = 0; index < content.length; index += 1) {
+    if (content[index]?.type !== "heading") continue;
+    if (getNodeText(content[index],) !== title) continue;
+
+    const nextParagraph = createParagraph(transcript,);
+    if (content[index + 1]?.type === "paragraph") {
+      content[index + 1] = nextParagraph;
+    } else {
+      content.splice(index + 1, 0, nextParagraph,);
+    }
+
+    return { type: "doc", content, };
+  }
+
+  return appendAdHocMeetingSection(doc, title, transcript,);
+}
+
+function formatAdHocMeetingTitle(date: Date,) {
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  },);
+  return `Ad-hoc meeting ${time}`;
+}
+
+function getSpeechRecognitionConstructor(): SpeechRecognitionConstructorLike | null {
+  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
+}
 
 function renderSearchSnippet(snippet: string,) {
   const parts = snippet.split(/(\[[^\]]+\])/,);
@@ -396,6 +512,7 @@ export default function AppLayout() {
   const [postUpdateInfo, setPostUpdateInfo,] = useState<PostUpdateInfo | null>(null,);
   const [isPinned, setIsPinned,] = useState(false,);
   const [isWindowFocused, setIsWindowFocused,] = useState(() => document.hasFocus());
+  const [isAdHocMeetingListening, setIsAdHocMeetingListening,] = useState(false,);
   const [globalSearchOpen, setGlobalSearchOpen,] = useState(false,);
   const [globalSearchQuery, setGlobalSearchQuery,] = useState("",);
   const [globalSearchResults, setGlobalSearchResults,] = useState<GlobalSearchResult[]>([],);
@@ -430,6 +547,10 @@ export default function AppLayout() {
   const widgetEditSessionRef = useRef<WidgetEditRequestDetail | null>(null,);
   const todayNoteRef = useRef<DailyNote | null>(null,);
   const todayEditorRef = useRef<EditableNoteHandle>(null,);
+  const adHocMeetingRecognitionRef = useRef<SpeechRecognitionLike | null>(null,);
+  const adHocMeetingTitleRef = useRef<string | null>(null,);
+  const adHocMeetingFinalTranscriptRef = useRef("",);
+  const adHocMeetingDisplayedTranscriptRef = useRef("",);
   const homeScrollTopRef = useRef(0,);
   const restoreHomeScrollTopRef = useRef<number | null>(null,);
   const googleSyncRef = useRef<Promise<boolean> | null>(null,);
@@ -667,6 +788,45 @@ export default function AppLayout() {
     };
   }, [],);
 
+  const waitForTodayEditor = useCallback(async () => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < 2000) {
+      const editor = todayEditorRef.current?.editor;
+      if (editor && !editor.isDestroyed) {
+        return editor;
+      }
+      await new Promise((resolve,) => window.setTimeout(resolve, 16,));
+    }
+
+    return null;
+  }, [],);
+
+  const replaceTodayNoteContent = useCallback((content: JSONContent,) => {
+    const note = todayNoteRef.current;
+    if (!note) return;
+    const updated = { ...note, content: JSON.stringify(content,), };
+    suppressWatcherUntilRef.current = Date.now() + LOCAL_SAVE_WATCH_SUPPRESSION_MS;
+    setTodayNote(updated,);
+    saveDailyNote(updated,).catch(console.error,);
+  }, [],);
+
+  const setAdHocMeetingTranscript = useCallback((title: string, transcript: string,) => {
+    const editor = todayEditorRef.current?.editor;
+    if (editor && !editor.isDestroyed) {
+      editor.commands.setContent(updateAdHocMeetingTranscript(editor.getJSON(), title, transcript,), {
+        emitUpdate: true,
+      },);
+      editor.commands.focus("end", { scrollIntoView: true, },);
+      return;
+    }
+
+    const note = todayNoteRef.current;
+    if (!note) return;
+    const nextContent = updateAdHocMeetingTranscript(parseJsonContent(note.content,), title, transcript,);
+    replaceTodayNoteContent(nextContent,);
+  }, [replaceTodayNoteContent,],);
+
   const openGlobalSearch = useCallback(() => {
     clearWidgetEditSession();
     setAiComposerOpen(false,);
@@ -772,6 +932,132 @@ export default function AppLayout() {
     setFocusedDate(isVisibleInFeed ? null : date,);
     setPendingScrollDate(date,);
   }, [closeGlobalSearch, currentView.kind, goHome, pastDates, today,],);
+
+  const stopAdHocMeetingListening = useCallback(() => {
+    adHocMeetingRecognitionRef.current?.stop();
+  }, [],);
+
+  const handleAdHocMeetingNoteClick = useCallback(async () => {
+    if (isAdHocMeetingListening) {
+      stopAdHocMeetingListening();
+      return;
+    }
+
+    closeGlobalSearch();
+    if (currentView.kind !== "home") {
+      goHome();
+    }
+    setFocusedDate(null,);
+    setPendingScrollDate(today,);
+
+    const ensuredTodayNote = todayNoteRef.current ?? await getOrCreateDailyNote(today,);
+    if (!todayNoteRef.current) {
+      setTodayNote(ensuredTodayNote,);
+    }
+
+    const editor = await waitForTodayEditor();
+    const title = formatAdHocMeetingTitle(new Date(),);
+    const baseDoc = editor && !editor.isDestroyed
+      ? editor.getJSON()
+      : parseJsonContent((todayNoteRef.current ?? ensuredTodayNote).content,);
+    const nextDoc = appendAdHocMeetingSection(baseDoc, title, "",);
+
+    if (editor && !editor.isDestroyed) {
+      editor.commands.setContent(nextDoc, { emitUpdate: true, },);
+      editor.commands.focus("end", { scrollIntoView: true, },);
+    } else {
+      replaceTodayNoteContent(nextDoc,);
+    }
+
+    adHocMeetingTitleRef.current = title;
+    adHocMeetingFinalTranscriptRef.current = "";
+    adHocMeetingDisplayedTranscriptRef.current = "";
+
+    const Recognition = getSpeechRecognitionConstructor();
+    if (!Recognition) {
+      adHocMeetingTitleRef.current = null;
+      adHocMeetingFinalTranscriptRef.current = "";
+      adHocMeetingDisplayedTranscriptRef.current = "";
+      console.error("Speech recognition is not available in this environment.",);
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event,) => {
+      let nextFinalTranscript = adHocMeetingFinalTranscriptRef.current;
+      let interimTranscript = "";
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result?.[0]?.transcript?.trim();
+        if (!transcript) continue;
+
+        if (result.isFinal) {
+          nextFinalTranscript = nextFinalTranscript
+            ? `${nextFinalTranscript}\n${transcript}`
+            : transcript;
+        } else {
+          interimTranscript = interimTranscript
+            ? `${interimTranscript}\n${transcript}`
+            : transcript;
+        }
+      }
+
+      adHocMeetingFinalTranscriptRef.current = nextFinalTranscript;
+      const displayedTranscript = interimTranscript
+        ? [nextFinalTranscript, interimTranscript,].filter(Boolean,).join("\n",)
+        : nextFinalTranscript;
+      adHocMeetingDisplayedTranscriptRef.current = displayedTranscript;
+      setAdHocMeetingTranscript(title, displayedTranscript,);
+    };
+
+    recognition.onerror = (event,) => {
+      console.error("Failed to start ad-hoc meeting listening:", event.error ?? event.type,);
+    };
+
+    recognition.onend = () => {
+      adHocMeetingRecognitionRef.current = null;
+      setIsAdHocMeetingListening(false,);
+
+      const activeTitle = adHocMeetingTitleRef.current;
+      const finalTranscript = adHocMeetingDisplayedTranscriptRef.current.trim();
+      if (activeTitle) {
+        setAdHocMeetingTranscript(activeTitle, finalTranscript,);
+      }
+
+      adHocMeetingTitleRef.current = null;
+      adHocMeetingFinalTranscriptRef.current = "";
+      adHocMeetingDisplayedTranscriptRef.current = "";
+    };
+
+    adHocMeetingRecognitionRef.current = recognition;
+    setIsAdHocMeetingListening(true,);
+
+    try {
+      recognition.start();
+    } catch (error) {
+      adHocMeetingRecognitionRef.current = null;
+      adHocMeetingTitleRef.current = null;
+      adHocMeetingFinalTranscriptRef.current = "";
+      adHocMeetingDisplayedTranscriptRef.current = "";
+      setIsAdHocMeetingListening(false,);
+      console.error("Could not start ad-hoc meeting listening:", error,);
+    }
+  }, [
+    closeGlobalSearch,
+    currentView.kind,
+    goHome,
+    isAdHocMeetingListening,
+    replaceTodayNoteContent,
+    setAdHocMeetingTranscript,
+    stopAdHocMeetingListening,
+    today,
+    waitForTodayEditor,
+  ],);
 
   const openGlobalSearchResult = useCallback(async (result: GlobalSearchResult | undefined,) => {
     if (!result) return;
@@ -1040,6 +1326,12 @@ export default function AppLayout() {
   useEffect(() => {
     return () => {
       aiAbortControllerRef.current?.abort();
+    };
+  }, [],);
+
+  useEffect(() => {
+    return () => {
+      adHocMeetingRecognitionRef.current?.stop();
     };
   }, [],);
 
@@ -1602,29 +1894,49 @@ export default function AppLayout() {
           </button>
         </div>
 
-        <button
-          onClick={async () => {
-            const next = !isPinned;
-            await getCurrentWindow().setAlwaysOnTop(next,);
-            setIsPinned(next,);
-          }}
-          className={`p-1 rounded-md transition-colors cursor-default ${
-            isPinned
-              ? "text-gray-900 dark:text-white bg-gray-200/60 dark:bg-gray-700/60"
-              : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-          }`}
-          title={isPinned ? "Unpin window" : "Pin window on top"}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            className={`transition-transform ${isPinned ? "" : "rotate-45"}`}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void handleAdHocMeetingNoteClick();
+            }}
+            className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${
+              isAdHocMeetingListening
+                ? "bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.14)]"
+                : "bg-red-500/92 hover:bg-red-500"
+            }`}
+            title={isAdHocMeetingListening ? "Stop ad-hoc meeting note" : "Start ad-hoc meeting note"}
+            aria-label={isAdHocMeetingListening ? "Stop ad-hoc meeting note" : "Start ad-hoc meeting note"}
           >
-            <path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A5.921 5.921 0 0 1 5 6.708V2.277a2.77 2.77 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354z" />
-          </svg>
-        </button>
+            <span
+              className={`h-2.5 w-2.5 rounded-full bg-white/95 ${isAdHocMeetingListening ? "animate-pulse" : ""}`}
+            />
+          </button>
+
+          <button
+            onClick={async () => {
+              const next = !isPinned;
+              await getCurrentWindow().setAlwaysOnTop(next,);
+              setIsPinned(next,);
+            }}
+            className={`p-1 rounded-md transition-colors cursor-default ${
+              isPinned
+                ? "text-gray-900 dark:text-white bg-gray-200/60 dark:bg-gray-700/60"
+                : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+            title={isPinned ? "Unpin window" : "Pin window on top"}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className={`transition-transform ${isPinned ? "" : "rotate-45"}`}
+            >
+              <path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A5.921 5.921 0 0 1 5 6.708V2.277a2.77 2.77 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {globalSearchOpen
