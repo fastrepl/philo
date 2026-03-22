@@ -50,6 +50,7 @@ const WEEKDAYS = [
 
 export type MentionKind = "date" | "recurring" | "tag" | "page" | "gmail" | "google_calendar";
 export type MentionGroup = "action" | "page" | "date" | "recurring";
+const PAGE_SUGGESTION_LIMIT = 20;
 
 interface MarkdownSearchResult {
   path: string;
@@ -66,7 +67,7 @@ export interface MentionChipData {
 
 export interface MentionSuggestion extends MentionChipData {
   group: MentionGroup;
-  action?: "open_date_picker";
+  action?: "open_date_picker" | "show_more_pages";
 }
 
 export interface MentionChipExternalPayload {
@@ -362,7 +363,7 @@ async function getDefaultPageSuggestions(): Promise<MentionSuggestion[]> {
       .map((entry,) => parsePageTitleFromLinkTarget(entry.name ?? "",))
       .filter((title,): title is string => Boolean(title,))
       .sort((left, right,) => left.localeCompare(right, undefined, { sensitivity: "base", numeric: true, },))
-      .slice(0, 8,)
+      .slice(0, PAGE_SUGGESTION_LIMIT,)
       .map((title,) => buildPageSuggestion(title,));
   } catch {
     return [];
@@ -490,7 +491,7 @@ async function getPageSuggestions(query: string,): Promise<MentionSuggestion[]> 
   const results = await invoke<MarkdownSearchResult[]>("search_markdown_files", {
     rootDir: pagesDir,
     query: normalized,
-    limit: 8,
+    limit: PAGE_SUGGESTION_LIMIT,
   },);
 
   return dedupeSuggestions(

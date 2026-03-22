@@ -13,8 +13,8 @@ import Mention from "@tiptap/extension-mention";
 import { PluginKey, } from "@tiptap/pm/state";
 import { ReactRenderer, } from "@tiptap/react";
 import type { SuggestionOptions, } from "@tiptap/suggestion";
-import { CalendarDays, FileText, Repeat2, } from "lucide-react";
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState, } from "react";
+import { CalendarDays, ChevronDown, FileText, Repeat2, } from "lucide-react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, } from "react";
 import {
   createDateMention,
   createRecurringMention,
@@ -39,6 +39,9 @@ function getRecurrenceDescription(date: string, recurrence: string,) {
   if (!recurrence) return null;
   return `Starting from ${formatRecurrenceDescriptionDate(date,)} this will show up on a ${recurrence} basis.`;
 }
+
+const INITIAL_PAGE_RESULTS = 5;
+const PAGE_RESULTS_INCREMENT = 3;
 
 function MiniCalendar({ selected, onSelect, }: { selected: string; onSelect: (date: string,) => void; },) {
   const todayStr = (() => {
@@ -125,15 +128,39 @@ const MentionMenu = forwardRef<
   const [showDatePicker, setShowDatePicker,] = useState(false,);
   const [selectedDate, setSelectedDate,] = useState(getToday(),);
   const [recurrence, setRecurrence,] = useState("",);
+  const [visiblePageCount, setVisiblePageCount,] = useState(INITIAL_PAGE_RESULTS,);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([],);
 
   useEffect(() => {
     setSelectedIndex(0,);
+    setVisiblePageCount(INITIAL_PAGE_RESULTS,);
   }, [items,],);
 
   useEffect(() => {
     setSelectedDate(getToday(),);
   }, [referenceDate,],);
+
+  const renderedItems = useMemo(() => {
+    const pageItems = items.filter((item,) => item.group === "page");
+    const nonPageItems = items.filter((item,) => item.group !== "page");
+    const visiblePages = pageItems.slice(0, visiblePageCount,);
+    const hiddenPageCount = Math.max(pageItems.length - visiblePages.length, 0,);
+
+    return [
+      ...items.filter((item,) => item.group === "action"),
+      ...visiblePages,
+      ...(hiddenPageCount > 0
+        ? [{
+          id: "action_show_more_pages",
+          label: "Show more",
+          kind: "page" as const,
+          group: "page" as const,
+          action: "show_more_pages" as const,
+        },]
+        : []),
+      ...nonPageItems.filter((item,) => item.group !== "action"),
+    ];
+  }, [items, visiblePageCount,],);
 
   useEffect(() => {
     if (showDatePicker) return;
@@ -141,12 +168,24 @@ const MentionMenu = forwardRef<
       block: "nearest",
       inline: "nearest",
     },);
-  }, [selectedIndex, showDatePicker, items,],);
+  }, [renderedItems, selectedIndex, showDatePicker,],);
 
   const applyCustomDate = () => {
     if (!selectedDate) return;
     const nextItem = recurrence ? createRecurringMention(selectedDate, recurrence,) : createDateMention(selectedDate,);
     command([nextItem,],);
+  };
+
+  const handleItemSelect = (item: MentionSuggestion,) => {
+    if (item.action === "open_date_picker") {
+      setShowDatePicker(true,);
+      return;
+    }
+    if (item.action === "show_more_pages") {
+      setVisiblePageCount((current,) => current + PAGE_RESULTS_INCREMENT);
+      return;
+    }
+    command([item,],);
   };
 
   useImperativeHandle(ref, () => ({
@@ -165,65 +204,56 @@ const MentionMenu = forwardRef<
         return false;
       }
 
-      if (items.length === 0) return false;
+      if (renderedItems.length === 0) return false;
 
       if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Enter") {
         event.preventDefault();
       }
 
       if (event.key === "ArrowUp") {
-        setSelectedIndex((current,) => (current + items.length - 1) % items.length);
+        setSelectedIndex((current,) => (current + renderedItems.length - 1) % renderedItems.length);
         return true;
       }
 
       if (event.key === "ArrowDown") {
-        setSelectedIndex((current,) => (current + 1) % items.length);
+        setSelectedIndex((current,) => (current + 1) % renderedItems.length);
         return true;
       }
 
       if (event.key === "Enter") {
-        const item = items[selectedIndex];
-        if (item?.action === "open_date_picker") {
-          setShowDatePicker(true,);
-          return true;
-        }
-        if (item) command([item,],);
+        const item = renderedItems[selectedIndex];
+        if (item) handleItemSelect(item,);
         return true;
       }
 
       return false;
     },
-  }), [showDatePicker, items, selectedIndex, command, selectedDate, recurrence,],);
+  }), [showDatePicker, renderedItems, selectedIndex, command, selectedDate, recurrence,],);
 
   return (
     <div className="mention-menu">
       {!showDatePicker && (
         <div className="mention-menu-items">
-          {items.map((item, index,) => {
-            const showActionDivider = item.group !== "action" && index > 0 && items[index - 1]?.group === "action";
-            const showPageDivider = item.group === "page" && items[index - 1]?.group !== "page" && index > 0;
-            const showDateDivider = item.group === "date" && items[index - 1]?.group !== "date"
-              && items[index - 1]?.group !== "action";
-            const showRecurringDivider = item.group === "recurring" && items[index - 1]?.group !== "recurring";
-            const Icon = item.kind === "page" ? FileText : item.kind === "recurring" ? Repeat2 : CalendarDays;
+          {renderedItems.map((item, index,) => {
+            const showDivider = index > 0 && renderedItems[index - 1]?.group !== item.group;
+            const Icon = item.action === "show_more_pages"
+              ? ChevronDown
+              : item.kind === "page"
+              ? FileText
+              : item.kind === "recurring"
+              ? Repeat2
+              : CalendarDays;
 
             return (
               <div key={item.id}>
-                {showActionDivider && <div className="mention-menu-divider" />}
-                {showPageDivider && <div className="mention-menu-divider" />}
-                {showDateDivider && <div className="mention-menu-divider" />}
-                {showRecurringDivider && <div className="mention-menu-divider" />}
+                {showDivider && <div className="mention-menu-divider" />}
                 <button
                   ref={(element,) => {
                     itemRefs.current[index] = element;
                   }}
                   className={`mention-menu-item ${index === selectedIndex ? "is-selected" : ""}`}
                   onClick={() => {
-                    if (item.action === "open_date_picker") {
-                      setShowDatePicker(true,);
-                      return;
-                    }
-                    command([item,],);
+                    handleItemSelect(item,);
                   }}
                   type="button"
                 >
