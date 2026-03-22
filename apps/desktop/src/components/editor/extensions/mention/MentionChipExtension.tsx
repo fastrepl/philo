@@ -429,6 +429,7 @@ export const MentionChipExtension = Mention.extend({
         };
         const dateState = getMentionChipState(chip,);
         const label = getMentionChipLabel(chip,);
+        const isInlineChip = chip.kind === "page" || chip.kind === "date";
 
         return [
           "span",
@@ -438,16 +439,23 @@ export const MentionChipExtension = Mention.extend({
             class: [
               "mention-chip",
               `mention-chip-${String(node.attrs.kind ?? "tag",)}`,
-              dateState === "today" ? "mention-chip-today" : "",
-              dateState === "overdue" ? "mention-chip-overdue" : "",
+              !isInlineChip && dateState === "today" ? "mention-chip-today" : "",
+              !isInlineChip && dateState === "overdue" ? "mention-chip-overdue" : "",
             ]
               .filter(Boolean,)
               .join(" ",),
           },),
-          ...(chip.kind === "page"
+          ...(isInlineChip
             ? [
-              ["span", { class: "mention-chip-page-icon", "aria-hidden": "true", contenteditable: "false", },],
-              ["span", { class: "mention-chip-page-label", }, label,],
+              [
+                "span",
+                {
+                  class: `mention-chip-${chip.kind}-icon`,
+                  "aria-hidden": "true",
+                  contenteditable: "false",
+                },
+              ],
+              ["span", { class: "mention-chip-inline-label", }, label,],
             ]
             : [label,]),
         ];
