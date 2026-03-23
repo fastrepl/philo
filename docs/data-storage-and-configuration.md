@@ -198,6 +198,104 @@ city: Seoul
 ![[weekly-plan.excalidraw]]
 ```
 
+## Pages
+
+Files under `pages/` are plain markdown, but they do not all share one exact schema.
+
+Current location:
+
+- vault mode: `<vaultDir>/pages/`
+- default mode: sibling `pages/` folder next to the resolved journal root
+
+Philo currently reads and writes three page-shaped markdown variants.
+
+### 1. Plain Pages
+
+These are the default attached pages. They may have no frontmatter at all.
+
+Example:
+
+```md
+# Draft outline
+
+- tighten the intro
+- add screenshots
+```
+
+Notes:
+
+- `type` defaults to `page` when omitted
+- the body is the canonical editable content
+- `attached_to` may be inferred from daily-note links instead of frontmatter
+
+### 2. Meeting Pages
+
+Meeting pages use frontmatter for structured metadata and then keep the meeting notes in the body.
+
+Example:
+
+```md
+---
+type: "meeting"
+started_at: "2026-03-23T09:00:00.000Z"
+ended_at: "2026-03-23T09:45:00.000Z"
+participants:
+  - "Alex"
+  - "Sam"
+location: "San Francisco"
+executive_summary: "Aligned on launch scope and owners."
+session_kind: "decision_making"
+agenda:
+  - "Launch timing"
+  - "QA readiness"
+action_items:
+  - "Alex to confirm release checklist"
+source: "ad-hoc"
+---
+
+## Summary
+
+- Launch is still on track for Friday.
+
+## Decisions
+
+- Ship without the secondary onboarding tweak.
+```
+
+Notes:
+
+- all meeting-specific frontmatter fields are optional
+- the body is still the source of truth for the editable meeting note itself
+- Philo may append transcript and summary sections into the body over time
+
+### 3. URL Summary Pages
+
+URL summary pages are normal `page` notes with URL-specific frontmatter and an AI-generated summary body.
+
+Example:
+
+```md
+---
+type: "page"
+source: "https://example.com/article"
+link_title: "Example article title"
+summary_updated_at: "2026-03-23T17:10:00.000Z"
+follow_up_questions:
+  - "What are the main risks?"
+  - "How does this compare to our current approach?"
+  - "What should I read next on this topic?"
+---
+
+This article argues that...
+```
+
+Notes:
+
+- `source` stores the canonical normalized URL
+- `link_title`, `summary_updated_at`, and `follow_up_questions` are app-generated and optional
+- the body remains editable markdown; it is not a hidden structured payload
+- these pages are created when Philo converts a stale bare URL into a page chip
+
 ## Images / Assets
 
 Pasted and dropped images are saved by `services/images.ts`.

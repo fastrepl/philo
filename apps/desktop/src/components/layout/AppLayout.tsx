@@ -3,7 +3,7 @@ import { listen, type UnlistenFn, } from "@tauri-apps/api/event";
 import { dirname, } from "@tauri-apps/api/path";
 import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { exists, watch, } from "@tauri-apps/plugin-fs";
-import { openPath, } from "@tauri-apps/plugin-opener";
+import { openPath, openUrl, } from "@tauri-apps/plugin-opener";
 import type { Editor as TiptapEditor, } from "@tiptap/core";
 import type { JSONContent, } from "@tiptap/react";
 import { ChevronLeft, ChevronRight, House, MapPin, } from "lucide-react";
@@ -77,6 +77,7 @@ import {
   type PostUpdateInfo,
   type UpdateInfo,
 } from "../../services/updater";
+import { isUrlSummaryPage, } from "../../services/url-summary";
 import { createWidgetFile, } from "../../services/widget-files";
 import { recordWidgetGitRevision, } from "../../services/widget-git-history";
 import { stringifyStorageSchema, } from "../../services/widget-storage";
@@ -570,6 +571,19 @@ function renderSearchSnippet(snippet: string,) {
   },);
 }
 
+function formatSummaryUpdatedAt(value: string | null,) {
+  if (!value) return null;
+  const date = new Date(value,);
+  if (Number.isNaN(date.getTime(),)) return null;
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  },);
+}
+
 function DateHeader({
   date,
   city,
@@ -757,6 +771,7 @@ function PageView({
   pageOverride,
   onOpenDate,
   onOpenPage,
+  onAskAiPrompt,
   onSave,
   onInteract,
   editorRef,
@@ -767,6 +782,7 @@ function PageView({
   pageOverride?: PageNote | null;
   onOpenDate?: (date: string,) => void;
   onOpenPage?: (title: string,) => void;
+  onAskAiPrompt?: (prompt: string,) => void;
   onSave?: (page: PageNote,) => void;
   onInteract?: () => void;
   editorRef?: RefObject<EditableNoteHandle | null>;
@@ -806,6 +822,10 @@ function PageView({
     );
   }
 
+  const pageIsUrlSummary = isUrlSummaryPage(page,);
+  const pageHeading = pageIsUrlSummary ? page.linkTitle ?? page.title : page.title;
+  const summaryUpdatedAt = formatSummaryUpdatedAt(page.summaryUpdatedAt,);
+
   return (
     <div className="w-full max-w-3xl">
       <div className="px-6 pt-6 pb-4">
@@ -814,7 +834,7 @@ function PageView({
             className="text-2xl italic text-gray-900 dark:text-white"
             style={{ fontFamily: '"Instrument Serif", serif', }}
           >
-            {page.title}
+            {pageHeading}
           </h1>
           {page.type === "meeting" && (
             <span
@@ -825,6 +845,26 @@ function PageView({
             </span>
           )}
         </div>
+        {pageIsUrlSummary && page.source && (
+          <div className="mt-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => openUrl(page.source!,).catch(console.error,)}
+              className="block max-w-full truncate text-left text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              title={page.source}
+            >
+              {page.source}
+            </button>
+            {summaryUpdatedAt && (
+              <p
+                className="text-[11px] uppercase tracking-[0.18em] text-gray-400"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+              >
+                summarized {summaryUpdatedAt}
+              </p>
+            )}
+          </div>
+        )}
         {page.attachedTo && (
           <button
             type="button"
@@ -843,6 +883,28 @@ function PageView({
         onOpenPage={onOpenPage}
         onInteract={onInteract}
       />
+      {pageIsUrlSummary && page.followUpQuestions.length > 0 && onAskAiPrompt && (
+        <div className="px-6 pt-4 pb-6">
+          <p
+            className="text-[11px] uppercase tracking-[0.18em] text-gray-400"
+            style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+          >
+            ask ai next
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {page.followUpQuestions.map((question,) => (
+              <button
+                key={question}
+                type="button"
+                onClick={() => onAskAiPrompt(question,)}
+                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:border-gray-300 hover:bg-white hover:text-gray-900"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1463,6 +1525,22 @@ export default function AppLayout() {
     );
     setAiComposerOpen(true,);
     setAiError(null,);
+    refreshAiAvailability();
+  }, [clearWidgetEditSession, refreshAiAvailability,],);
+
+  const openAiComposerWithPrompt = useCallback((prompt: string,) => {
+    const normalizedPrompt = prompt.trim();
+    if (!normalizedPrompt) return;
+
+    clearWidgetEditSession();
+    setGlobalSearchOpen(false,);
+    setAiScope("recent",);
+    setAiSelectedLabel(null,);
+    setAiSelectedText(null,);
+    setAiSelectionHighlight(null,);
+    setAiComposerOpen(true,);
+    setAiError(null,);
+    setAiPrompt(normalizedPrompt,);
     refreshAiAvailability();
   }, [clearWidgetEditSession, refreshAiAvailability,],);
 
@@ -2739,6 +2817,7 @@ export default function AppLayout() {
                     pageOverride={activePage}
                     onOpenDate={scrollToDate}
                     onOpenPage={openPageView}
+                    onAskAiPrompt={openAiComposerWithPrompt}
                     onSave={handlePageSave}
                     onInteract={handleEditorInteract}
                     editorRef={pageEditorRef}
