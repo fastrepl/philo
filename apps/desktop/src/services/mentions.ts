@@ -141,6 +141,40 @@ function formatDisplayDate(date: string,): string {
   },);
 }
 
+function formatDisplayDateWithYear(date: string, referenceDate: string,): string {
+  const options: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+  };
+
+  if (date.slice(0, 4,) !== referenceDate.slice(0, 4,)) {
+    options.year = "numeric";
+  }
+
+  return fromIsoDate(date,).toLocaleDateString("en-US", options,);
+}
+
+function formatRelativeChipDate(date: string, referenceDate: string,): string {
+  const daysUntil = diffDays(referenceDate, date,);
+  if (daysUntil === 0) return "Today";
+  if (daysUntil === -1) return "Yesterday";
+  if (daysUntil === 1) return "Tomorrow";
+  if (daysUntil >= 2 && daysUntil <= 6) return `${daysUntil} days later`;
+  if (daysUntil <= -2 && daysUntil >= -6) return `${Math.abs(daysUntil,)} days ago`;
+  return formatDisplayDateWithYear(date, referenceDate,);
+}
+
+function getDateChipState(
+  date: string,
+  referenceDate: string,
+): "past" | "today" | "this_week" | "future" {
+  if (date < referenceDate) return "past";
+  if (date === referenceDate) return "today";
+
+  const nextWeekStart = toIsoDate(addDays(startOfWeek(fromIsoDate(referenceDate,),), 7,),);
+  return date < nextWeekStart ? "this_week" : "future";
+}
+
 function normalizeToken(token: string,): string {
   return token.trim().toLowerCase().replace(/\s+/g, " ",);
 }
@@ -653,11 +687,11 @@ export function getMentionChipLabel(
   }
 
   if (parsed.kind === "date") {
-    return parsed.date === referenceDate ? "Today" : formatDisplayDate(parsed.date,);
+    return formatRelativeChipDate(parsed.date, referenceDate,);
   }
 
   const displayDate = getRecurringDisplayDate(parsed.startDate, parsed.intervalDays, referenceDate,);
-  return displayDate === referenceDate ? "Today" : formatDisplayDate(displayDate,);
+  return formatRelativeChipDate(displayDate, referenceDate,);
 }
 
 export function getMentionChipDate(
@@ -679,20 +713,18 @@ export function getMentionChipDate(
 export function getMentionChipState(
   data: Pick<MentionChipData, "id" | "kind">,
   referenceDate: string = getToday(),
-): "today" | "overdue" | null {
+): "past" | "today" | "this_week" | "future" | null {
   if (parseExternalChipId(data.id,)) return null;
 
   const parsed = parseMentionId(data.id,);
   if (!parsed) return null;
 
   if (parsed.kind === "date") {
-    if (parsed.date === referenceDate) return "today";
-    if (parsed.date < referenceDate) return "overdue";
-    return null;
+    return getDateChipState(parsed.date, referenceDate,);
   }
 
   const displayDate = getRecurringDisplayDate(parsed.startDate, parsed.intervalDays, referenceDate,);
-  return displayDate === referenceDate ? "today" : null;
+  return getDateChipState(displayDate, referenceDate,);
 }
 
 export function renderMentionMarkdown(

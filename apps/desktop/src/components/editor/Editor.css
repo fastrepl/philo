@@ -83,8 +83,7 @@
   cursor: pointer;
 }
 
-.tiptap .mention-chip-page,
-.tiptap .mention-chip-date {
+.tiptap .mention-chip-page {
   max-width: none;
   height: auto;
   gap: 0.3rem;
@@ -106,8 +105,7 @@
     color 120ms ease;
 }
 
-.tiptap .mention-chip-page:hover,
-.tiptap .mention-chip-date:hover {
+.tiptap .mention-chip-page:hover {
   background-color: rgba(17, 24, 39, 0.08);
 }
 
@@ -127,6 +125,34 @@
 
 .tiptap .mention-chip-date-icon {
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.tiptap .mention-chip-date {
+  max-width: none;
+  height: auto;
+  gap: 0.28rem;
+  margin: 0 0.125rem;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  vertical-align: -0.08em;
+  align-items: center;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    filter 120ms ease;
+}
+
+.tiptap .mention-chip-date:hover {
+  filter: brightness(0.97);
 }
 
 .tiptap .mention-chip-inline-label {
@@ -157,17 +183,28 @@
   color: #374151;
 }
 
-.tiptap .mention-chip-today {
-  border-radius: 6px;
-  border-color: #fde68a;
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.tiptap .mention-chip-overdue {
+.tiptap .mention-chip-state-past {
   border-color: #fecaca;
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.tiptap .mention-chip-state-today {
+  border-color: #fdba74;
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.tiptap .mention-chip-state-this-week {
+  border-color: #fde68a;
+  background: #fef3c7;
+  color: #a16207;
+}
+
+.tiptap .mention-chip-state-future {
+  border-color: #bfdbfe;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .ai-diff-preview .tiptap {
