@@ -1,5 +1,5 @@
 import { invoke, } from "@tauri-apps/api/core";
-import { listen, } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn, } from "@tauri-apps/api/event";
 import { dirname, } from "@tauri-apps/api/path";
 import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { exists, watch, } from "@tauri-apps/plugin-fs";
@@ -34,6 +34,18 @@ import { syncGoogleImports, } from "../../services/google-imports";
 import type { LibraryItem, } from "../../services/library";
 import { cleanupLegacyLibraryState, } from "../../services/library";
 import {
+  type ListenerSessionDataEvent,
+  type ListenerSessionLifecycleEvent,
+  type ListenerStreamResponse,
+  listenToListenerSessionData,
+  listenToListenerSessionError,
+  listenToListenerSessionLifecycle,
+  listenToListenerSessionProgress,
+  startListenerSession,
+  stopListenerSession,
+} from "../../services/listener";
+import { summarizeMeeting, } from "../../services/meeting-summary";
+import {
   buildPageLinkTarget,
   getJournalDir,
   getPagePath,
@@ -43,7 +55,12 @@ import {
   parsePageTitleFromPath,
   sanitizePageTitle,
 } from "../../services/paths";
-import { getFilenamePattern, hasActiveAiProvider, loadSettings, } from "../../services/settings";
+import {
+  getFilenamePattern,
+  hasActiveAiProvider,
+  loadSettings,
+  resolveActiveSttConfig,
+} from "../../services/settings";
 import {
   createUntitledAttachedPage,
   getOrCreateDailyNote,
@@ -63,7 +80,7 @@ import {
 import { createWidgetFile, } from "../../services/widget-files";
 import { recordWidgetGitRevision, } from "../../services/widget-git-history";
 import { stringifyStorageSchema, } from "../../services/widget-storage";
-import { DailyNote, formatDate, getDaysAgo, isToday, type PageNote, } from "../../types/note";
+import { DailyNote, formatDate, getDaysAgo, isToday, type MeetingSessionKind, type PageNote, } from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
 import {
   WIDGET_BUILD_STATE_EVENT,
@@ -103,49 +120,27 @@ interface AiSelectionHighlight {
 
 type AppView = { kind: "home"; } | { kind: "page"; title: string; };
 
-interface SpeechRecognitionAlternativeLike {
-  transcript: string;
+interface MeetingTranscriptWord {
+  text: string;
+  startMs: number;
+  endMs: number;
+  channel: number;
 }
 
-interface SpeechRecognitionResultLike {
-  isFinal: boolean;
-  0: SpeechRecognitionAlternativeLike;
+interface MeetingTranscriptState {
+  finalWordsByChannel: Record<number, MeetingTranscriptWord[]>;
+  partialWordsByChannel: Record<number, MeetingTranscriptWord[]>;
+  finalWordsMaxEndMsByChannel: Record<number, number>;
+  fallbackFinalText: string;
+  fallbackPartialText: string;
 }
 
-interface SpeechRecognitionResultListLike {
-  [index: number]: SpeechRecognitionResultLike;
-  length: number;
-}
-
-interface SpeechRecognitionEventLike extends Event {
-  resultIndex: number;
-  results: SpeechRecognitionResultListLike;
-}
-
-interface SpeechRecognitionErrorEventLike extends Event {
-  error?: string;
-}
-
-interface SpeechRecognitionLike extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onend: ((event: Event,) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEventLike,) => void) | null;
-  onresult: ((event: SpeechRecognitionEventLike,) => void) | null;
-  start(): void;
-  stop(): void;
-}
-
-interface SpeechRecognitionConstructorLike {
-  new(): SpeechRecognitionLike;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: SpeechRecognitionConstructorLike;
-    webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
-  }
+interface ActiveMeetingSession {
+  sessionId: string;
+  pageTitle: string;
+  startedAt: string;
+  baseDoc: JSONContent;
+  transcriptState: MeetingTranscriptState;
 }
 
 function getNodeText(node: JSONContent | undefined,): string {
@@ -177,6 +172,38 @@ function createPageLinkParagraph(title: string,): JSONContent {
   };
 }
 
+function createHeading(level: number, text: string,): JSONContent {
+  return {
+    type: "heading",
+    attrs: { level, },
+    content: [{ type: "text", text, },],
+  };
+}
+
+function createListItem(text: string,): JSONContent {
+  return {
+    type: "listItem",
+    content: [createParagraph(text,),],
+  };
+}
+
+function createBulletList(items: string[],): JSONContent | null {
+  const cleaned = items.map((item,) => item.trim()).filter(Boolean,);
+  if (cleaned.length === 0) return null;
+  return {
+    type: "bulletList",
+    content: cleaned.map((item,) => createListItem(item,)),
+  };
+}
+
+function createParagraphsFromText(text: string,): JSONContent[] {
+  return text
+    .split(/\n+/,)
+    .map((line,) => line.trim())
+    .filter(Boolean,)
+    .map((line,) => createParagraph(line,));
+}
+
 function normalizeDocContent(doc: JSONContent,): JSONContent[] {
   const content = Array.isArray(doc.content,) ? [...doc.content,] : [];
   if (content.length !== 1 || content[0]?.type !== "paragraph" || getNodeText(content[0],).trim()) {
@@ -192,10 +219,10 @@ function appendAttachedPageLink(doc: JSONContent, title: string,): JSONContent {
   };
 }
 
-function appendTranscriptToDoc(baseDoc: JSONContent, transcript: string,): JSONContent {
+function appendDoc(baseDoc: JSONContent, appendedDoc: JSONContent,): JSONContent {
   const baseContent = normalizeDocContent(baseDoc,);
-  const trimmedTranscript = transcript.trim();
-  if (!trimmedTranscript) {
+  const appendedContent = normalizeDocContent(appendedDoc,);
+  if (appendedContent.length === 0) {
     return baseContent.length > 0 ? { type: "doc", content: baseContent, } : EMPTY_DOC;
   }
 
@@ -204,9 +231,65 @@ function appendTranscriptToDoc(baseDoc: JSONContent, transcript: string,): JSONC
     content: [
       ...baseContent,
       ...(baseContent.length > 0 ? [createParagraph(),] : []),
-      createParagraph(trimmedTranscript,),
+      ...appendedContent,
     ],
   };
+}
+
+function buildMeetingCaptureDoc({
+  sessionKind,
+  summary,
+  decisions,
+  keyTakeaways,
+  actionItems,
+  transcript,
+}: {
+  sessionKind?: MeetingSessionKind | null;
+  summary?: string[];
+  decisions?: string[];
+  keyTakeaways?: string[];
+  actionItems?: string[];
+  transcript?: string;
+},): JSONContent {
+  const content: JSONContent[] = [];
+  const summaryList = createBulletList(summary ?? [],);
+  const transcriptText = transcript?.trim() ?? "";
+
+  if (summaryList) {
+    content.push(createHeading(2, "Summary",), summaryList,);
+  }
+
+  if (sessionKind === "decision_making") {
+    content.push(createHeading(2, "Decisions",),);
+    content.push(
+      createBulletList(
+        decisions?.length ? decisions : ["No explicit decisions were captured.",],
+      )!,
+    );
+    content.push(createHeading(2, "Action Items",),);
+    content.push(
+      createBulletList(
+        actionItems?.length ? actionItems : ["No action items were captured.",],
+      )!,
+    );
+  } else if (sessionKind === "informative") {
+    content.push(createHeading(2, "Key Takeaways",),);
+    content.push(
+      createBulletList(
+        keyTakeaways?.length
+          ? keyTakeaways
+          : summary?.length
+          ? summary
+          : ["No key takeaways were captured.",],
+      )!,
+    );
+  }
+
+  if (transcriptText) {
+    content.push(createHeading(2, "Transcript",), ...createParagraphsFromText(transcriptText,),);
+  }
+
+  return content.length > 0 ? { type: "doc", content, } : EMPTY_DOC;
 }
 
 function formatAdHocMeetingTitle(date: Date,) {
@@ -218,8 +301,256 @@ function formatAdHocMeetingTitle(date: Date,) {
   return `Ad-hoc meeting ${time}`;
 }
 
-function getSpeechRecognitionConstructor(): SpeechRecognitionConstructorLike | null {
-  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
+function mergeTranscriptText(current: string, next: string,) {
+  const currentText = current.trim();
+  const nextText = next.trim();
+  if (!nextText) return currentText;
+  if (!currentText) return nextText;
+  if (currentText.endsWith(nextText,)) return currentText;
+
+  const maxOverlap = Math.min(currentText.length, nextText.length,);
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    if (currentText.endsWith(nextText.slice(0, overlap,),)) {
+      return `${currentText}${nextText.slice(overlap,)}`.trim();
+    }
+  }
+
+  return `${currentText}\n\n${nextText}`.trim();
+}
+
+function createMeetingTranscriptState(): MeetingTranscriptState {
+  return {
+    finalWordsByChannel: {},
+    partialWordsByChannel: {},
+    finalWordsMaxEndMsByChannel: {},
+    fallbackFinalText: "",
+    fallbackPartialText: "",
+  };
+}
+
+function fixSpacingForTranscriptWords(words: string[], transcript: string,): string[] {
+  const result: string[] = [];
+  let position = 0;
+
+  for (const [index, word,] of words.entries()) {
+    const trimmed = word.trim();
+    if (!trimmed) {
+      result.push(word,);
+      continue;
+    }
+
+    const foundAt = transcript.indexOf(trimmed, position,);
+    if (foundAt === -1) {
+      result.push(word,);
+      continue;
+    }
+
+    const prefix = index === 0 ? " " : transcript.slice(position, foundAt,);
+    result.push(`${prefix}${trimmed}`,);
+    position = foundAt + trimmed.length;
+  }
+
+  return result;
+}
+
+function toMeetingTranscriptWords(response: ListenerStreamResponse,): MeetingTranscriptWord[] {
+  if (response.type !== "Results") return [];
+
+  const channel = response.channel_index[0];
+  const alternative = response.channel.alternatives[0];
+  if (channel === undefined || !alternative?.words?.length) {
+    return [];
+  }
+
+  const textsWithSpacing = fixSpacingForTranscriptWords(
+    alternative.words.map((word,) => word.punctuated_word ?? word.word),
+    alternative.transcript,
+  );
+
+  return alternative.words.map((word, index,) => ({
+    text: textsWithSpacing[index] ?? ` ${word.punctuated_word ?? word.word}`,
+    startMs: Math.round(word.start * 1000,),
+    endMs: Math.round(word.end * 1000,),
+    channel,
+  }));
+}
+
+function applyTranscriptResponse(state: MeetingTranscriptState, response: ListenerStreamResponse,) {
+  if (response.type !== "Results") return;
+
+  const transcript = response.channel.alternatives[0]?.transcript?.trim() ?? "";
+  const words = toMeetingTranscriptWords(response,);
+  const channel = response.channel_index[0] ?? 0;
+
+  if (words.length === 0) {
+    if (response.is_final) {
+      state.fallbackFinalText = mergeTranscriptText(state.fallbackFinalText, transcript,);
+      state.fallbackPartialText = "";
+    } else {
+      state.fallbackPartialText = transcript;
+    }
+    return;
+  }
+
+  if (response.is_final) {
+    const lastPersistedEndMs = state.finalWordsMaxEndMsByChannel[channel] ?? 0;
+    const firstNewWordIndex = words.findIndex((word,) => word.endMs > lastPersistedEndMs);
+    if (firstNewWordIndex === -1) {
+      return;
+    }
+
+    const newWords = words.slice(firstNewWordIndex,);
+    const lastEndMs = newWords[newWords.length - 1]?.endMs ?? lastPersistedEndMs;
+    const existingPartial = state.partialWordsByChannel[channel] ?? [];
+
+    state.finalWordsByChannel[channel] = [
+      ...(state.finalWordsByChannel[channel] ?? []),
+      ...newWords,
+    ];
+    state.partialWordsByChannel[channel] = existingPartial.filter((word,) => word.startMs > lastEndMs);
+    state.finalWordsMaxEndMsByChannel[channel] = lastEndMs;
+    return;
+  }
+
+  const existingPartial = state.partialWordsByChannel[channel] ?? [];
+  const firstStartMs = words[0]?.startMs ?? 0;
+  const lastEndMs = words[words.length - 1]?.endMs ?? 0;
+
+  state.partialWordsByChannel[channel] = [
+    ...existingPartial.filter((word,) => word.endMs <= firstStartMs),
+    ...words,
+    ...existingPartial.filter((word,) => word.startMs >= lastEndMs),
+  ];
+}
+
+function finalizeTranscriptState(state: MeetingTranscriptState,) {
+  state.fallbackFinalText = mergeTranscriptText(state.fallbackFinalText, state.fallbackPartialText,);
+  state.fallbackPartialText = "";
+
+  for (const channel of Object.keys(state.partialWordsByChannel,).map(Number,)) {
+    const partialWords = state.partialWordsByChannel[channel] ?? [];
+    if (partialWords.length === 0) continue;
+
+    const lastPersistedEndMs = state.finalWordsMaxEndMsByChannel[channel] ?? 0;
+    const firstNewWordIndex = partialWords.findIndex((word,) => word.endMs > lastPersistedEndMs);
+    if (firstNewWordIndex !== -1) {
+      const newWords = partialWords.slice(firstNewWordIndex,);
+      state.finalWordsByChannel[channel] = [
+        ...(state.finalWordsByChannel[channel] ?? []),
+        ...newWords,
+      ];
+      state.finalWordsMaxEndMsByChannel[channel] = newWords[newWords.length - 1]?.endMs ?? lastPersistedEndMs;
+    }
+
+    state.partialWordsByChannel[channel] = [];
+  }
+}
+
+function getTranscriptText(state: MeetingTranscriptState, includePartial = true,) {
+  const allWords = [
+    ...Object.values(state.finalWordsByChannel,).flat(),
+    ...(includePartial ? Object.values(state.partialWordsByChannel,).flat() : []),
+  ].sort((left, right,) => {
+    if (left.startMs !== right.startMs) return left.startMs - right.startMs;
+    if (left.endMs !== right.endMs) return left.endMs - right.endMs;
+    return left.channel - right.channel;
+  },);
+
+  const wordText = allWords.map((word,) => word.text).join("",).trim();
+  if (wordText) return wordText;
+
+  return includePartial
+    ? [state.fallbackFinalText, state.fallbackPartialText,].filter(Boolean,).join("\n\n",).trim()
+    : state.fallbackFinalText.trim();
+}
+
+function getDocPlainText(doc: JSONContent,) {
+  return normalizeDocContent(doc,)
+    .map((node,) => getNodeText(node,).trim())
+    .filter(Boolean,)
+    .join("\n\n",);
+}
+
+function hasHeading(doc: JSONContent, label: string,) {
+  return normalizeDocContent(doc,).some((node,) => node.type === "heading" && getNodeText(node,).trim() === label);
+}
+
+function trimTrailingEmptyParagraphs(content: JSONContent[],): JSONContent[] {
+  const trimmed = [...content,];
+  while (trimmed.length > 0) {
+    const last = trimmed[trimmed.length - 1];
+    if (last?.type !== "paragraph" || getNodeText(last,).trim()) break;
+    trimmed.pop();
+  }
+  return trimmed;
+}
+
+function getTextAfterHeading(doc: JSONContent, label: string,) {
+  const content = normalizeDocContent(doc,);
+  const parts: string[] = [];
+  let capturing = false;
+
+  for (const node of content) {
+    if (node.type === "heading") {
+      const text = getNodeText(node,).trim();
+      if (text === label) {
+        capturing = true;
+        continue;
+      }
+      if (capturing) {
+        break;
+      }
+    }
+
+    if (!capturing) continue;
+    const text = getNodeText(node,).trim();
+    if (text) {
+      parts.push(text,);
+    }
+  }
+
+  return parts.join("\n\n",).trim();
+}
+
+function splitMeetingCaptureDoc(doc: JSONContent,) {
+  const content = normalizeDocContent(doc,);
+  let transcriptStartIndex = -1;
+  for (let index = content.length - 1; index >= 0; index -= 1) {
+    const node = content[index];
+    if (node.type === "heading" && getNodeText(node,).trim() === "Transcript") {
+      transcriptStartIndex = index;
+      break;
+    }
+  }
+
+  if (transcriptStartIndex === -1) {
+    return { baseDoc: doc, transcript: "", };
+  }
+
+  let captureStartIndex = transcriptStartIndex;
+  for (let index = transcriptStartIndex - 1; index >= 0; index -= 1) {
+    const node = content[index];
+    if (node.type !== "heading") continue;
+
+    const label = getNodeText(node,).trim();
+    if (label === "Summary" || label === "Decisions" || label === "Action Items" || label === "Key Takeaways") {
+      captureStartIndex = index;
+      continue;
+    }
+    break;
+  }
+
+  const baseContent = trimTrailingEmptyParagraphs(content.slice(0, captureStartIndex,),);
+  return {
+    baseDoc: baseContent.length > 0 ? { type: "doc", content: baseContent, } : EMPTY_DOC,
+    transcript: getTextAfterHeading(
+      {
+        type: "doc",
+        content: content.slice(captureStartIndex,),
+      },
+      "Transcript",
+    ),
+  };
 }
 
 function renderSearchSnippet(snippet: string,) {
@@ -423,6 +754,7 @@ function LazyNote({
 function PageView({
   title,
   pagesRevision,
+  pageOverride,
   onOpenDate,
   onOpenPage,
   onSave,
@@ -432,6 +764,7 @@ function PageView({
 }: {
   title: string;
   pagesRevision: number;
+  pageOverride?: PageNote | null;
   onOpenDate?: (date: string,) => void;
   onOpenPage?: (title: string,) => void;
   onSave?: (page: PageNote,) => void;
@@ -444,6 +777,11 @@ function PageView({
   useEffect(() => {
     loadPage(title,).then(setPage,).catch(console.error,);
   }, [pagesRevision, title,],);
+
+  useEffect(() => {
+    if (!pageOverride || pageOverride.title !== title) return;
+    setPage(pageOverride,);
+  }, [pageOverride, title,],);
 
   useEffect(() => {
     onPageChange?.(page,);
@@ -529,7 +867,7 @@ export default function AppLayout() {
   const [postUpdateInfo, setPostUpdateInfo,] = useState<PostUpdateInfo | null>(null,);
   const [isPinned, setIsPinned,] = useState(false,);
   const [isWindowFocused, setIsWindowFocused,] = useState(() => document.hasFocus());
-  const [isAdHocMeetingListening, setIsAdHocMeetingListening,] = useState(false,);
+  const [isMeetingRecording, setIsMeetingRecording,] = useState(false,);
   const [globalSearchOpen, setGlobalSearchOpen,] = useState(false,);
   const [globalSearchQuery, setGlobalSearchQuery,] = useState("",);
   const [globalSearchResults, setGlobalSearchResults,] = useState<GlobalSearchResult[]>([],);
@@ -554,6 +892,9 @@ export default function AppLayout() {
   const [aiApplyingDates, setAiApplyingDates,] = useState<string[]>([],);
   const [widgetEditSession, setWidgetEditSession,] = useState<WidgetEditRequestDetail | null>(null,);
   const [widgetEditSubmitting, setWidgetEditSubmitting,] = useState(false,);
+  const [activePage, setActivePage,] = useState<PageNote | null>(null,);
+  const [meetingSummaryTargetTitle, setMeetingSummaryTargetTitle,] = useState<string | null>(null,);
+  const [meetingSummaryError, setMeetingSummaryError,] = useState<string | null>(null,);
   const [viewState, setViewState,] = useState<{ history: AppView[]; index: number; }>({
     history: [{ kind: "home", },],
     index: 0,
@@ -566,13 +907,8 @@ export default function AppLayout() {
   const todayEditorRef = useRef<EditableNoteHandle>(null,);
   const currentPageRef = useRef<PageNote | null>(null,);
   const pageEditorRef = useRef<EditableNoteHandle>(null,);
-  const adHocMeetingPageRef = useRef<PageNote | null>(null,);
-  const adHocMeetingRecognitionRef = useRef<SpeechRecognitionLike | null>(null,);
-  const adHocMeetingPageTitleRef = useRef<string | null>(null,);
-  const adHocMeetingFinalTranscriptRef = useRef("",);
-  const adHocMeetingDisplayedTranscriptRef = useRef("",);
-  const adHocMeetingBaseDocRef = useRef<JSONContent>(EMPTY_DOC,);
-  const adHocMeetingShouldUpdateMeetingMetadataRef = useRef(false,);
+  const activeMeetingSessionRef = useRef<ActiveMeetingSession | null>(null,);
+  const meetingListenerUnsubscribersRef = useRef<UnlistenFn[]>([],);
   const homeScrollTopRef = useRef(0,);
   const restoreHomeScrollTopRef = useRef<number | null>(null,);
   const googleSyncRef = useRef<Promise<boolean> | null>(null,);
@@ -606,8 +942,14 @@ export default function AppLayout() {
     widgetEditSessionRef.current = widgetEditSession;
   }, [widgetEditSession,],);
 
+  useEffect(() => {
+    setMeetingSummaryError(null,);
+    setMeetingSummaryTargetTitle(null,);
+  }, [activePage?.title,],);
+
   const handleCurrentPageChange = useCallback((page: PageNote | null,) => {
     currentPageRef.current = page;
+    setActivePage(page,);
   }, [],);
 
   const upsertAiChatHistoryEntry = useCallback((entry: ChatHistoryEntry, persist = true,) => {
@@ -825,7 +1167,7 @@ export default function AppLayout() {
     saveDailyNote(updated,).catch(console.error,);
   }, [],);
 
-  const attachAdHocMeetingPageToTodayNote = useCallback((title: string,) => {
+  const attachMeetingPageToTodayNote = useCallback((title: string,) => {
     const editor = todayEditorRef.current?.editor;
     if (editor && !editor.isDestroyed) {
       editor.commands.setContent(appendAttachedPageLink(editor.getJSON(), title,), {
@@ -839,9 +1181,40 @@ export default function AppLayout() {
     replaceTodayNoteContent(appendAttachedPageLink(parseJsonContent(note.content,), title,),);
   }, [replaceTodayNoteContent,],);
 
-  const createAdHocMeetingPage = useCallback(async () => {
-    const startedAt = new Date();
-    const baseTitle = formatAdHocMeetingTitle(startedAt,);
+  const clearMeetingListeners = useCallback(() => {
+    const unlisteners = [...meetingListenerUnsubscribersRef.current,];
+    meetingListenerUnsubscribersRef.current = [];
+    unlisteners.forEach((unlisten,) => {
+      try {
+        unlisten();
+      } catch (error) {
+        console.error(error,);
+      }
+    },);
+  }, [],);
+
+  const persistPageUpdate = useCallback(async (page: PageNote,) => {
+    suppressWatcherUntilRef.current = Date.now() + LOCAL_SAVE_WATCH_SUPPRESSION_MS;
+    currentPageRef.current = page;
+    setActivePage(page,);
+    await savePage(page,);
+    return page;
+  }, [],);
+
+  const getMeetingLocationHint = useCallback(() => {
+    const explicitTodayCity = todayNoteRef.current?.city?.trim();
+    if (explicitTodayCity) return explicitTodayCity;
+
+    const currentCityName = currentCity.city.trim();
+    if (currentCityName) return currentCityName;
+
+    const timezoneCity = currentCity.timezoneCity.trim();
+    return timezoneCity || null;
+  }, [currentCity.city, currentCity.timezoneCity,],);
+
+  const createMeetingPage = useCallback(async (startedAt: string, location: string | null,) => {
+    const startedAtDate = new Date(startedAt,);
+    const baseTitle = formatAdHocMeetingTitle(startedAtDate,);
     let candidate = baseTitle;
     let suffix = 2;
 
@@ -857,10 +1230,10 @@ export default function AppLayout() {
       type: "meeting",
       attachedTo: today,
       eventId: null,
-      startedAt: startedAt.toISOString(),
+      startedAt,
       endedAt: null,
       participants: [],
-      location: null,
+      location,
       executiveSummary: null,
       sessionKind: null,
       agenda: [],
@@ -868,7 +1241,8 @@ export default function AppLayout() {
       source: "ad-hoc",
       frontmatter: {
         type: "meeting",
-        started_at: startedAt.toISOString(),
+        started_at: startedAt,
+        location: location ?? undefined,
         source: "ad-hoc",
       },
       hasFrontmatter: true,
@@ -878,35 +1252,169 @@ export default function AppLayout() {
     return page;
   }, [today,],);
 
-  const setAdHocMeetingPageTranscript = useCallback((title: string, transcript: string, endedAt?: string | null,) => {
-    const page = adHocMeetingPageRef.current;
-    if (!page || page.title !== title) return;
-    const nextContent = appendTranscriptToDoc(adHocMeetingBaseDocRef.current, transcript,);
-    const shouldUpdateMeetingMetadata = adHocMeetingShouldUpdateMeetingMetadataRef.current;
+  const buildMeetingStartPage = useCallback((page: PageNote, startedAt: string, location: string | null,) => {
+    const nextStartedAt = page.startedAt && !page.endedAt ? page.startedAt : startedAt;
+    const nextLocation = page.location ?? location;
+    const nextSource = page.source ?? "ad-hoc";
 
-    const updated: PageNote = {
+    return {
       ...page,
-      content: JSON.stringify(nextContent,),
-      endedAt: shouldUpdateMeetingMetadata ? endedAt ?? page.endedAt : page.endedAt,
-      frontmatter: shouldUpdateMeetingMetadata
-        ? {
-          ...page.frontmatter,
-          ended_at: endedAt ?? page.endedAt ?? undefined,
-        }
-        : page.frontmatter,
-    };
+      type: "meeting" as const,
+      startedAt: nextStartedAt,
+      endedAt: null,
+      location: nextLocation,
+      executiveSummary: null,
+      sessionKind: null,
+      agenda: [],
+      actionItems: [],
+      source: nextSource,
+      hasFrontmatter: true,
+      frontmatter: {
+        ...page.frontmatter,
+        type: "meeting",
+        started_at: nextStartedAt,
+        ended_at: undefined,
+        location: nextLocation ?? undefined,
+        executive_summary: undefined,
+        session_kind: undefined,
+        agenda: undefined,
+        action_items: undefined,
+        source: nextSource,
+      },
+    } satisfies PageNote;
+  }, [],);
 
-    adHocMeetingPageRef.current = updated;
-    if (currentView.kind === "page" && currentPageTitle === updated.title) {
-      currentPageRef.current = updated;
-      const editor = pageEditorRef.current?.editor;
-      if (editor && !editor.isDestroyed) {
-        editor.commands.setContent(nextContent, { emitUpdate: true, },);
-        return;
-      }
+  const updateMeetingPage = useCallback(async ({
+    pageTitle,
+    transcript,
+    endedAt,
+    summaryResult,
+  }: {
+    pageTitle: string;
+    transcript: string;
+    endedAt?: string | null;
+    summaryResult?: Awaited<ReturnType<typeof summarizeMeeting>>;
+  },) => {
+    const page = currentPageRef.current?.title === pageTitle
+      ? currentPageRef.current
+      : await loadPage(pageTitle,);
+    if (!page) return null;
+
+    const activeSession = activeMeetingSessionRef.current;
+    const currentDoc = parseJsonContent(page.content,);
+    const baseDoc = activeSession?.pageTitle === pageTitle
+      ? activeSession.baseDoc
+      : splitMeetingCaptureDoc(currentDoc,).baseDoc;
+    const nextSummary = summaryResult
+      ? (summaryResult.summary.length > 0 ? summaryResult.summary : [summaryResult.executiveSummary,])
+      : undefined;
+    const nextSessionKind = summaryResult?.sessionKind ?? page.sessionKind;
+    const nextAgenda = summaryResult
+      ? (summaryResult.sessionKind === "decision_making" ? summaryResult.agenda : [])
+      : page.agenda;
+    const nextActionItems = summaryResult
+      ? (summaryResult.sessionKind === "decision_making" ? summaryResult.actionItems : [])
+      : page.actionItems;
+    const nextCaptureDoc = buildMeetingCaptureDoc({
+      sessionKind: nextSessionKind,
+      summary: nextSummary,
+      decisions: summaryResult?.decisions,
+      keyTakeaways: summaryResult?.keyTakeaways,
+      actionItems: nextActionItems,
+      transcript,
+    },);
+    const nextStartedAt = page.startedAt ?? activeSession?.startedAt ?? null;
+    const nextLocation = summaryResult?.location ?? page.location;
+    const nextParticipants = summaryResult?.participants.length ? summaryResult.participants : page.participants;
+    const nextExecutiveSummary = summaryResult?.executiveSummary ?? page.executiveSummary;
+    const nextEndedAt = endedAt ?? page.endedAt;
+    const nextSource = page.source ?? "ad-hoc";
+
+    return await persistPageUpdate({
+      ...page,
+      type: "meeting",
+      content: JSON.stringify(appendDoc(baseDoc, nextCaptureDoc,),),
+      startedAt: nextStartedAt,
+      endedAt: nextEndedAt,
+      participants: nextParticipants,
+      location: nextLocation,
+      executiveSummary: nextExecutiveSummary,
+      sessionKind: nextSessionKind,
+      agenda: nextAgenda,
+      actionItems: nextActionItems,
+      source: nextSource,
+      hasFrontmatter: true,
+      frontmatter: {
+        ...page.frontmatter,
+        type: "meeting",
+        started_at: nextStartedAt ?? undefined,
+        ended_at: nextEndedAt ?? undefined,
+        location: nextLocation ?? undefined,
+        executive_summary: nextExecutiveSummary ?? undefined,
+        session_kind: nextSessionKind ?? undefined,
+        participants: nextParticipants.length > 0 ? nextParticipants : undefined,
+        agenda: nextAgenda.length > 0 ? nextAgenda : undefined,
+        action_items: nextActionItems.length > 0 ? nextActionItems : undefined,
+        source: nextSource,
+      },
+    },);
+  }, [persistPageUpdate,],);
+
+  const summarizeMeetingPageNote = useCallback(async (
+    pageInput: PageNote | string | null,
+    transcriptOverride?: string,
+    endedAtOverride?: string | null,
+  ) => {
+    const page = typeof pageInput === "string"
+      ? (
+        currentPageRef.current?.title === pageInput
+          ? currentPageRef.current
+          : await loadPage(pageInput,)
+      )
+      : pageInput;
+    if (!page) return null;
+
+    const currentDoc = parseJsonContent(page.content,);
+    const activeSession = activeMeetingSessionRef.current?.pageTitle === page.title
+      ? activeMeetingSessionRef.current
+      : null;
+    const fallbackSplit = splitMeetingCaptureDoc(currentDoc,);
+    const transcript = transcriptOverride?.trim() || getTextAfterHeading(currentDoc, "Transcript",);
+    if (!transcript) {
+      throw new Error("No transcript is available to summarize.",);
     }
-    savePage(updated,).catch(console.error,);
-  }, [currentPageTitle, currentView.kind,],);
+
+    setMeetingSummaryTargetTitle(page.title,);
+    setMeetingSummaryError(null,);
+
+    try {
+      const result = await summarizeMeeting({
+        title: page.title,
+        transcript,
+        startedAt: page.startedAt,
+        endedAt: endedAtOverride ?? page.endedAt,
+        attachedTo: page.attachedTo,
+        locationHint: page.location ?? getMeetingLocationHint(),
+        participantsHint: page.participants,
+        notesContext: getDocPlainText(activeSession?.baseDoc ?? fallbackSplit.baseDoc,).slice(0, 6000,),
+      },);
+
+      const updated = await updateMeetingPage({
+        pageTitle: page.title,
+        transcript,
+        endedAt: endedAtOverride ?? page.endedAt,
+        summaryResult: result,
+      },);
+
+      setMeetingSummaryTargetTitle(null,);
+      setMeetingSummaryError(null,);
+      return updated;
+    } catch (error) {
+      setMeetingSummaryTargetTitle(null,);
+      setMeetingSummaryError(error instanceof Error ? error.message : "Could not summarize meeting.",);
+      throw error;
+    }
+  }, [getMeetingLocationHint, updateMeetingPage,],);
 
   const openGlobalSearch = useCallback(() => {
     clearWidgetEditSession();
@@ -1014,142 +1522,192 @@ export default function AppLayout() {
     setPendingScrollDate(date,);
   }, [closeGlobalSearch, currentView.kind, goHome, pastDates, today,],);
 
-  const stopAdHocMeetingListening = useCallback(() => {
-    adHocMeetingRecognitionRef.current?.stop();
+  const stopMeetingRecording = useCallback(async () => {
+    try {
+      await stopListenerSession();
+    } catch (error) {
+      console.error(error,);
+    }
   }, [],);
 
-  const handleAdHocMeetingNoteClick = useCallback(async () => {
-    if (isAdHocMeetingListening) {
-      stopAdHocMeetingListening();
+  const finalizeMeetingRecording = useCallback(async (endedAt?: string | null, errorMessage?: string | null,) => {
+    const activeSession = activeMeetingSessionRef.current;
+    if (!activeSession) return;
+
+    finalizeTranscriptState(activeSession.transcriptState,);
+    const transcript = getTranscriptText(activeSession.transcriptState, false,);
+    const finalizedAt = endedAt ?? new Date().toISOString();
+
+    try {
+      await updateMeetingPage({
+        pageTitle: activeSession.pageTitle,
+        transcript,
+        endedAt: finalizedAt,
+      },);
+    } catch (error) {
+      console.error(error,);
+    }
+
+    clearMeetingListeners();
+    activeMeetingSessionRef.current = null;
+    setIsMeetingRecording(false,);
+
+    if (errorMessage) {
+      console.error("Meeting recording stopped:", errorMessage,);
+    }
+
+    if (!transcript) {
+      setMeetingSummaryTargetTitle(null,);
+      setMeetingSummaryError(null,);
+      return;
+    }
+
+    try {
+      const settings = await loadSettings();
+      const aiAvailable = hasActiveAiProvider(settings,);
+      setHasAiConfigured(aiAvailable,);
+
+      if (!aiAvailable) {
+        setMeetingSummaryTargetTitle(null,);
+        return;
+      }
+
+      await summarizeMeetingPageNote(activeSession.pageTitle, transcript, finalizedAt,);
+    } catch (error) {
+      setMeetingSummaryTargetTitle(null,);
+      setMeetingSummaryError(error instanceof Error ? error.message : "Could not summarize meeting.",);
+      console.error(error,);
+    }
+  }, [clearMeetingListeners, summarizeMeetingPageNote, updateMeetingPage,],);
+
+  const handleMeetingRecordClick = useCallback(async () => {
+    if (isMeetingRecording) {
+      await stopMeetingRecording();
       return;
     }
 
     closeGlobalSearch();
+    setMeetingSummaryTargetTitle(null,);
+    setMeetingSummaryError(null,);
+
+    const settings = await loadSettings();
+    const sttConfig = resolveActiveSttConfig(settings,);
+    if (!sttConfig) {
+      setSettingsOpen(true,);
+      return;
+    }
+
     let page: PageNote | null = null;
+    const startedAt = new Date().toISOString();
+    const location = getMeetingLocationHint();
 
     if (currentView.kind === "page") {
       page = currentPageRef.current ?? await loadPage(currentView.title,);
       if (!page) return;
-      currentPageRef.current = page;
-      const editor = pageEditorRef.current?.editor;
-      adHocMeetingBaseDocRef.current = editor && !editor.isDestroyed
-        ? editor.getJSON()
-        : parseJsonContent(page.content,);
-      adHocMeetingShouldUpdateMeetingMetadataRef.current = false;
     } else {
       const ensuredTodayNote = todayNoteRef.current ?? await getOrCreateDailyNote(today,);
       if (!todayNoteRef.current) {
         todayNoteRef.current = ensuredTodayNote;
         setTodayNote(ensuredTodayNote,);
       }
-      page = await createAdHocMeetingPage();
-      attachAdHocMeetingPageToTodayNote(page.title,);
+      page = await createMeetingPage(startedAt, location,);
+      attachMeetingPageToTodayNote(page.title,);
       setPagesRevision((value,) => value + 1);
       openPageView(page.title,);
-      adHocMeetingBaseDocRef.current = EMPTY_DOC;
-      adHocMeetingShouldUpdateMeetingMetadataRef.current = true;
     }
 
-    adHocMeetingPageRef.current = page;
+    const preparedPage = buildMeetingStartPage(page, startedAt, location,);
+    const pageEditor = pageEditorRef.current?.editor;
+    const baseDoc = currentView.kind === "page" && pageEditor && !pageEditor.isDestroyed
+      ? pageEditor.getJSON()
+      : parseJsonContent(preparedPage.content,);
 
-    adHocMeetingPageTitleRef.current = page.title;
-    adHocMeetingFinalTranscriptRef.current = "";
-    adHocMeetingDisplayedTranscriptRef.current = "";
+    await persistPageUpdate(preparedPage,);
 
-    const Recognition = getSpeechRecognitionConstructor();
-    if (!Recognition) {
-      adHocMeetingPageRef.current = null;
-      adHocMeetingPageTitleRef.current = null;
-      adHocMeetingFinalTranscriptRef.current = "";
-      adHocMeetingDisplayedTranscriptRef.current = "";
-      adHocMeetingBaseDocRef.current = EMPTY_DOC;
-      adHocMeetingShouldUpdateMeetingMetadataRef.current = false;
-      console.error("Speech recognition is not available in this environment.",);
-      return;
-    }
-
-    const recognition = new Recognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event,) => {
-      let nextFinalTranscript = adHocMeetingFinalTranscriptRef.current;
-      let interimTranscript = "";
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const result = event.results[index];
-        const transcript = result?.[0]?.transcript?.trim();
-        if (!transcript) continue;
-
-        if (result.isFinal) {
-          nextFinalTranscript = nextFinalTranscript
-            ? `${nextFinalTranscript}\n${transcript}`
-            : transcript;
-        } else {
-          interimTranscript = interimTranscript
-            ? `${interimTranscript}\n${transcript}`
-            : transcript;
-        }
-      }
-
-      adHocMeetingFinalTranscriptRef.current = nextFinalTranscript;
-      const displayedTranscript = interimTranscript
-        ? [nextFinalTranscript, interimTranscript,].filter(Boolean,).join("\n",)
-        : nextFinalTranscript;
-      adHocMeetingDisplayedTranscriptRef.current = displayedTranscript;
-      setAdHocMeetingPageTranscript(page.title, displayedTranscript,);
+    clearMeetingListeners();
+    const sessionId = crypto.randomUUID();
+    activeMeetingSessionRef.current = {
+      sessionId,
+      pageTitle: preparedPage.title,
+      startedAt: preparedPage.startedAt ?? startedAt,
+      baseDoc,
+      transcriptState: createMeetingTranscriptState(),
     };
 
-    recognition.onerror = (event,) => {
-      console.error("Failed to start ad-hoc meeting listening:", event.error ?? event.type,);
-    };
-
-    recognition.onend = () => {
-      adHocMeetingRecognitionRef.current = null;
-      setIsAdHocMeetingListening(false,);
-
-      const activeTitle = adHocMeetingPageTitleRef.current;
-      const finalTranscript = adHocMeetingDisplayedTranscriptRef.current.trim();
-      if (activeTitle) {
-        setAdHocMeetingPageTranscript(activeTitle, finalTranscript, new Date().toISOString(),);
-      }
-
-      adHocMeetingPageRef.current = null;
-      adHocMeetingPageTitleRef.current = null;
-      adHocMeetingFinalTranscriptRef.current = "";
-      adHocMeetingDisplayedTranscriptRef.current = "";
-      adHocMeetingBaseDocRef.current = EMPTY_DOC;
-      adHocMeetingShouldUpdateMeetingMetadataRef.current = false;
-    };
-
-    adHocMeetingRecognitionRef.current = recognition;
-    setIsAdHocMeetingListening(true,);
+    const sessionListeners: UnlistenFn[] = [];
 
     try {
-      recognition.start();
+      sessionListeners.push(
+        await listenToListenerSessionData(async (event: ListenerSessionDataEvent,) => {
+          const activeSession = activeMeetingSessionRef.current;
+          if (!activeSession || event.session_id !== activeSession.sessionId) return;
+          if (event.type !== "stream_response") return;
+
+          applyTranscriptResponse(activeSession.transcriptState, event.response,);
+
+          try {
+            await updateMeetingPage({
+              pageTitle: activeSession.pageTitle,
+              transcript: getTranscriptText(activeSession.transcriptState, true,),
+            },);
+          } catch (error) {
+            console.error(error,);
+          }
+        },),
+      );
+      sessionListeners.push(
+        await listenToListenerSessionLifecycle(async (event: ListenerSessionLifecycleEvent,) => {
+          const activeSession = activeMeetingSessionRef.current;
+          if (!activeSession || event.session_id !== activeSession.sessionId) return;
+          if (event.type === "inactive") {
+            await finalizeMeetingRecording(new Date().toISOString(), event.error,);
+          }
+        },),
+      );
+      sessionListeners.push(
+        await listenToListenerSessionError((event,) => {
+          const activeSession = activeMeetingSessionRef.current;
+          if (!activeSession || event.session_id !== activeSession.sessionId) return;
+          console.error("Meeting recording error:", event.error,);
+        },),
+      );
+      sessionListeners.push(
+        await listenToListenerSessionProgress(() => undefined),
+      );
+      meetingListenerUnsubscribersRef.current = sessionListeners;
+      setIsMeetingRecording(true,);
+      await startListenerSession({
+        session_id: sessionId,
+        languages: sttConfig.spokenLanguages,
+        onboarding: false,
+        record_enabled: sttConfig.saveRecordings,
+        model: sttConfig.model,
+        base_url: sttConfig.baseUrl,
+        api_key: sttConfig.apiKey,
+        keywords: [],
+      },);
     } catch (error) {
-      adHocMeetingRecognitionRef.current = null;
-      adHocMeetingPageRef.current = null;
-      adHocMeetingPageTitleRef.current = null;
-      adHocMeetingFinalTranscriptRef.current = "";
-      adHocMeetingDisplayedTranscriptRef.current = "";
-      adHocMeetingBaseDocRef.current = EMPTY_DOC;
-      adHocMeetingShouldUpdateMeetingMetadataRef.current = false;
-      setIsAdHocMeetingListening(false,);
-      console.error("Could not start ad-hoc meeting listening:", error,);
+      clearMeetingListeners();
+      activeMeetingSessionRef.current = null;
+      setIsMeetingRecording(false,);
+      console.error("Could not start meeting recording:", error,);
     }
   }, [
-    attachAdHocMeetingPageToTodayNote,
+    attachMeetingPageToTodayNote,
+    buildMeetingStartPage,
     closeGlobalSearch,
-    createAdHocMeetingPage,
+    createMeetingPage,
     currentView.kind,
     currentPageTitle,
-    isAdHocMeetingListening,
+    finalizeMeetingRecording,
+    getMeetingLocationHint,
+    isMeetingRecording,
     openPageView,
-    setAdHocMeetingPageTranscript,
-    stopAdHocMeetingListening,
+    persistPageUpdate,
+    stopMeetingRecording,
     today,
+    updateMeetingPage,
+    clearMeetingListeners,
   ],);
 
   const openGlobalSearchResult = useCallback(async (result: GlobalSearchResult | undefined,) => {
@@ -1424,9 +1982,10 @@ export default function AppLayout() {
 
   useEffect(() => {
     return () => {
-      adHocMeetingRecognitionRef.current?.stop();
+      clearMeetingListeners();
+      void stopListenerSession().catch(console.error,);
     };
-  }, [],);
+  }, [clearMeetingListeners,],);
 
   useEffect(() => {
     const handleFocus = () => setIsWindowFocused(true,);
@@ -1561,6 +2120,8 @@ export default function AppLayout() {
 
   const handlePageSave = useCallback((page: PageNote,) => {
     suppressWatcherUntilRef.current = Date.now() + LOCAL_SAVE_WATCH_SUPPRESSION_MS;
+    currentPageRef.current = page;
+    setActivePage(page,);
     savePage(page,).catch(console.error,);
   }, [],);
 
@@ -1579,6 +2140,39 @@ export default function AppLayout() {
     openPageView(page.title,);
     return page.title;
   }, [openPageView,],);
+
+  const activePageDoc = useMemo(
+    () => activePage ? parseJsonContent(activePage.content,) : null,
+    [activePage,],
+  );
+  const shouldShowMeetingSummaryFab = currentView.kind === "page"
+    && !!activePage
+    && activePage.type === "meeting"
+    && !!activePage.endedAt
+    && !activePage.executiveSummary
+    && !!activePageDoc
+    && hasHeading(activePageDoc, "Transcript",);
+  const isMeetingSummaryRunning = !!activePage && meetingSummaryTargetTitle === activePage.title;
+
+  const handleMeetingSummaryFabClick = useCallback(async () => {
+    if (!activePage) return;
+    if (!hasAiConfigured) {
+      setSettingsOpen(true,);
+      return;
+    }
+
+    try {
+      await summarizeMeetingPageNote(activePage,);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not summarize meeting.";
+      if (message === "AI is not configured.") {
+        setHasAiConfigured(false,);
+        setSettingsOpen(true,);
+        return;
+      }
+      setMeetingSummaryError(message,);
+    }
+  }, [activePage, hasAiConfigured, summarizeMeetingPageNote,],);
 
   const runAiPrompt = useCallback(async (promptText: string,) => {
     const todayNoteValue = getCurrentTodayNoteForAi();
@@ -1991,15 +2585,15 @@ export default function AppLayout() {
           <button
             type="button"
             onClick={() => {
-              void handleAdHocMeetingNoteClick();
+              void handleMeetingRecordClick();
             }}
             className={`h-4 w-4 rounded-full transition-all ${
-              isAdHocMeetingListening
+              isMeetingRecording
                 ? "bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.14)]"
                 : "bg-red-500/92 hover:bg-red-500"
             }`}
-            title={isAdHocMeetingListening ? "Stop ad-hoc meeting note" : "Start ad-hoc meeting note"}
-            aria-label={isAdHocMeetingListening ? "Stop ad-hoc meeting note" : "Start ad-hoc meeting note"}
+            title={isMeetingRecording ? "Stop meeting recording" : "Start meeting recording"}
+            aria-label={isMeetingRecording ? "Stop meeting recording" : "Start meeting recording"}
           />
 
           <button
@@ -2139,6 +2733,7 @@ export default function AppLayout() {
                   <PageView
                     title={currentView.title}
                     pagesRevision={pagesRevision}
+                    pageOverride={activePage}
                     onOpenDate={scrollToDate}
                     onOpenPage={openPageView}
                     onSave={handlePageSave}
@@ -2244,6 +2839,27 @@ export default function AppLayout() {
               )}
           </>
         )}
+
+      {shouldShowMeetingSummaryFab && (
+        <button
+          type="button"
+          onClick={() => {
+            void handleMeetingSummaryFabClick();
+          }}
+          disabled={isMeetingSummaryRunning}
+          className={`fixed bottom-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-medium uppercase tracking-wide text-white font-sans shadow-lg transition-all ${
+            isMeetingSummaryRunning
+              ? "cursor-default opacity-80"
+              : "cursor-pointer hover:scale-105 active:scale-95"
+          }`}
+          style={{ background: "linear-gradient(to bottom, #4b5563, #1f2937)", }}
+          title={!hasAiConfigured
+            ? "Configure AI to summarize this meeting"
+            : meetingSummaryError ?? "Summarize this meeting"}
+        >
+          {isMeetingSummaryRunning ? "Summarizing meeting..." : "Summarize meeting"}
+        </button>
+      )}
 
       <AiComposer
         open={aiComposerOpen}
