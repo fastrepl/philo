@@ -92,39 +92,23 @@
   padding: 0 0.125rem;
   border-radius: 6px;
   border: 0;
-  background: transparent;
+  background-color: transparent;
   color: #111827;
   font-size: inherit;
   font-weight: inherit;
   line-height: inherit;
   vertical-align: -0.08em;
   align-items: center;
-  position: relative;
-  isolation: isolate;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-  transition: color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
-.tiptap .mention-chip-page::after,
-.tiptap .mention-chip-date::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  border-radius: 6px;
-  background: rgba(17, 24, 39, 0.08);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
-  z-index: -1;
-}
-
-.tiptap .mention-chip-page:hover::after,
-.tiptap .mention-chip-date:hover::after {
-  opacity: 1;
+.tiptap .mention-chip-page:hover,
+.tiptap .mention-chip-date:hover {
+  background-color: rgba(17, 24, 39, 0.08);
 }
 
 .tiptap .mention-chip-page-icon,
