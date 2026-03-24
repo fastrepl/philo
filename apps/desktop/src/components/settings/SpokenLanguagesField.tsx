@@ -151,7 +151,7 @@ export function SpokenLanguagesField(
           aria-controls="spoken-language-options"
           aria-activedescendant={activeIndex >= 0 ? `spoken-language-option-${activeIndex}` : undefined}
           aria-label="Add spoken language"
-          placeholder={value.length === 0 ? "Search languages" : "Add language"}
+          placeholder={value.length === 0 ? "Search languages" : ""}
           className="min-w-[140px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
           style={mono}
         />
