@@ -60,6 +60,41 @@ export type GoogleCalendarOpenClient = (typeof GOOGLE_CALENDAR_OPEN_CLIENTS)[num
 export const DEFAULT_GOOGLE_CALENDAR_OPEN_CLIENT: GoogleCalendarOpenClient = "google_calendar";
 const DEFAULT_SPOKEN_LANGUAGES = ["en",] as string[];
 
+const AI_PROVIDER_DEFAULT_MODELS: Record<AiProvider, string> = {
+  anthropic: "claude-sonnet-4-0",
+  openai: "gpt-4.1",
+  google: "gemini-2.5-flash",
+  openrouter: "openai/gpt-4.1",
+};
+
+const AI_PROVIDER_SUGGESTED_MODELS: Record<AiProvider, string[]> = {
+  anthropic: [
+    "claude-sonnet-4-0",
+    "claude-opus-4-1",
+    "claude-3-7-sonnet-latest",
+    "claude-3-5-haiku-latest",
+  ],
+  openai: [
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+    "gpt-4o",
+    "gpt-4o-mini",
+  ],
+  google: [
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+  ],
+  openrouter: [
+    "openai/gpt-4.1",
+    "openai/gpt-4.1-mini",
+    "anthropic/claude-sonnet-4",
+    "google/gemini-2.5-flash",
+  ],
+};
+
 const STT_PROVIDER_LABELS: Record<SttProvider, string> = {
   deepgram: "Deepgram",
   assemblyai: "AssemblyAI",
@@ -260,15 +295,52 @@ export function getAiProviderLabel(provider: AiProvider,) {
 }
 
 export function getDefaultAiModel(provider: AiProvider, purpose: "assistant" | "widget",) {
-  switch (provider) {
-    case "anthropic":
-      return purpose === "assistant" ? "claude-sonnet-4-5" : "claude-opus-4-6";
-    case "openai":
-      return "gpt-4.1";
-    case "google":
-      return "gemini-2.0-flash";
-    case "openrouter":
-      return "openai/gpt-4.1";
+  void purpose;
+  return AI_PROVIDER_DEFAULT_MODELS[provider];
+}
+
+export function getSuggestedAiModels(provider: AiProvider,) {
+  return AI_PROVIDER_SUGGESTED_MODELS[provider];
+}
+
+export function getAiModelLabel(model: string,) {
+  switch (model) {
+    case "claude-sonnet-4-0":
+      return "Claude Sonnet 4";
+    case "claude-opus-4-1":
+      return "Claude Opus 4.1";
+    case "claude-3-7-sonnet-latest":
+      return "Claude Sonnet 3.7";
+    case "claude-3-5-haiku-latest":
+      return "Claude Haiku 3.5";
+    case "gpt-4.1":
+      return "GPT-4.1";
+    case "gpt-4.1-mini":
+      return "GPT-4.1 mini";
+    case "gpt-4.1-nano":
+      return "GPT-4.1 nano";
+    case "gpt-4o":
+      return "GPT-4o";
+    case "gpt-4o-mini":
+      return "GPT-4o mini";
+    case "gemini-2.5-flash":
+      return "Gemini 2.5 Flash";
+    case "gemini-2.5-pro":
+      return "Gemini 2.5 Pro";
+    case "gemini-2.5-flash-lite":
+      return "Gemini 2.5 Flash-Lite";
+    case "gemini-2.0-flash":
+      return "Gemini 2.0 Flash";
+    case "openai/gpt-4.1":
+      return "GPT-4.1";
+    case "openai/gpt-4.1-mini":
+      return "GPT-4.1 mini";
+    case "anthropic/claude-sonnet-4":
+      return "Claude Sonnet 4";
+    case "google/gemini-2.5-flash":
+      return "Gemini 2.5 Flash";
+    default:
+      return model;
   }
 }
 
