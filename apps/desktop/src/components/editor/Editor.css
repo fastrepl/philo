@@ -112,12 +112,12 @@
 
 .tiptap .mention-chip-date {
   --mention-chip-date-rgb: 37 99 235;
-  background-color: rgb(var(--mention-chip-date-rgb) / 20%);
+  background-color: rgb(var(--mention-chip-date-rgb) / 5%);
   color: rgb(var(--mention-chip-date-rgb));
 }
 
 .tiptap .mention-chip-date:hover {
-  background-color: rgb(var(--mention-chip-date-rgb) / 28%);
+  background-color: rgb(var(--mention-chip-date-rgb) / 10%);
 }
 
 .tiptap .mention-chip-page-icon,
