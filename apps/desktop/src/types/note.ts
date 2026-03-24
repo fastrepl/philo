@@ -6,6 +6,57 @@ export interface DailyNote {
 
 export type PageType = "page" | "meeting";
 export type MeetingSessionKind = "decision_making" | "informative";
+export type LinkKind = "generic" | "github_pr" | "github_issue" | "github_commit";
+
+export interface GitHubPrLinkData {
+  owner: string;
+  repo: string;
+  number: number;
+  title: string;
+  state: string;
+  isDraft: boolean;
+  isMerged: boolean;
+  author: string | null;
+  baseBranch: string | null;
+  headBranch: string | null;
+  labels: string[];
+  assignees: string[];
+  reviewers: string[];
+  changedFilesCount: number | null;
+  commitsCount: number | null;
+  additions: number | null;
+  deletions: number | null;
+  changedFiles: string[];
+}
+
+export interface GitHubIssueLinkData {
+  owner: string;
+  repo: string;
+  number: number;
+  title: string;
+  state: string;
+  author: string | null;
+  labels: string[];
+  assignees: string[];
+  openedAt: string | null;
+  closedAt: string | null;
+}
+
+export interface GitHubCommitLinkData {
+  owner: string;
+  repo: string;
+  sha: string;
+  shortSha: string;
+  title: string;
+  author: string | null;
+  committedAt: string | null;
+  changedFilesCount: number | null;
+  additions: number | null;
+  deletions: number | null;
+  changedFiles: string[];
+}
+
+export type LinkData = GitHubPrLinkData | GitHubIssueLinkData | GitHubCommitLinkData;
 
 export interface PageFrontmatter {
   type?: string;
@@ -22,6 +73,8 @@ export interface PageFrontmatter {
   link_title?: string;
   summary_updated_at?: string;
   follow_up_questions?: unknown;
+  link_kind?: string;
+  link_data?: unknown;
   [key: string]: unknown;
 }
 
@@ -44,6 +97,8 @@ export interface PageNote {
   linkTitle: string | null;
   summaryUpdatedAt: string | null;
   followUpQuestions: string[];
+  linkKind: LinkKind | null;
+  linkData: LinkData | null;
   frontmatter: PageFrontmatter;
   hasFrontmatter: boolean;
 }

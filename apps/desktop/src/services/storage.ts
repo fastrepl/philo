@@ -6,6 +6,11 @@ import {
   DailyNote,
   getDaysAgo,
   getToday,
+  type GitHubCommitLinkData,
+  type GitHubIssueLinkData,
+  type GitHubPrLinkData,
+  type LinkData,
+  type LinkKind,
   type MeetingSessionKind,
   type PageFrontmatter,
   type PageNote,
@@ -60,6 +65,8 @@ const PAGE_FRONTMATTER_KEYS = new Set([
   "link_title",
   "summary_updated_at",
   "follow_up_questions",
+  "link_kind",
+  "link_data",
 ],);
 
 type FrontmatterValue = unknown;
@@ -266,8 +273,175 @@ function toStringArray(value: unknown,): string[] {
     .filter(Boolean,);
 }
 
+function toOptionalNumber(value: unknown,) {
+  if (typeof value !== "number" || !Number.isFinite(value,)) return null;
+  return value;
+}
+
+function toOptionalObject(value: unknown,) {
+  if (!value || typeof value !== "object" || Array.isArray(value,)) return null;
+  return value as Record<string, unknown>;
+}
+
 function isMeetingSessionKind(value: unknown,): value is MeetingSessionKind {
   return value === "decision_making" || value === "informative";
+}
+
+function isLinkKind(value: unknown,): value is LinkKind {
+  return value === "generic" || value === "github_pr" || value === "github_issue" || value === "github_commit";
+}
+
+function toLinkKind(frontmatter: PageFrontmatter,): LinkKind | null {
+  if (isLinkKind(frontmatter.link_kind,)) return frontmatter.link_kind;
+
+  const hasLegacyUrlSummaryMetadata = typeof frontmatter.link_title === "string"
+    || typeof frontmatter.summary_updated_at === "string"
+    || Array.isArray(frontmatter.follow_up_questions,);
+  return hasLegacyUrlSummaryMetadata ? "generic" : null;
+}
+
+function toGitHubPrLinkData(value: unknown,): GitHubPrLinkData | null {
+  const record = toOptionalObject(value,);
+  const owner = toOptionalString(record?.owner,);
+  const repo = toOptionalString(record?.repo,);
+  const number = toOptionalNumber(record?.number,);
+  const title = toOptionalString(record?.title,);
+  const state = toOptionalString(record?.state,);
+  if (!owner || !repo || number === null || !title || !state) return null;
+
+  return {
+    owner,
+    repo,
+    number,
+    title,
+    state,
+    isDraft: record?.is_draft === true,
+    isMerged: record?.is_merged === true,
+    author: toOptionalString(record?.author,),
+    baseBranch: toOptionalString(record?.base_branch,),
+    headBranch: toOptionalString(record?.head_branch,),
+    labels: toStringArray(record?.labels,),
+    assignees: toStringArray(record?.assignees,),
+    reviewers: toStringArray(record?.reviewers,),
+    changedFilesCount: toOptionalNumber(record?.changed_files_count,),
+    commitsCount: toOptionalNumber(record?.commits_count,),
+    additions: toOptionalNumber(record?.additions,),
+    deletions: toOptionalNumber(record?.deletions,),
+    changedFiles: toStringArray(record?.changed_files,),
+  };
+}
+
+function toGitHubIssueLinkData(value: unknown,): GitHubIssueLinkData | null {
+  const record = toOptionalObject(value,);
+  const owner = toOptionalString(record?.owner,);
+  const repo = toOptionalString(record?.repo,);
+  const number = toOptionalNumber(record?.number,);
+  const title = toOptionalString(record?.title,);
+  const state = toOptionalString(record?.state,);
+  if (!owner || !repo || number === null || !title || !state) return null;
+
+  return {
+    owner,
+    repo,
+    number,
+    title,
+    state,
+    author: toOptionalString(record?.author,),
+    labels: toStringArray(record?.labels,),
+    assignees: toStringArray(record?.assignees,),
+    openedAt: toOptionalString(record?.opened_at,),
+    closedAt: toOptionalString(record?.closed_at,),
+  };
+}
+
+function toGitHubCommitLinkData(value: unknown,): GitHubCommitLinkData | null {
+  const record = toOptionalObject(value,);
+  const owner = toOptionalString(record?.owner,);
+  const repo = toOptionalString(record?.repo,);
+  const sha = toOptionalString(record?.sha,);
+  const shortSha = toOptionalString(record?.short_sha,);
+  const title = toOptionalString(record?.title,);
+  if (!owner || !repo || !sha || !shortSha || !title) return null;
+
+  return {
+    owner,
+    repo,
+    sha,
+    shortSha,
+    title,
+    author: toOptionalString(record?.author,),
+    committedAt: toOptionalString(record?.committed_at,),
+    changedFilesCount: toOptionalNumber(record?.changed_files_count,),
+    additions: toOptionalNumber(record?.additions,),
+    deletions: toOptionalNumber(record?.deletions,),
+    changedFiles: toStringArray(record?.changed_files,),
+  };
+}
+
+function toLinkData(kind: LinkKind | null, value: unknown,): LinkData | null {
+  if (!kind || kind === "generic") return null;
+  if (kind === "github_pr") return toGitHubPrLinkData(value,);
+  if (kind === "github_issue") return toGitHubIssueLinkData(value,);
+  return toGitHubCommitLinkData(value,);
+}
+
+function buildLinkDataFrontmatter(kind: LinkKind | null, value: LinkData | null,) {
+  if (!kind || !value || kind === "generic") return undefined;
+
+  if (kind === "github_pr") {
+    const data = value as GitHubPrLinkData;
+    return {
+      owner: data.owner,
+      repo: data.repo,
+      number: data.number,
+      title: data.title,
+      state: data.state,
+      is_draft: data.isDraft,
+      is_merged: data.isMerged,
+      author: data.author ?? undefined,
+      base_branch: data.baseBranch ?? undefined,
+      head_branch: data.headBranch ?? undefined,
+      labels: data.labels,
+      assignees: data.assignees,
+      reviewers: data.reviewers,
+      changed_files_count: data.changedFilesCount ?? undefined,
+      commits_count: data.commitsCount ?? undefined,
+      additions: data.additions ?? undefined,
+      deletions: data.deletions ?? undefined,
+      changed_files: data.changedFiles,
+    };
+  }
+
+  if (kind === "github_issue") {
+    const data = value as GitHubIssueLinkData;
+    return {
+      owner: data.owner,
+      repo: data.repo,
+      number: data.number,
+      title: data.title,
+      state: data.state,
+      author: data.author ?? undefined,
+      labels: data.labels,
+      assignees: data.assignees,
+      opened_at: data.openedAt ?? undefined,
+      closed_at: data.closedAt ?? undefined,
+    };
+  }
+
+  const data = value as GitHubCommitLinkData;
+  return {
+    owner: data.owner,
+    repo: data.repo,
+    sha: data.sha,
+    short_sha: data.shortSha,
+    title: data.title,
+    author: data.author ?? undefined,
+    committed_at: data.committedAt ?? undefined,
+    changed_files_count: data.changedFilesCount ?? undefined,
+    additions: data.additions ?? undefined,
+    deletions: data.deletions ?? undefined,
+    changed_files: data.changedFiles,
+  };
 }
 
 function buildPageNote(
@@ -278,6 +452,7 @@ function buildPageNote(
   hasFrontmatter: boolean,
   attachedTo: string | null,
 ): PageNote {
+  const linkKind = toLinkKind(frontmatter,);
   return {
     title,
     path,
@@ -297,6 +472,8 @@ function buildPageNote(
     linkTitle: toOptionalString(frontmatter.link_title,),
     summaryUpdatedAt: toOptionalString(frontmatter.summary_updated_at,),
     followUpQuestions: toStringArray(frontmatter.follow_up_questions,),
+    linkKind,
+    linkData: toLinkData(linkKind, frontmatter.link_data,),
     frontmatter,
     hasFrontmatter,
   };
@@ -319,7 +496,9 @@ function buildPageFrontmatter(page: PageNote,): FrontmatterRecord {
     || !!page.source
     || !!page.linkTitle
     || !!page.summaryUpdatedAt
-    || page.followUpQuestions.length > 0;
+    || page.followUpQuestions.length > 0
+    || !!page.linkKind
+    || !!page.linkData;
 
   if (hasKnownMetadata) {
     frontmatter.type = page.type;
@@ -336,6 +515,9 @@ function buildPageFrontmatter(page: PageNote,): FrontmatterRecord {
     if (page.linkTitle) frontmatter.link_title = page.linkTitle;
     if (page.summaryUpdatedAt) frontmatter.summary_updated_at = page.summaryUpdatedAt;
     if (page.followUpQuestions.length > 0) frontmatter.follow_up_questions = page.followUpQuestions;
+    if (page.linkKind) frontmatter.link_kind = page.linkKind;
+    const linkData = buildLinkDataFrontmatter(page.linkKind, page.linkData,);
+    if (linkData) frontmatter.link_data = linkData;
   }
 
   for (const [key, value,] of Object.entries(page.frontmatter,)) {

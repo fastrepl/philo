@@ -86,6 +86,9 @@ import {
   formatDate,
   getDaysAgo,
   getToday,
+  type GitHubCommitLinkData,
+  type GitHubIssueLinkData,
+  type GitHubPrLinkData,
   isToday,
   type MeetingSessionKind,
   type PageNote,
@@ -592,6 +595,183 @@ function formatSummaryUpdatedAt(value: string | null,) {
   },);
 }
 
+function MetadataField({
+  label,
+  value,
+  monospace = false,
+}: {
+  label: string;
+  value: string | null;
+  monospace?: boolean;
+},) {
+  if (!value) return null;
+
+  return (
+    <div>
+      <p
+        className="text-[11px] uppercase tracking-[0.18em] text-gray-400"
+        style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+      >
+        {label}
+      </p>
+      <p className={`mt-1 text-sm text-gray-700 ${monospace ? "font-mono" : ""}`}>{value}</p>
+    </div>
+  );
+}
+
+function MetadataList({
+  label,
+  values,
+  monospace = false,
+}: {
+  label: string;
+  values: string[];
+  monospace?: boolean;
+},) {
+  if (values.length === 0) return null;
+
+  return (
+    <div>
+      <p
+        className="text-[11px] uppercase tracking-[0.18em] text-gray-400"
+        style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+      >
+        {label}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {values.map((value,) => (
+          <span
+            key={`${label}-${value}`}
+            className={`rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 ${
+              monospace ? "font-mono" : ""
+            }`}
+          >
+            {value}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function formatGitHubCount(value: number | null,) {
+  if (value === null) return null;
+  return value.toLocaleString("en-US",);
+}
+
+function formatGitHubDate(value: string | null,) {
+  if (!value) return null;
+  return formatSummaryUpdatedAt(value,);
+}
+
+function GitHubPageHeader({ page, }: { page: PageNote; },) {
+  if (page.linkKind === "github_pr" && page.linkData) {
+    const data = page.linkData as GitHubPrLinkData;
+    return (
+      <div className="mt-4 rounded-3xl border border-gray-200 bg-gray-50/80 px-4 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-black px-3 py-1 text-xs font-medium uppercase tracking-wide text-white">
+            GitHub Pull Request
+          </span>
+          <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700">
+            {data.owner}/{data.repo}
+          </span>
+          <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700">
+            {data.state}
+          </span>
+          {data.isDraft && (
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm text-amber-700">
+              Draft
+            </span>
+          )}
+          {data.isMerged && (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm text-emerald-700">
+              Merged
+            </span>
+          )}
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <MetadataField label="PR" value={`#${data.number}`} monospace />
+          <MetadataField label="Author" value={data.author} />
+          <MetadataField label="Base Branch" value={data.baseBranch} monospace />
+          <MetadataField label="Head Branch" value={data.headBranch} monospace />
+          <MetadataField label="Commits" value={formatGitHubCount(data.commitsCount,)} />
+          <MetadataField label="Files Changed" value={formatGitHubCount(data.changedFilesCount,)} />
+          <MetadataField label="Additions" value={formatGitHubCount(data.additions,)} />
+          <MetadataField label="Deletions" value={formatGitHubCount(data.deletions,)} />
+        </div>
+        <div className="mt-4 space-y-4">
+          <MetadataList label="Labels" values={data.labels} />
+          <MetadataList label="Assignees" values={data.assignees} />
+          <MetadataList label="Reviewers" values={data.reviewers} />
+          <MetadataList label="Changed Files" values={data.changedFiles} monospace />
+        </div>
+      </div>
+    );
+  }
+
+  if (page.linkKind === "github_issue" && page.linkData) {
+    const data = page.linkData as GitHubIssueLinkData;
+    return (
+      <div className="mt-4 rounded-3xl border border-gray-200 bg-gray-50/80 px-4 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-black px-3 py-1 text-xs font-medium uppercase tracking-wide text-white">
+            GitHub Issue
+          </span>
+          <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700">
+            {data.owner}/{data.repo}
+          </span>
+          <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700">
+            {data.state}
+          </span>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <MetadataField label="Issue" value={`#${data.number}`} monospace />
+          <MetadataField label="Author" value={data.author} />
+          <MetadataField label="Opened" value={formatGitHubDate(data.openedAt,)} />
+          <MetadataField label="Closed" value={formatGitHubDate(data.closedAt,)} />
+        </div>
+        <div className="mt-4 space-y-4">
+          <MetadataList label="Labels" values={data.labels} />
+          <MetadataList label="Assignees" values={data.assignees} />
+        </div>
+      </div>
+    );
+  }
+
+  if (page.linkKind === "github_commit" && page.linkData) {
+    const data = page.linkData as GitHubCommitLinkData;
+    return (
+      <div className="mt-4 rounded-3xl border border-gray-200 bg-gray-50/80 px-4 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-black px-3 py-1 text-xs font-medium uppercase tracking-wide text-white">
+            GitHub Commit
+          </span>
+          <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700">
+            {data.owner}/{data.repo}
+          </span>
+          <span className="rounded-full border border-gray-200 bg-white px-3 py-1 font-mono text-sm text-gray-700">
+            {data.shortSha}
+          </span>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <MetadataField label="Author" value={data.author} />
+          <MetadataField label="Committed" value={formatGitHubDate(data.committedAt,)} />
+          <MetadataField label="Files Changed" value={formatGitHubCount(data.changedFilesCount,)} />
+          <MetadataField label="Additions" value={formatGitHubCount(data.additions,)} />
+          <MetadataField label="Deletions" value={formatGitHubCount(data.deletions,)} />
+          <MetadataField label="SHA" value={data.sha} monospace />
+        </div>
+        <div className="mt-4">
+          <MetadataList label="Changed Files" values={data.changedFiles} monospace />
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function DateHeader({
   date,
   city,
@@ -832,6 +1012,9 @@ function PageView({
   }
 
   const pageIsUrlSummary = isUrlSummaryPage(page,);
+  const pageIsTypedGitHub = page.linkKind === "github_pr"
+    || page.linkKind === "github_issue"
+    || page.linkKind === "github_commit";
   const pageHeading = pageIsUrlSummary ? page.linkTitle ?? page.title : page.title;
   const summaryUpdatedAt = formatSummaryUpdatedAt(page.summaryUpdatedAt,);
 
@@ -874,6 +1057,7 @@ function PageView({
             )}
           </div>
         )}
+        {pageIsTypedGitHub && <GitHubPageHeader page={page} />}
         {page.attachedTo && (
           <button
             type="button"
@@ -1317,6 +1501,8 @@ export default function AppLayout() {
       linkTitle: null,
       summaryUpdatedAt: null,
       followUpQuestions: [],
+      linkKind: null,
+      linkData: null,
       frontmatter: {
         type: "meeting",
         started_at: startedAt,
@@ -1346,6 +1532,8 @@ export default function AppLayout() {
       agenda: [],
       actionItems: [],
       source: nextSource,
+      linkKind: null,
+      linkData: null,
       hasFrontmatter: true,
       frontmatter: {
         ...page.frontmatter,
@@ -1421,6 +1609,8 @@ export default function AppLayout() {
       agenda: nextAgenda,
       actionItems: nextActionItems,
       source: nextSource,
+      linkKind: null,
+      linkData: null,
       hasFrontmatter: true,
       frontmatter: {
         ...page.frontmatter,
