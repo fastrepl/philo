@@ -1,3 +1,4 @@
+import { autoUpdate, computePosition, flip, limitShift, offset, shift, size, } from "@floating-ui/dom";
 import { openUrl, } from "@tauri-apps/plugin-opener";
 import type { Editor as TiptapEditor, } from "@tiptap/core";
 import FileHandler from "@tiptap/extension-file-handler";
@@ -11,19 +12,34 @@ import { Fragment, type Node as ProseMirrorNode, } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, } from "@tiptap/pm/state";
 import { EditorContent, useEditor, } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { forwardRef, useEffect, useImperativeHandle, useRef, } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, } from "react";
 import { useDebounceCallback, } from "usehooks-ts";
 import "../editor/Editor.css";
+import { showNativeContextMenu, } from "../../hooks/useNativeContextMenu";
 import { parseJsonContent, } from "../../lib/markdown";
 import { openGoogleMentionChip, } from "../../services/google-open";
 import { resolveAssetUrl, saveImage, } from "../../services/images";
-import { getMentionChipDate, getMentionChipHref, type MentionKind, } from "../../services/mentions";
+import {
+  createDateMention,
+  createRecurringMention,
+  getMentionChipDate,
+  getMentionChipHref,
+  getMentionChipLabel,
+  getMentionChipRecurringIntervalDays,
+  type MentionKind,
+} from "../../services/mentions";
 import { buildPageLinkTarget, parsePageTitleFromLinkTarget, } from "../../services/paths";
 import { saveDailyNote, } from "../../services/storage";
 import { ensureUrlSummaryPage, } from "../../services/url-summary";
 import { type DailyNote, getToday, type PageNote, } from "../../types/note";
 import { EditorBubbleMenu, } from "../editor/EditorBubbleMenu";
 import { ClipboardTextSerializer, } from "../editor/extensions/clipboard";
+import {
+  DATE_PICKER_RECURRENCE_OPTIONS,
+  type DatePickerRecurrence,
+  handleDatePickerKeyDown,
+  MiniCalendar,
+} from "../editor/extensions/date-picker";
 import { ExcalidrawExtension, } from "../editor/extensions/excalidraw/ExcalidrawExtension";
 import { HashtagExtension, } from "../editor/extensions/hashtag/HashtagExtension";
 import { CustomListKeymap, } from "../editor/extensions/list-keymap";
@@ -68,11 +84,50 @@ interface EditableNoteProps {
   persistentSelectionRange?: PersistentSelectionRange | null;
 }
 
+interface EditableDateChipState {
+  element: HTMLElement;
+  pos: number;
+  selectedDate: string;
+  recurrence: DatePickerRecurrence;
+}
+
 const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp",];
 
 function getReferenceDate(note: DailyNote | PageNote,) {
   if ("date" in note) return note.date;
   return note.attachedTo ?? getToday();
+}
+
+function isDateChipKind(kind: MentionKind,): kind is "date" | "recurring" {
+  return kind === "date" || kind === "recurring";
+}
+
+function getMentionChipDataFromElement(chipElement: HTMLElement,) {
+  return {
+    id: chipElement.getAttribute("data-id",) ?? "",
+    kind: (chipElement.getAttribute("data-kind",) ?? "tag") as MentionKind,
+    label: chipElement.getAttribute("data-label",) ?? "",
+  };
+}
+
+function getDatePickerRecurrence(intervalDays: number | null,): DatePickerRecurrence {
+  if (intervalDays === 1) return "daily";
+  if (intervalDays === 7) return "weekly";
+  if (intervalDays === 30) return "monthly";
+  return "";
+}
+
+function formatRecurrenceDescriptionDate(date: string,) {
+  return new Date(`${date}T00:00:00`,).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  },);
+}
+
+function getRecurrenceDescription(date: string, recurrence: DatePickerRecurrence,) {
+  if (!recurrence) return null;
+  return `Starting from ${formatRecurrenceDescriptionDate(date,)} this will show up on a ${recurrence} basis.`;
 }
 
 function isListItemNode(node: ProseMirrorNode,) {
@@ -310,6 +365,9 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
     const noteRef = useRef(note,);
     noteRef.current = note;
 
+    const onOpenDateRef = useRef(onOpenDate,);
+    onOpenDateRef.current = onOpenDate;
+
     const onSaveRef = useRef(onSave,);
     onSaveRef.current = onSave;
 
@@ -317,6 +375,21 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
     onCreatePageRef.current = onCreatePage;
 
     const selfUpdateRef = useRef(false,);
+    const [editingDateChip, setEditingDateChip,] = useState<EditableDateChipState | null>(null,);
+    const dateChipPopoverRef = useRef<HTMLDivElement | null>(null,);
+    const editingDateChipRef = useRef<EditableDateChipState | null>(null,);
+    editingDateChipRef.current = editingDateChip;
+
+    const closeDateChipEditor = useCallback(() => {
+      setEditingDateChip(null,);
+    }, [],);
+
+    const updateEditingDateChip = useCallback(
+      (updates: Partial<Pick<EditableDateChipState, "selectedDate" | "recurrence">>,) => {
+        setEditingDateChip((current,) => (current ? { ...current, ...updates, } : current));
+      },
+      [],
+    );
 
     const saveDebounced = useDebounceCallback((jsonStr: string,) => {
       const updated = { ...noteRef.current, content: jsonStr, };
@@ -327,6 +400,55 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         saveDailyNote(updated,).catch(console.error,);
       }
     }, 500,);
+
+    const openDateChipEditorRef = useRef<
+      (
+        _view: import("@tiptap/pm/view").EditorView,
+        _chipElement: HTMLElement,
+      ) => boolean
+    >((_view, _chipElement,) => false);
+    openDateChipEditorRef.current = (view, chipElement,) => {
+      const chipData = getMentionChipDataFromElement(chipElement,);
+      if (!isDateChipKind(chipData.kind,)) return false;
+
+      const pos = view.posAtDOM(chipElement, 0,);
+      const selectedDate = getMentionChipDate(chipData, getReferenceDate(noteRef.current,),);
+      if (!selectedDate) return false;
+
+      setEditingDateChip({
+        element: chipElement,
+        pos,
+        selectedDate,
+        recurrence: getDatePickerRecurrence(getMentionChipRecurringIntervalDays(chipData,),),
+      },);
+      return true;
+    };
+
+    const showDateChipContextMenuRef = useRef<
+      (
+        _event: MouseEvent,
+        _chipElement: HTMLElement,
+      ) => boolean
+    >((_event, _chipElement,) => false);
+    showDateChipContextMenuRef.current = (event, chipElement,) => {
+      const chipData = getMentionChipDataFromElement(chipElement,);
+      if (!isDateChipKind(chipData.kind,)) return false;
+
+      const date = getMentionChipDate(chipData, getReferenceDate(noteRef.current,),);
+      if (!date) return false;
+
+      const label = getMentionChipLabel(chipData, getReferenceDate(noteRef.current,),);
+      setEditingDateChip(null,);
+      void showNativeContextMenu([
+        {
+          id: `go-to-${date}`,
+          text: `Go to ${label}`,
+          action: () => onOpenDateRef.current?.(date,),
+          disabled: !onOpenDateRef.current,
+        },
+      ], event,);
+      return true;
+    };
 
     const editor = useEditor({
       extensions: [
@@ -351,13 +473,15 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
               new Plugin({
                 key: new PluginKey("linkCmdClick",),
                 props: {
-                  handleClick(_view, _pos, event,) {
+                  handleClick(view, _pos, event,) {
                     const chip = (event.target as HTMLElement).closest("[data-mention-chip]",);
                     if (chip) {
-                      const chipData = {
-                        id: chip.getAttribute("data-id",) ?? "",
-                        kind: (chip.getAttribute("data-kind",) ?? "tag") as MentionKind,
-                      };
+                      if (openDateChipEditorRef.current(view, chip as HTMLElement,)) {
+                        event.preventDefault();
+                        return true;
+                      }
+
+                      const chipData = getMentionChipDataFromElement(chip as HTMLElement,);
                       const pageTitle = onOpenPage && chipData.kind === "page"
                         ? parsePageTitleFromLinkTarget(chipData.id,)
                         : null;
@@ -572,11 +696,55 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           }
           return false;
         },
+        handleDOMEvents: {
+          contextmenu: (_view, event,) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return false;
+
+            const chip = target.closest("[data-mention-chip]",);
+            if (!(chip instanceof HTMLElement)) return false;
+
+            return showDateChipContextMenuRef.current(event as MouseEvent, chip,);
+          },
+        },
       },
       onUpdate: ({ editor, },) => {
         saveDebounced(JSON.stringify(editor.getJSON(),),);
       },
     },);
+
+    const applyDateChipEdit = useCallback(() => {
+      if (!editor || !editingDateChip) return;
+
+      const currentNode = editor.state.doc.nodeAt(editingDateChip.pos,);
+      if (!currentNode || currentNode.type.name !== "mentionChip") {
+        setEditingDateChip(null,);
+        return;
+      }
+
+      const nextChip = editingDateChip.recurrence
+        ? createRecurringMention(editingDateChip.selectedDate, editingDateChip.recurrence,)
+        : createDateMention(editingDateChip.selectedDate,);
+      const nextNode = editor.schema.nodes.mentionChip?.create({
+        id: nextChip.id,
+        kind: nextChip.kind,
+        label: nextChip.label,
+      },);
+      if (!nextNode) {
+        setEditingDateChip(null,);
+        return;
+      }
+
+      editor.view.dispatch(
+        editor.state.tr.replaceWith(
+          editingDateChip.pos,
+          editingDateChip.pos + currentNode.nodeSize,
+          nextNode,
+        ),
+      );
+      editor.commands.focus();
+      setEditingDateChip(null,);
+    }, [editor, editingDateChip,],);
 
     useImperativeHandle(
       ref,
@@ -649,6 +817,86 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
       persistentSelectionRange?.to,
     ],);
 
+    useEffect(() => {
+      if (!editingDateChip || !dateChipPopoverRef.current) return;
+
+      const floatingEl = dateChipPopoverRef.current;
+      floatingEl.style.visibility = "hidden";
+
+      const updatePosition = () => {
+        void computePosition(editingDateChip.element, floatingEl, {
+          strategy: "fixed",
+          placement: "bottom-start",
+          middleware: [
+            offset(6,),
+            flip({ padding: 8, },),
+            shift({ padding: 8, limiter: limitShift(), },),
+            size({
+              padding: 8,
+              apply: ({ availableHeight, availableWidth, elements, },) => {
+                const maxHeight = `${Math.max(availableHeight, 0,)}px`;
+                const maxWidth = `${Math.max(availableWidth, 0,)}px`;
+                elements.floating.style.maxHeight = maxHeight;
+                elements.floating.style.maxWidth = maxWidth;
+
+                const popoverRoot = elements.floating.firstElementChild;
+                if (popoverRoot instanceof HTMLElement) {
+                  popoverRoot.style.maxHeight = maxHeight;
+                  popoverRoot.style.maxWidth = maxWidth;
+                }
+              },
+            },),
+          ],
+        },).then(({ x, y, },) => {
+          floatingEl.style.left = `${x}px`;
+          floatingEl.style.top = `${y}px`;
+          floatingEl.style.visibility = "visible";
+        },);
+      };
+
+      const cleanup = autoUpdate(editingDateChip.element, floatingEl, updatePosition,);
+      floatingEl.focus();
+      updatePosition();
+      return cleanup;
+    }, [editingDateChip,],);
+
+    useEffect(() => {
+      if (!editingDateChip) return;
+
+      const handlePointerDown = (event: PointerEvent,) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        if (dateChipPopoverRef.current?.contains(target,)) return;
+        if (editingDateChipRef.current?.element.contains(target,)) return;
+        setEditingDateChip(null,);
+      };
+
+      const handleKeyDown = (event: KeyboardEvent,) => {
+        const current = editingDateChipRef.current;
+        if (!current) return;
+
+        const handled = handleDatePickerKeyDown({
+          event,
+          selectedDate: current.selectedDate,
+          setSelectedDate: (selectedDate,) => updateEditingDateChip({ selectedDate, },),
+          recurrence: current.recurrence,
+          setRecurrence: (recurrence,) => updateEditingDateChip({ recurrence, },),
+          onSubmit: applyDateChipEdit,
+          onClose: closeDateChipEditor,
+        },);
+        if (handled) {
+          event.stopPropagation();
+        }
+      };
+
+      document.addEventListener("pointerdown", handlePointerDown, true,);
+      document.addEventListener("keydown", handleKeyDown, true,);
+      return () => {
+        document.removeEventListener("pointerdown", handlePointerDown, true,);
+        document.removeEventListener("keydown", handleKeyDown, true,);
+      };
+    }, [applyDateChipEdit, closeDateChipEditor, editingDateChip, updateEditingDateChip,],);
+
     return (
       <>
         {editor && onChatSelection && (
@@ -669,6 +917,60 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         <div onMouseDownCapture={onInteract}>
           <EditorContent editor={editor} />
         </div>
+        {editingDateChip && (
+          <div
+            ref={dateChipPopoverRef}
+            className="mention-menu"
+            style={{ position: "fixed", top: 0, left: 0, zIndex: 60, }}
+            tabIndex={-1}
+          >
+            <div className="mention-date-picker">
+              <MiniCalendar
+                selected={editingDateChip.selectedDate}
+                onSelect={(selectedDate,) => updateEditingDateChip({ selectedDate, },)}
+              />
+              <div className="mention-recurrence">
+                <div className="mention-recurrence-label">Repeat</div>
+                <div className="mention-recurrence-options">
+                  {DATE_PICKER_RECURRENCE_OPTIONS.map((option,) => (
+                    <button
+                      key={option.value || "none"}
+                      className={`mention-recurrence-option${
+                        editingDateChip.recurrence === option.value ? " is-active" : ""
+                      }`}
+                      onClick={() => updateEditingDateChip({ recurrence: option.value, },)}
+                      type="button"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                {editingDateChip.recurrence && (
+                  <div className="mention-recurrence-description">
+                    {getRecurrenceDescription(editingDateChip.selectedDate, editingDateChip.recurrence,)}
+                  </div>
+                )}
+              </div>
+              <div className="mention-date-picker-actions">
+                <button
+                  className="mention-date-picker-btn mention-date-picker-btn-muted"
+                  onClick={closeDateChipEditor}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="mention-date-picker-btn"
+                  disabled={!editingDateChip.selectedDate}
+                  onClick={applyDateChipEdit}
+                  type="button"
+                >
+                  Update
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   },

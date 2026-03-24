@@ -719,6 +719,16 @@ export function getMentionChipDate(
   return getRecurringDisplayDate(parsed.startDate, parsed.intervalDays, referenceDate,);
 }
 
+export function getMentionChipRecurringIntervalDays(
+  data: Pick<MentionChipData, "id" | "kind">,
+): number | null {
+  if (parseExternalChipId(data.id,)) return null;
+
+  const parsed = parseMentionId(data.id,);
+  if (parsed?.kind !== "recurring") return null;
+  return parsed.intervalDays;
+}
+
 export function getMentionChipState(
   data: Pick<MentionChipData, "id" | "kind">,
   referenceDate: string = getToday(),
