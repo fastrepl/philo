@@ -32,6 +32,7 @@ import {
 } from "../../services/settings";
 import { getToday, } from "../../types/note";
 import { VaultPathMarquee, } from "../shared/VaultPathMarquee";
+import { SpokenLanguagesField, } from "./SpokenLanguagesField";
 
 interface SettingsModalProps {
   open: boolean;
@@ -425,7 +426,11 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       currentSttModel: current.currentSttModel.trim(),
       sttBaseUrl: current.sttBaseUrl.trim(),
       sttApiKey: current.sttApiKey.trim(),
-      spokenLanguages: current.spokenLanguages.map((language,) => language.trim().toLowerCase()).filter(Boolean,),
+      spokenLanguages: [
+        ...new Set(
+          current.spokenLanguages.map((language,) => language.trim().toLowerCase()).filter(Boolean,),
+        ),
+      ],
       saveRecordings: current.saveRecordings !== false,
       googleOAuthClientId: current.googleOAuthClientId.trim(),
       googleAccounts: current.googleAccounts.map((account,) => ({
@@ -890,19 +895,9 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                   <label className="block text-xs text-gray-500" style={mono}>
                     Spoken languages
                   </label>
-                  <input
-                    type="text"
-                    value={settings.spokenLanguages.join(", ",)}
-                    onChange={(e,) =>
-                      update({
-                        spokenLanguages: e.target.value
-                          .split(",",)
-                          .map((value,) => value.trim().toLowerCase())
-                          .filter(Boolean,),
-                      },)}
-                    placeholder="en, ko"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
-                    style={mono}
+                  <SpokenLanguagesField
+                    value={settings.spokenLanguages}
+                    onChange={(spokenLanguages,) => update({ spokenLanguages, },)}
                   />
                 </div>
               </div>

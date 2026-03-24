@@ -162,10 +162,14 @@ function normalizeSttProvider(value: unknown,): SttProvider {
 
 function normalizeSpokenLanguages(value: unknown,) {
   if (!Array.isArray(value,)) return [...DEFAULT_SPOKEN_LANGUAGES,];
-  const normalized = value
-    .filter((entry,): entry is string => typeof entry === "string")
-    .map((entry,) => entry.trim().toLowerCase())
-    .filter(Boolean,);
+  const normalized = [
+    ...new Set(
+      value
+        .filter((entry,): entry is string => typeof entry === "string")
+        .map((entry,) => entry.trim().toLowerCase())
+        .filter(Boolean,),
+    ),
+  ];
   return normalized.length > 0 ? normalized : [...DEFAULT_SPOKEN_LANGUAGES,];
 }
 
