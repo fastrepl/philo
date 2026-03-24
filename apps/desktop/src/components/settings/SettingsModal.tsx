@@ -2,11 +2,10 @@ import { invoke, } from "@tauri-apps/api/core";
 import { join, } from "@tauri-apps/api/path";
 import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { open as openDialog, } from "@tauri-apps/plugin-dialog";
-import { exists, } from "@tauri-apps/plugin-fs";
 import { AlertTriangle, Check, ChevronDown, RefreshCw, X, } from "lucide-react";
 import { useEffect, useRef, useState, } from "react";
 import { connectGoogleAccount, disconnectGoogleAccount, isGoogleAccountConnected, } from "../../services/google";
-import { detectObsidianFolders, } from "../../services/obsidian";
+import { detectObsidianFolders, isWithinObsidianVault, } from "../../services/obsidian";
 import { applyFilenamePattern, getJournalDir, initJournalScope, resetJournalDir, } from "../../services/paths";
 import {
   AI_PROVIDERS,
@@ -488,8 +487,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
 
     let cancelled = false;
 
-    join(vaultPath, ".obsidian",)
-      .then((obsidianPath,) => exists(obsidianPath,))
+    isWithinObsidianVault(vaultPath,)
       .then((found,) => {
         if (!cancelled) {
           setIsObsidianVault(found,);

@@ -1,5 +1,5 @@
 import { invoke, } from "@tauri-apps/api/core";
-import { join, } from "@tauri-apps/api/path";
+import { dirname, join, } from "@tauri-apps/api/path";
 import { exists, readTextFile, } from "@tauri-apps/plugin-fs";
 
 interface FolderDetection {
@@ -205,6 +205,25 @@ export async function detectObsidianFolders(vaultDir: string,): Promise<FolderDe
     assetsFolder: detectAssetsFolder(appConfig,),
     filenamePattern: detectFilenamePattern(dailyNotesConfig, periodicNotesConfig,),
   };
+}
+
+export async function isWithinObsidianVault(path: string,): Promise<boolean> {
+  let currentPath = path.trim();
+  if (!currentPath) return false;
+
+  while (true) {
+    const obsidianDir = await join(currentPath, ".obsidian",);
+    if (await exists(obsidianDir,)) {
+      return true;
+    }
+
+    const parentPath = await dirname(currentPath,);
+    if (!parentPath || parentPath === currentPath) {
+      return false;
+    }
+
+    currentPath = parentPath;
+  }
 }
 
 export async function loadObsidianMarkdownIndentation(
