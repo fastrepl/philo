@@ -1,5 +1,6 @@
 import { invoke, } from "@tauri-apps/api/core";
 import { join, } from "@tauri-apps/api/path";
+import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { open as openDialog, } from "@tauri-apps/plugin-dialog";
 import { exists, } from "@tauri-apps/plugin-fs";
 import { AlertTriangle, Check, ChevronDown, RefreshCw, X, } from "lucide-react";
@@ -745,6 +746,14 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
     }
   };
 
+  const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>,) => {
+    if (e.buttons === 1 && !(e.target as HTMLElement).closest("button, input",)) {
+      e.detail === 2
+        ? void getCurrentWindow().toggleMaximize()
+        : void getCurrentWindow().startDragging();
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-[100]"
@@ -769,20 +778,20 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
         onClick={(e,) => e.stopPropagation()}
       >
         <div
-          className="absolute top-0 left-0 right-0 z-[1] h-[38px]"
-          data-tauri-drag-region
-          onClick={(e,) => e.stopPropagation()}
-        />
-        <div className="border-b border-gray-100 px-6 pb-4 pt-[52px]">
+          className="border-b border-gray-100 px-6 pb-4 pt-[52px]"
+          onMouseDown={handleHeaderMouseDown}
+        >
           <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
             <h2 className="text-lg font-medium text-gray-900" style={mono}>
               Settings
             </h2>
             <button
+              type="button"
               onClick={() => void handleRequestClose()}
-              className="text-gray-400 transition-colors text-lg cursor-pointer hover:text-gray-600"
+              className="rounded-md p-1 text-gray-400 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Close settings"
             >
-              ✕
+              <X className="h-6 w-6" strokeWidth={1.75} />
             </button>
           </div>
         </div>
