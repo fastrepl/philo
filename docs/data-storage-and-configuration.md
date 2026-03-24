@@ -207,7 +207,7 @@ Current location:
 - vault mode: `<vaultDir>/pages/`
 - default mode: sibling `pages/` folder next to the resolved journal root
 
-Philo currently reads and writes three page-shaped markdown variants.
+Philo currently reads and writes four page-shaped markdown variants.
 
 ### 1. Plain Pages
 
@@ -295,6 +295,57 @@ Notes:
 - `link_title`, `summary_updated_at`, and `follow_up_questions` are app-generated and optional
 - the body remains editable markdown; it is not a hidden structured payload
 - these pages are created when Philo converts a stale bare URL into a page chip
+
+### 4. Typed GitHub Pages
+
+Typed GitHub pages are still normal `page` notes, but they add `link_kind` and `link_data` so Philo can render a structured header for known GitHub resources.
+
+Example:
+
+```md
+---
+type: "page"
+source: "https://github.com/vercel/ai/pull/13784"
+link_title: "Version Packages (beta)"
+summary_updated_at: "2026-03-24T04:30:00.000Z"
+follow_up_questions:
+  - "What changed in this PR beyond the release metadata?"
+  - "Which packages are most likely to affect our integration?"
+  - "What should I review before merging a similar release PR?"
+link_kind: "github_pr"
+link_data:
+  owner: "vercel"
+  repo: "ai"
+  number: 13784
+  title: "Version Packages (beta)"
+  state: "Open"
+  is_draft: false
+  is_merged: false
+  author: "vercel-ai-sdk[bot]"
+  base_branch: "main"
+  head_branch: "changeset-release/main"
+  labels: []
+  assignees: []
+  reviewers:
+    - "some-reviewer"
+  changed_files_count: 10
+  commits_count: 1
+  additions: 42
+  deletions: 12
+  changed_files:
+    - ".changeset/pre.json"
+    - "packages/core/package.json"
+---
+
+This pull request updates prerelease package versions and release metadata...
+```
+
+Notes:
+
+- `link_kind` identifies the specialized renderer; current app-generated values are `generic`, `github_pr`, `github_issue`, and `github_commit`
+- `link_data` is structured app-generated metadata for the recognized source and is optional on disk
+- the markdown body is still the canonical editable summary content
+- existing generic URL summary pages remain valid even if they do not have `link_kind`
 
 ## Images / Assets
 

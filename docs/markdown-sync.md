@@ -120,6 +120,34 @@ That pairing is what makes the round-trip work:
 
 The editor is therefore not reading the markdown file directly on every keystroke. It reads a TipTap document that was derived from markdown when the note was loaded.
 
+## Chip Kinds
+
+Philo currently renders six mention-chip kinds in the editor:
+
+- `date`
+- `recurring`
+- `tag`
+- `page`
+- `gmail`
+- `google_calendar`
+
+Important behavior:
+
+- page chips are the common display form for attached pages, shared pages, and URL-created pages
+- URL chips are not a separate markdown primitive; when a stale bare URL is converted, Philo creates or reuses a shared page and inserts a normal `page` chip
+- those page chips still serialize as wiki links on disk, so the markdown round-trip stays uniform even when the in-editor display is richer
+
+## Page Display Variants
+
+The page markdown under `pages/` is not the same as the page presentation in the app. `PageView` currently has several display modes layered on top of the same underlying markdown page model:
+
+- plain page: page title plus editable body
+- meeting page: title, meeting badge, attached-date link when relevant, then editable body
+- generic URL summary page: `link_title` as heading, source URL link, summary timestamp, editable summary body, follow-up AI chips
+- typed GitHub page: `link_title` as heading, source URL link, structured GitHub metadata header, editable summary body, follow-up AI chips
+
+That means two pages can both be stored as normal markdown files under `pages/` while rendering very differently in the app because their frontmatter carries different metadata.
+
 ## Editor Behavior That Matters For Sync
 
 The live editor now uses normal block splitting for Enter at the top level. That matters because list creation depends on real paragraph boundaries:
