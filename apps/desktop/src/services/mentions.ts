@@ -141,17 +141,10 @@ function formatDisplayDate(date: string,): string {
   },);
 }
 
-function formatDisplayDateWithYear(date: string, referenceDate: string,): string {
-  const options: Intl.DateTimeFormatOptions = {
-    month: "short",
-    day: "numeric",
-  };
-
-  if (date.slice(0, 4,) !== referenceDate.slice(0, 4,)) {
-    options.year = "numeric";
-  }
-
-  return fromIsoDate(date,).toLocaleDateString("en-US", options,);
+function formatRelativeUnit(value: number, unit: "week" | "month" | "year",): string {
+  const count = Math.abs(value,);
+  const suffix = count === 1 ? unit : `${unit}s`;
+  return value < 0 ? `${count} ${suffix} ago` : `${count} ${suffix} later`;
 }
 
 function formatRelativeChipDate(date: string, referenceDate: string,): string {
@@ -159,9 +152,25 @@ function formatRelativeChipDate(date: string, referenceDate: string,): string {
   if (daysUntil === 0) return "Today";
   if (daysUntil === -1) return "Yesterday";
   if (daysUntil === 1) return "Tomorrow";
+
+  const reference = fromIsoDate(referenceDate,);
+  const target = fromIsoDate(date,);
+  if (daysUntil > 1 && startOfWeek(target,).getTime() === startOfWeek(reference,).getTime()) {
+    return `This ${toTitleCase(WEEKDAYS[target.getDay()],)}`;
+  }
+
   if (daysUntil >= 2 && daysUntil <= 6) return `${daysUntil} days later`;
   if (daysUntil <= -2 && daysUntil >= -6) return `${Math.abs(daysUntil,)} days ago`;
-  return formatDisplayDateWithYear(date, referenceDate,);
+
+  if (Math.abs(daysUntil,) < 28) {
+    return formatRelativeUnit(Math.sign(daysUntil,) * Math.max(1, Math.round(Math.abs(daysUntil,) / 7,),), "week",);
+  }
+
+  if (Math.abs(daysUntil,) < 365) {
+    return formatRelativeUnit(Math.sign(daysUntil,) * Math.max(1, Math.round(Math.abs(daysUntil,) / 30,),), "month",);
+  }
+
+  return formatRelativeUnit(Math.sign(daysUntil,) * Math.max(1, Math.round(Math.abs(daysUntil,) / 365,),), "year",);
 }
 
 function getDateChipState(

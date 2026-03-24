@@ -106,9 +106,18 @@
     color 120ms ease;
 }
 
-.tiptap .mention-chip-page:hover,
-.tiptap .mention-chip-date:hover {
+.tiptap .mention-chip-page:hover {
   background-color: rgba(17, 24, 39, 0.08);
+}
+
+.tiptap .mention-chip-date {
+  --mention-chip-date-rgb: 37 99 235;
+  background-color: rgb(var(--mention-chip-date-rgb) / 20%);
+  color: rgb(var(--mention-chip-date-rgb));
+}
+
+.tiptap .mention-chip-date:hover {
+  background-color: rgb(var(--mention-chip-date-rgb) / 28%);
 }
 
 .tiptap .mention-chip-page-icon,
@@ -136,19 +145,19 @@
 }
 
 .tiptap .mention-chip-date-state-past {
-  color: #b91c1c;
+  --mention-chip-date-rgb: 185 28 28;
 }
 
 .tiptap .mention-chip-date-state-today {
-  color: #c2410c;
+  --mention-chip-date-rgb: 194 65 12;
 }
 
 .tiptap .mention-chip-date-state-this-week {
-  color: #a16207;
+  --mention-chip-date-rgb: 161 98 7;
 }
 
 .tiptap .mention-chip-date-state-future {
-  color: #2563eb;
+  --mention-chip-date-rgb: 37 99 235;
 }
 
 .tiptap .mention-chip-recurring {
