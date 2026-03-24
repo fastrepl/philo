@@ -81,7 +81,15 @@ import { isUrlSummaryPage, } from "../../services/url-summary";
 import { createWidgetFile, } from "../../services/widget-files";
 import { recordWidgetGitRevision, } from "../../services/widget-git-history";
 import { stringifyStorageSchema, } from "../../services/widget-storage";
-import { DailyNote, formatDate, getDaysAgo, isToday, type MeetingSessionKind, type PageNote, } from "../../types/note";
+import {
+  DailyNote,
+  formatDate,
+  getDaysAgo,
+  getToday,
+  isToday,
+  type MeetingSessionKind,
+  type PageNote,
+} from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
 import {
   WIDGET_BUILD_STATE_EVENT,
@@ -724,7 +732,8 @@ function LazyNote({
     const observer = new IntersectionObserver(
       ([entry,],) => {
         if (entry.isIntersecting) {
-          loadDailyNote(date,).then(setNote,).catch(console.error,);
+          const loadNote = date > getToday() ? getOrCreateDailyNote(date,) : loadDailyNote(date,);
+          loadNote.then(setNote,).catch(console.error,);
         }
       },
       { rootMargin: "400px", },
