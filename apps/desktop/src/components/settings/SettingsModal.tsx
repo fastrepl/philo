@@ -529,6 +529,7 @@ function SharpSelectField<T extends string,>(
 
     const handleEscape = (event: KeyboardEvent,) => {
       if (event.key === "Escape") {
+        event.preventDefault();
         setOpen(false,);
       }
     };
@@ -1082,11 +1083,23 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent,) => {
-    if (e.key === "Escape") {
+  useEffect(() => {
+    if (!open) return;
+
+    const handleEscape = (event: KeyboardEvent,) => {
+      if (event.key !== "Escape" || event.defaultPrevented) {
+        return;
+      }
+
+      event.preventDefault();
       void handleRequestClose();
-    }
-  };
+    };
+
+    window.addEventListener("keydown", handleEscape,);
+    return () => {
+      window.removeEventListener("keydown", handleEscape,);
+    };
+  }, [open, handleRequestClose,],);
 
   const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>,) => {
     if (e.buttons === 1 && !(e.target as HTMLElement).closest("button, input",)) {
@@ -1100,7 +1113,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
     <div
       className="fixed inset-0 z-[100]"
       onClick={() => void handleRequestClose()}
-      onKeyDown={handleKeyDown}
     >
       <style>
         {`
