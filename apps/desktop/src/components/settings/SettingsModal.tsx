@@ -883,8 +883,8 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const showCustomSttModelInput = settings.currentSttProvider === "custom"
     || selectedSttModelValue === CUSTOM_STT_MODEL_VALUE;
   const activeProviderDescription = providerSettingsTab === "ai"
-    ? "Choose the provider for summaries and chat. Keys stay on this device."
-    : "Choose the speech-to-text provider for recording. Recording auth stays on this device.";
+    ? "Choose the provider for summaries and chat."
+    : "Choose the speech-to-text provider for recording.";
 
   return (
     <div
