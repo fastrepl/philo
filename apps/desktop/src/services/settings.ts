@@ -92,6 +92,17 @@ const STT_PROVIDER_DEFAULT_MODELS: Record<SttProvider, string> = {
   custom: "",
 };
 
+const STT_PROVIDER_SUGGESTED_MODELS: Record<SttProvider, string[]> = {
+  deepgram: ["nova-2-meeting", "nova-3-general", "nova-2-phonecall",],
+  assemblyai: ["universal",],
+  openai: ["gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1",],
+  gladia: ["solaria-1",],
+  soniox: ["stt-v4", "stt-v3",],
+  elevenlabs: ["scribe_v2",],
+  mistral: ["voxtral-mini-2602",],
+  custom: [],
+};
+
 export interface ActiveAiConfig {
   provider: AiProvider;
   apiKey: string;
@@ -255,6 +266,41 @@ export function getDefaultSttBaseUrl(provider: SttProvider,) {
 
 export function getDefaultSttModel(provider: SttProvider,) {
   return STT_PROVIDER_DEFAULT_MODELS[provider];
+}
+
+export function getSuggestedSttModels(provider: SttProvider,) {
+  return STT_PROVIDER_SUGGESTED_MODELS[provider];
+}
+
+export function getSttModelLabel(model: string,) {
+  switch (model) {
+    case "nova-2-meeting":
+      return "Nova 2 Meeting";
+    case "nova-3-general":
+      return "Nova 3 General";
+    case "nova-2-phonecall":
+      return "Nova 2 Phonecall";
+    case "universal":
+      return "Universal";
+    case "gpt-4o-transcribe":
+      return "GPT-4o Transcribe";
+    case "gpt-4o-mini-transcribe":
+      return "GPT-4o mini Transcribe";
+    case "whisper-1":
+      return "Whisper 1";
+    case "solaria-1":
+      return "Solaria 1";
+    case "stt-v4":
+      return "Soniox v4";
+    case "stt-v3":
+      return "Soniox v3";
+    case "scribe_v2":
+      return "Scribe V2";
+    case "voxtral-mini-2602":
+      return "Voxtral Mini 2602";
+    default:
+      return model;
+  }
 }
 
 export function getAiProviderApiKey(settings: Settings, provider: AiProvider,) {

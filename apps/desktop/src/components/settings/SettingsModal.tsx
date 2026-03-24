@@ -19,7 +19,9 @@ import {
   getAiProviderLabel,
   getDefaultSttBaseUrl,
   getDefaultSttModel,
+  getSttModelLabel,
   getSttProviderLabel,
+  getSuggestedSttModels,
   GOOGLE_CALENDAR_OPEN_CLIENTS,
   GOOGLE_EMAIL_OPEN_CLIENTS,
   type GoogleCalendarOpenClient,
@@ -66,6 +68,8 @@ const STT_PROVIDER_HINTS: Record<SttProvider, string> = {
   custom: "Manual",
 };
 
+const CUSTOM_STT_MODEL_VALUE = "__philo_custom_stt_model__";
+
 const GOOGLE_EMAIL_OPEN_CLIENT_LABELS: Record<GoogleEmailOpenClient, string> = {
   gmail: "Gmail",
   apple_mail: "Apple Mail",
@@ -109,6 +113,26 @@ function getErrorMessage(error: unknown, fallback: string,) {
   }
 
   return fallback;
+}
+
+function getSttModelHint(model: string,) {
+  switch (model) {
+    case "nova-2-meeting":
+    case "gpt-4o-transcribe":
+    case "stt-v4":
+      return "Recommended";
+    case "nova-3-general":
+      return "General";
+    case "nova-2-phonecall":
+      return "Phone";
+    case "gpt-4o-mini-transcribe":
+      return "Lower cost";
+    case "whisper-1":
+    case "stt-v3":
+      return "Legacy";
+    default:
+      return "Default";
+  }
 }
 
 function GoogleMark() {
@@ -327,6 +351,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const filenamePatternSectionRef = useRef<HTMLDivElement>(null,);
   const filenamePatternInputRef = useRef<HTMLInputElement>(null,);
   const sttApiKeyInputRef = useRef<HTMLInputElement>(null,);
+  const sttModelInputRef = useRef<HTMLInputElement>(null,);
   const settingsRef = useRef<Settings | null>(null,);
   const lastSavedSettingsRef = useRef<Settings | null>(null,);
   const activeSaveRef = useRef<Promise<void> | null>(null,);
@@ -419,6 +444,12 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
     && !settings.sttApiKey.trim()
     && Boolean(trimmedOpenAiApiKey,);
   const displayedSttApiKey = isReusingOpenAiSttKey ? settings.openaiApiKey : settings.sttApiKey;
+  const suggestedSttModels = getSuggestedSttModels(settings.currentSttProvider,);
+  const normalizedCurrentSttModel = settings.currentSttModel.trim();
+  const hasPresetSttModel = suggestedSttModels.includes(normalizedCurrentSttModel,);
+  const selectedSttModelValue = hasPresetSttModel ? normalizedCurrentSttModel : CUSTOM_STT_MODEL_VALUE;
+  const showCustomSttModelInput = settings.currentSttProvider === "custom"
+    || selectedSttModelValue === CUSTOM_STT_MODEL_VALUE;
 
   const buildPersistedSettings = async (current: Settings,) => {
     const normalizedVault = current.vaultDir.trim();
@@ -574,6 +605,19 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       currentSttModel: getDefaultSttModel(provider,),
       sttBaseUrl: getDefaultSttBaseUrl(provider,),
     },);
+  };
+
+  const handleSttModelChange = (model: string,) => {
+    if (model === CUSTOM_STT_MODEL_VALUE) {
+      update({ currentSttModel: hasPresetSttModel ? "" : settings.currentSttModel, },);
+      requestAnimationFrame(() => {
+        sttModelInputRef.current?.focus();
+        sttModelInputRef.current?.select();
+      },);
+      return;
+    }
+
+    update({ currentSttModel: model, },);
   };
 
   const handleConnectGoogle = async () => {
@@ -889,17 +933,63 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               />
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="block text-xs text-gray-500" style={mono}>
-                    Model
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.currentSttModel}
-                    onChange={(e,) => update({ currentSttModel: e.target.value, },)}
-                    placeholder={getDefaultSttModel(settings.currentSttProvider,)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
-                    style={mono}
-                  />
+                  {settings.currentSttProvider === "custom"
+                    ? (
+                      <>
+                        <label className="block text-xs text-gray-500" style={mono}>
+                          Model
+                        </label>
+                        <input
+                          ref={sttModelInputRef}
+                          type="text"
+                          value={settings.currentSttModel}
+                          onChange={(e,) => update({ currentSttModel: e.target.value, },)}
+                          placeholder="Enter model ID"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+                          style={mono}
+                        />
+                        <p className="text-[11px] text-gray-400" style={mono}>
+                          Paste the upstream model ID your API expects.
+                        </p>
+                      </>
+                    )
+                    : (
+                      <>
+                        <SharpSelectField
+                          label="Model"
+                          options={[
+                            ...suggestedSttModels.map((model,) => ({
+                              hint: getSttModelHint(model,),
+                              label: getSttModelLabel(model,),
+                              value: model,
+                            })),
+                            {
+                              hint: "Manual",
+                              label: "Custom model ID",
+                              value: CUSTOM_STT_MODEL_VALUE,
+                            },
+                          ]}
+                          value={selectedSttModelValue}
+                          onChange={handleSttModelChange}
+                        />
+                        {showCustomSttModelInput && (
+                          <input
+                            ref={sttModelInputRef}
+                            type="text"
+                            value={settings.currentSttModel}
+                            onChange={(e,) => update({ currentSttModel: e.target.value, },)}
+                            placeholder={getDefaultSttModel(settings.currentSttProvider,)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+                            style={mono}
+                          />
+                        )}
+                        <p className="text-[11px] text-gray-400" style={mono}>
+                          {showCustomSttModelInput
+                            ? "Use a manual model ID if your provider needs something outside the presets."
+                            : `Model ID: ${settings.currentSttModel}`}
+                        </p>
+                      </>
+                    )}
                 </div>
                 <div className="space-y-2">
                   <label className="block text-xs text-gray-500" style={mono}>
