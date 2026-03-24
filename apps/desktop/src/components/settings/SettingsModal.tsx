@@ -781,14 +781,15 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
           className="border-b border-gray-100"
           onMouseDown={handleHeaderMouseDown}
         >
-          <div className="flex h-[38px] w-full items-center justify-between gap-4 px-3 pl-24">
-            <h2 className="text-base font-medium text-gray-900" style={mono}>
+          <div className="grid h-[38px] w-full grid-cols-[96px_minmax(0,1fr)_96px] items-center px-3">
+            <div />
+            <h2 className="justify-self-center text-base font-medium text-gray-900" style={mono}>
               Settings
             </h2>
             <button
               type="button"
               onClick={() => void handleRequestClose()}
-              className="rounded-md p-1 text-gray-400 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-600"
+              className="justify-self-end rounded-md p-1 text-gray-400 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-600"
               aria-label="Close settings"
             >
               <X className="h-5 w-5" strokeWidth={1.75} />
