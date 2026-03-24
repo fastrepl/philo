@@ -149,16 +149,17 @@ export function AiComposer({
                               setPromptValue(suggestion.command,);
                               window.setTimeout(() => inputRef.current?.focus(), 0,);
                             }}
-                            className="grid w-full grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] items-center gap-4 px-6 py-4 text-left transition-colors hover:bg-gray-50 sm:gap-5"
+                            className="w-full px-6 py-4 text-left transition-colors hover:bg-gray-50"
                           >
-                            <p
-                              className="min-w-0 text-lg leading-none text-slate-900 sm:text-[1.3rem]"
-                              style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                            >
-                              {suggestion.command}
-                            </p>
-                            <p className="min-w-0 text-sm leading-6 tracking-[-0.02em] text-slate-500 sm:text-[1.05rem] sm:leading-[1.45]">
-                              {suggestion.description}
+                            <p className="min-w-0 text-sm leading-6 text-slate-600 sm:text-[1.02rem]">
+                              <span
+                                className="text-slate-900"
+                                style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                              >
+                                {suggestion.command}
+                              </span>
+                              {" - "}
+                              <span>{suggestion.description}</span>
                             </p>
                           </button>
                         ))}
