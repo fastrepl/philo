@@ -127,6 +127,12 @@ export function handleDatePickerKeyDown({
     return true;
   }
 
+  if (key === "n") {
+    event.preventDefault();
+    setRecurrence("",);
+    return true;
+  }
+
   return false;
 }
 
