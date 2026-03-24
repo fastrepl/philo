@@ -130,29 +130,29 @@ function getSttModelHint(model: string,) {
 
 function getAiModelHint(model: string,) {
   switch (model) {
-    case "claude-sonnet-4-0":
+    case "claude-opus-4-6":
+    case "gpt-5.4":
+    case "gemini-2.5-pro":
+    case "anthropic/claude-opus-4.6":
+      return "Best";
+    case "openrouter/auto":
+      return "Auto";
+    case "claude-sonnet-4-6":
+    case "gpt-5.2":
+    case "gemini-3-flash-preview":
+    case "anthropic/claude-sonnet-4.6":
+      return "Strong";
+    case "gpt-5-mini":
     case "gpt-4.1":
     case "gemini-2.5-flash":
-    case "openai/gpt-4.1":
-      return "Default";
-    case "claude-opus-4-1":
-    case "gemini-2.5-pro":
-      return "Stronger";
-    case "claude-3-5-haiku-latest":
-    case "gpt-4.1-nano":
+    case "openai/gpt-5.2":
+      return "Balanced";
+    case "claude-haiku-4-5":
+    case "gpt-5-nano":
     case "gemini-2.5-flash-lite":
       return "Fast";
-    case "gpt-4.1-mini":
-    case "gpt-4o-mini":
-    case "openai/gpt-4.1-mini":
-      return "Smaller";
-    case "gpt-4o":
-    case "gemini-2.0-flash":
-    case "google/gemini-2.5-flash":
-      return "Balanced";
-    case "claude-3-7-sonnet-latest":
-    case "anthropic/claude-sonnet-4":
-      return "Alternate";
+    case "google/gemini-3.1-pro-preview":
+      return "Preview";
     default:
       return "Custom";
   }

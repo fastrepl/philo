@@ -61,37 +61,37 @@ export const DEFAULT_GOOGLE_CALENDAR_OPEN_CLIENT: GoogleCalendarOpenClient = "go
 const DEFAULT_SPOKEN_LANGUAGES = ["en",] as string[];
 
 const AI_PROVIDER_DEFAULT_MODELS: Record<AiProvider, string> = {
-  anthropic: "claude-sonnet-4-0",
-  openai: "gpt-4.1",
-  google: "gemini-2.5-flash",
-  openrouter: "openai/gpt-4.1",
+  anthropic: "claude-opus-4-6",
+  openai: "gpt-5.4",
+  google: "gemini-2.5-pro",
+  openrouter: "openrouter/auto",
 };
 
 const AI_PROVIDER_SUGGESTED_MODELS: Record<AiProvider, string[]> = {
   anthropic: [
-    "claude-sonnet-4-0",
-    "claude-opus-4-1",
-    "claude-3-7-sonnet-latest",
-    "claude-3-5-haiku-latest",
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5",
   ],
   openai: [
+    "gpt-5.4",
+    "gpt-5.2",
+    "gpt-5-mini",
+    "gpt-5-nano",
     "gpt-4.1",
-    "gpt-4.1-mini",
-    "gpt-4.1-nano",
-    "gpt-4o",
-    "gpt-4o-mini",
   ],
   google: [
-    "gemini-2.5-flash",
     "gemini-2.5-pro",
+    "gemini-3-flash-preview",
+    "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
   ],
   openrouter: [
-    "openai/gpt-4.1",
-    "openai/gpt-4.1-mini",
-    "anthropic/claude-sonnet-4",
-    "google/gemini-2.5-flash",
+    "openrouter/auto",
+    "anthropic/claude-opus-4.6",
+    "openai/gpt-5.2",
+    "google/gemini-3.1-pro-preview",
+    "anthropic/claude-sonnet-4.6",
   ],
 };
 
@@ -305,40 +305,40 @@ export function getSuggestedAiModels(provider: AiProvider,) {
 
 export function getAiModelLabel(model: string,) {
   switch (model) {
-    case "claude-sonnet-4-0":
-      return "Claude Sonnet 4";
-    case "claude-opus-4-1":
-      return "Claude Opus 4.1";
-    case "claude-3-7-sonnet-latest":
-      return "Claude Sonnet 3.7";
-    case "claude-3-5-haiku-latest":
-      return "Claude Haiku 3.5";
+    case "claude-opus-4-6":
+      return "Claude Opus 4.6";
+    case "claude-sonnet-4-6":
+      return "Claude Sonnet 4.6";
+    case "claude-haiku-4-5":
+      return "Claude Haiku 4.5";
+    case "gpt-5.4":
+      return "GPT-5.4";
+    case "gpt-5.2":
+      return "GPT-5.2";
+    case "gpt-5-mini":
+      return "GPT-5 mini";
+    case "gpt-5-nano":
+      return "GPT-5 nano";
     case "gpt-4.1":
       return "GPT-4.1";
-    case "gpt-4.1-mini":
-      return "GPT-4.1 mini";
-    case "gpt-4.1-nano":
-      return "GPT-4.1 nano";
-    case "gpt-4o":
-      return "GPT-4o";
-    case "gpt-4o-mini":
-      return "GPT-4o mini";
-    case "gemini-2.5-flash":
-      return "Gemini 2.5 Flash";
     case "gemini-2.5-pro":
       return "Gemini 2.5 Pro";
+    case "gemini-3-flash-preview":
+      return "Gemini 3 Flash Preview";
+    case "gemini-2.5-flash":
+      return "Gemini 2.5 Flash";
     case "gemini-2.5-flash-lite":
       return "Gemini 2.5 Flash-Lite";
-    case "gemini-2.0-flash":
-      return "Gemini 2.0 Flash";
-    case "openai/gpt-4.1":
-      return "GPT-4.1";
-    case "openai/gpt-4.1-mini":
-      return "GPT-4.1 mini";
-    case "anthropic/claude-sonnet-4":
-      return "Claude Sonnet 4";
-    case "google/gemini-2.5-flash":
-      return "Gemini 2.5 Flash";
+    case "openrouter/auto":
+      return "OpenRouter Auto";
+    case "anthropic/claude-opus-4.6":
+      return "Claude Opus 4.6";
+    case "openai/gpt-5.2":
+      return "GPT-5.2";
+    case "google/gemini-3.1-pro-preview":
+      return "Gemini 3.1 Pro Preview";
+    case "anthropic/claude-sonnet-4.6":
+      return "Claude Sonnet 4.6";
     default:
       return model;
   }
