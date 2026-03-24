@@ -7,7 +7,7 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Table, TableCell, TableHeader, TableRow, } from "@tiptap/extension-table";
 import TaskList from "@tiptap/extension-task-list";
-import { Fragment, } from "@tiptap/pm/model";
+import { Fragment, type Node as ProseMirrorNode, } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, } from "@tiptap/pm/state";
 import { EditorContent, useEditor, } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -75,6 +75,42 @@ function getReferenceDate(note: DailyNote | PageNote,) {
   return note.attachedTo ?? getToday();
 }
 
+function isListItemNode(node: ProseMirrorNode,) {
+  return node.type.name === "listItem" || node.type.name === "taskItem";
+}
+
+function isListContainerNode(node: ProseMirrorNode,) {
+  return node.type.name === "bulletList" || node.type.name === "orderedList" || node.type.name === "taskList";
+}
+
+function findNestedListChildIndex(node: ProseMirrorNode, listTypeName: string,) {
+  for (let index = 0; index < node.childCount; index += 1) {
+    if (node.child(index,).type.name === listTypeName) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function getDescendantNodePos(ancestorPos: number, ancestorNode: ProseMirrorNode, path: number[],): number {
+  let currentPos = ancestorPos;
+  let currentNode = ancestorNode;
+
+  for (const index of path) {
+    let childPos = currentPos + 1;
+
+    for (let childIndex = 0; childIndex < index; childIndex += 1) {
+      childPos += currentNode.child(childIndex,).nodeSize;
+    }
+
+    currentPos = childPos;
+    currentNode = currentNode.child(index,);
+  }
+
+  return currentPos;
+}
+
 function getMovableNodeContext(state: import("@tiptap/pm/state").EditorState,) {
   const { doc, selection, } = state;
 
@@ -123,6 +159,83 @@ function getMovableNodeContext(state: import("@tiptap/pm/state").EditorState,) {
   };
 }
 
+function tryMoveListItemIntoNextSibling(
+  view: import("@tiptap/pm/view").EditorView,
+  context: ReturnType<typeof getMovableNodeContext>,
+): boolean {
+  if (!context) return false;
+
+  const { state, } = view;
+  const { selection, } = state;
+  const {
+    index,
+    node,
+    nodePos,
+    parent,
+    parentDepth,
+  } = context;
+
+  if (!isListItemNode(node,) || !isListContainerNode(parent,) || index >= parent.childCount - 1) {
+    return false;
+  }
+
+  const nextSibling = parent.child(index + 1,);
+  if (!isListItemNode(nextSibling,)) {
+    return false;
+  }
+
+  const nestedListIndex = findNestedListChildIndex(nextSibling, parent.type.name,);
+  if (nestedListIndex < 0) {
+    return false;
+  }
+
+  const nestedList = nextSibling.child(nestedListIndex,);
+  const nestedListChildren = Array.from(
+    { length: nestedList.childCount, },
+    (_, childIndex,) => nestedList.child(childIndex,),
+  );
+  nestedListChildren.unshift(node,);
+
+  const nextSiblingChildren = Array.from(
+    { length: nextSibling.childCount, },
+    (_, childIndex,) => nextSibling.child(childIndex,),
+  );
+  nextSiblingChildren[nestedListIndex] = nestedList.copy(Fragment.fromArray(nestedListChildren,),);
+
+  const parentChildren = Array.from({ length: parent.childCount, }, (_, childIndex,) => parent.child(childIndex,),);
+  parentChildren.splice(index, 1,);
+  parentChildren[index] = nextSibling.copy(Fragment.fromArray(nextSiblingChildren,),);
+
+  const tr = state.tr;
+  const $nodePos = state.doc.resolve(nodePos,);
+  const parentStart = parentDepth === 0 ? 0 : $nodePos.start(parentDepth,);
+  const parentEnd = parentDepth === 0 ? state.doc.content.size : $nodePos.end(parentDepth,);
+  tr.replaceWith(parentStart, parentEnd, Fragment.fromArray(parentChildren,),);
+
+  if (parentDepth === 0) {
+    view.dispatch(tr.scrollIntoView(),);
+    return true;
+  }
+
+  const parentNodePos = $nodePos.before(parentDepth,);
+  const updatedParent = tr.doc.nodeAt(parentNodePos,);
+  if (!updatedParent) {
+    view.dispatch(tr.scrollIntoView(),);
+    return true;
+  }
+
+  const newNodePos = getDescendantNodePos(parentNodePos, updatedParent, [index, nestedListIndex, 0,],);
+
+  if (selection instanceof NodeSelection) {
+    tr.setSelection(NodeSelection.create(tr.doc, newNodePos,),);
+  } else {
+    tr.setSelection(TextSelection.near(tr.doc.resolve(newNodePos + 1,),),);
+  }
+
+  view.dispatch(tr.scrollIntoView(),);
+  return true;
+}
+
 function moveSelectedNode(view: import("@tiptap/pm/view").EditorView, direction: "up" | "down",): boolean {
   const { state, } = view;
   const { selection, } = state;
@@ -135,6 +248,11 @@ function moveSelectedNode(view: import("@tiptap/pm/view").EditorView, direction:
     parent,
     parentDepth,
   } = context;
+
+  if (direction === "down" && tryMoveListItemIntoNextSibling(view, context,)) {
+    return true;
+  }
+
   const targetIndex = direction === "up" ? index - 1 : index + 1;
 
   if (targetIndex < 0 || targetIndex >= parent.childCount) {
