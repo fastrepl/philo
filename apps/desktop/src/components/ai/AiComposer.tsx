@@ -16,7 +16,7 @@ interface AiComposerProps {
   hasAiConfigured: boolean;
   isSubmitting: boolean;
   canStopSubmitting?: boolean;
-  submittingLabel?: string;
+  submittingLabel?: string | null;
   error: string | null;
   onPromptChange: (value: string,) => void;
   onClose: () => void;
@@ -43,7 +43,7 @@ export function AiComposer({
   hasAiConfigured,
   isSubmitting,
   canStopSubmitting = true,
-  submittingLabel = "Sophia is thinking...",
+  submittingLabel = null,
   error,
   onPromptChange,
   onNewChat,
@@ -203,7 +203,7 @@ export function AiComposer({
                       {isSubmitting && !prompt.trim() && (
                         <div className="pointer-events-none absolute inset-0 flex items-center gap-2 px-1 py-0.5 text-[15px] leading-6 text-slate-500">
                           <LoaderCircle size={14} className="shrink-0 animate-spin" />
-                          <span className="truncate">{submittingLabel}</span>
+                          {submittingLabel && <span className="truncate">{submittingLabel}</span>}
                         </div>
                       )}
                     </div>
