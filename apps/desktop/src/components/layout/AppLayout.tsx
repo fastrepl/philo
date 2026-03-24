@@ -2935,7 +2935,7 @@ export default function AppLayout() {
             onClick={() => {
               void handleMeetingRecordClick();
             }}
-            className="flex h-5 w-5 items-center justify-center"
+            className="-translate-y-px flex h-5 w-5 items-center justify-center"
             title={isMeetingRecording ? "Stop meeting recording" : "Start meeting recording"}
             aria-label={isMeetingRecording ? "Stop meeting recording" : "Start meeting recording"}
           >
