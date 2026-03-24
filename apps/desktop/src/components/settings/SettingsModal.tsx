@@ -3,12 +3,8 @@ import { join, } from "@tauri-apps/api/path";
 import { getCurrentWindow, } from "@tauri-apps/api/window";
 import { open as openDialog, } from "@tauri-apps/plugin-dialog";
 import { exists, } from "@tauri-apps/plugin-fs";
-import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, X, } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, RefreshCw, X, } from "lucide-react";
 import { useEffect, useRef, useState, } from "react";
-import claudeAiSymbol from "../../assets/claude-ai-symbol.svg";
-import googleGeminiIcon from "../../assets/google-gemini-icon.svg";
-import openaiSymbol from "../../assets/openai-symbol.svg";
-import openrouterIcon from "../../assets/openrouter.svg";
 import { connectGoogleAccount, disconnectGoogleAccount, isGoogleAccountConnected, } from "../../services/google";
 import { detectObsidianFolders, } from "../../services/obsidian";
 import { applyFilenamePattern, getJournalDir, initJournalScope, resetJournalDir, } from "../../services/paths";
@@ -51,13 +47,6 @@ const AI_PROVIDER_PLACEHOLDERS: Record<AiProvider, string> = {
   openrouter: "sk-or-v1-...",
 };
 
-const AI_PROVIDER_ICONS: Record<AiProvider, string> = {
-  anthropic: claudeAiSymbol,
-  openai: openaiSymbol,
-  google: googleGeminiIcon,
-  openrouter: openrouterIcon,
-};
-
 const STT_PROVIDER_HINTS: Record<SttProvider, string> = {
   deepgram: "BYOK",
   assemblyai: "BYOK",
@@ -67,17 +56,6 @@ const STT_PROVIDER_HINTS: Record<SttProvider, string> = {
   elevenlabs: "BYOK",
   mistral: "BYOK",
   custom: "Manual",
-};
-
-const STT_PROVIDER_MARKS: Record<SttProvider, string> = {
-  deepgram: "DG",
-  assemblyai: "AA",
-  openai: "OA",
-  gladia: "GL",
-  soniox: "SX",
-  elevenlabs: "11",
-  mistral: "MS",
-  custom: "//",
 };
 
 const CUSTOM_STT_MODEL_VALUE = "__philo_custom_stt_model__";
@@ -145,26 +123,6 @@ function getSttModelHint(model: string,) {
     default:
       return "Default";
   }
-}
-
-function getAiProviderCardDescription(provider: AiProvider, hasKey: boolean,) {
-  if (hasKey) {
-    return "API key saved on this device.";
-  }
-
-  return `Add your ${getAiProviderLabel(provider,)} API key.`;
-}
-
-function getSttProviderCardDescription(provider: SttProvider,) {
-  if (provider === "openai") {
-    return "Reuse your OpenAI key or set a separate STT key.";
-  }
-
-  if (provider === "custom") {
-    return "Manual base URL, model, and auth.";
-  }
-
-  return `Default model: ${getDefaultSttModel(provider,)}`;
 }
 
 function getAiProviderDraftKey(settings: Settings, provider: AiProvider,) {
@@ -264,73 +222,6 @@ function FilenamePatternFieldValue({ value, muted = false, }: { value: string; m
   );
 }
 
-function SelectableProviderCard(
-  {
-    badge,
-    className,
-    description,
-    icon,
-    onClick,
-    selected,
-    title,
-  }: {
-    badge?: string;
-    className?: string;
-    description: string;
-    icon: React.ReactNode;
-    onClick: () => void;
-    selected: boolean;
-    title: string;
-  },
-) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-none border p-2.5 text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/30 ${
-        selected
-          ? "border-violet-300 bg-violet-50/40 ring-1 ring-violet-200"
-          : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-      } ${className ?? ""}`}
-    >
-      <span className="flex items-start gap-3">
-        <span
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-none border bg-white ${
-            selected ? "border-violet-200 text-violet-700" : "border-gray-200 text-gray-500"
-          }`}
-        >
-          {icon}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="text-[13px] text-gray-900" style={mono}>
-              {title}
-            </span>
-            {badge && (
-              <span
-                className={`inline-flex items-center rounded-none border px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] ${
-                  selected
-                    ? "border-violet-200 bg-violet-50 text-violet-700"
-                    : "border-gray-200 bg-gray-50 text-gray-500"
-                }`}
-                style={mono}
-              >
-                {badge}
-              </span>
-            )}
-          </span>
-          <span
-            className={`mt-1 block text-[11px] leading-4 ${selected ? "text-gray-600" : "text-gray-400"}`}
-            style={mono}
-          >
-            {description}
-          </span>
-        </span>
-      </span>
-    </button>
-  );
-}
-
 function ProviderModeTabs(
   {
     selected,
@@ -367,80 +258,6 @@ function ProviderModeTabs(
           </button>
         );
       },)}
-    </div>
-  );
-}
-
-function ProviderCarousel<T extends string,>(
-  {
-    ariaLabel,
-    items,
-    onSelect,
-    selected,
-  }: {
-    ariaLabel: string;
-    items: Array<{
-      badge?: string;
-      description: string;
-      icon: React.ReactNode;
-      title: string;
-      value: T;
-    }>;
-    onSelect: (value: T,) => void;
-    selected: T;
-  },
-) {
-  const railRef = useRef<HTMLDivElement>(null,);
-
-  const scrollRail = (direction: -1 | 1,) => {
-    const rail = railRef.current;
-    if (!rail) return;
-    rail.scrollBy({
-      behavior: "smooth",
-      left: direction * Math.max(rail.clientWidth * 0.85, 260,),
-    },);
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => scrollRail(-1,)}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-none border border-gray-200 bg-white text-gray-500 transition-colors cursor-pointer hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-          aria-label={`Scroll ${ariaLabel} left`}
-        >
-          <ChevronLeft className="h-4 w-4" strokeWidth={1.75} />
-        </button>
-        <button
-          type="button"
-          onClick={() => scrollRail(1,)}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-none border border-gray-200 bg-white text-gray-500 transition-colors cursor-pointer hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-          aria-label={`Scroll ${ariaLabel} right`}
-        >
-          <ChevronRight className="h-4 w-4" strokeWidth={1.75} />
-        </button>
-      </div>
-      <div
-        ref={railRef}
-        role="list"
-        aria-label={ariaLabel}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pr-6 scroll-smooth"
-      >
-        {items.map((item,) => (
-          <div key={item.value} role="listitem" className="w-[240px] shrink-0 snap-start">
-            <SelectableProviderCard
-              badge={item.badge}
-              className="h-full w-full"
-              description={item.description}
-              icon={item.icon}
-              onClick={() => onSelect(item.value,)}
-              selected={item.value === selected}
-              title={item.title}
-            />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -1164,36 +981,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               {providerSettingsTab === "ai"
                 ? (
                   <>
-                    <ProviderCarousel
-                      ariaLabel="AI providers"
-                      items={AI_PROVIDERS.map((provider,) => {
-                        const hasKey = Boolean(getAiProviderDraftKey(settings, provider,).trim(),);
-                        return {
-                          badge: hasKey ? "Saved" : undefined,
-                          description: getAiProviderCardDescription(provider, hasKey,),
-                          icon: (
-                            <span className="flex h-4 w-4 items-center justify-center">
-                              <img
-                                src={AI_PROVIDER_ICONS[provider]}
-                                alt=""
-                                className="h-4 w-4 object-contain"
-                                aria-hidden="true"
-                              />
-                            </span>
-                          ),
-                          title: getAiProviderLabel(provider,),
-                          value: provider,
-                        };
-                      },)}
-                      onSelect={(provider,) => {
-                        update({ aiProvider: provider, },);
-                        requestAnimationFrame(() => {
-                          inputRef.current?.focus();
-                          inputRef.current?.select();
-                        },);
-                      }}
-                      selected={settings.aiProvider}
-                    />
                     <ProviderConfigurationPanel
                       eyebrow="Active provider"
                       title={getAiProviderLabel(selectedAiProvider,)}
@@ -1201,6 +988,24 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                       status={selectedAiHasKey ? "Configured" : "Missing API key"}
                       statusTone={selectedAiHasKey ? "accent" : "muted"}
                     >
+                      <div className="space-y-2">
+                        <SharpSelectField
+                          label="Provider"
+                          options={AI_PROVIDERS.map((provider,) => ({
+                            hint: getAiProviderDraftKey(settings, provider,).trim() ? "Saved" : "Add key",
+                            label: getAiProviderLabel(provider,),
+                            value: provider,
+                          }))}
+                          value={selectedAiProvider}
+                          onChange={(provider,) => {
+                            update({ aiProvider: provider, },);
+                            requestAnimationFrame(() => {
+                              inputRef.current?.focus();
+                              inputRef.current?.select();
+                            },);
+                          }}
+                        />
+                      </div>
                       <div className="space-y-2">
                         <label className="block text-xs text-gray-500" style={mono}>
                           API key
@@ -1220,22 +1025,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                 )
                 : (
                   <>
-                    <ProviderCarousel
-                      ariaLabel="Dictation providers"
-                      items={STT_PROVIDERS.map((provider,) => ({
-                        badge: STT_PROVIDER_HINTS[provider],
-                        description: getSttProviderCardDescription(provider,),
-                        icon: (
-                          <span className="text-[11px] leading-none" style={mono}>
-                            {STT_PROVIDER_MARKS[provider]}
-                          </span>
-                        ),
-                        title: getSttProviderLabel(provider,),
-                        value: provider,
-                      }))}
-                      onSelect={handleSttProviderChange}
-                      selected={settings.currentSttProvider}
-                    />
                     <ProviderConfigurationPanel
                       eyebrow="Active provider"
                       title={getSttProviderLabel(settings.currentSttProvider,)}
@@ -1247,6 +1036,18 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                         : "Needs setup"}
                       statusTone={isReusingOpenAiSttKey || activeSttConfigured ? "accent" : "muted"}
                     >
+                      <div className="space-y-2">
+                        <SharpSelectField
+                          label="Provider"
+                          options={STT_PROVIDERS.map((provider,) => ({
+                            hint: STT_PROVIDER_HINTS[provider],
+                            label: getSttProviderLabel(provider,),
+                            value: provider,
+                          }))}
+                          value={settings.currentSttProvider}
+                          onChange={handleSttProviderChange}
+                        />
+                      </div>
                       <div className="grid gap-3 md:grid-cols-2">
                         <div className="space-y-2">
                           {settings.currentSttProvider === "custom"
