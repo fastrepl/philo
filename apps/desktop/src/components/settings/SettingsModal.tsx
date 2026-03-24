@@ -1158,20 +1158,27 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                           />
                         </div>
                       </div>
-                      <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-                        <div className="space-y-2">
-                          <label className="block text-xs text-gray-500" style={mono}>
-                            Base URL
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.sttBaseUrl}
-                            onChange={(e,) => update({ sttBaseUrl: e.target.value, },)}
-                            placeholder={getDefaultSttBaseUrl(settings.currentSttProvider,) || "https://example.com/v1"}
-                            className="w-full border border-gray-200 bg-white px-3 py-2 text-sm transition-all focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-                            style={mono}
-                          />
-                        </div>
+                      <div
+                        className={settings.currentSttProvider === "custom"
+                          ? "grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+                          : "space-y-2"}
+                      >
+                        {settings.currentSttProvider === "custom" && (
+                          <div className="space-y-2">
+                            <label className="block text-xs text-gray-500" style={mono}>
+                              Base URL
+                            </label>
+                            <input
+                              type="text"
+                              value={settings.sttBaseUrl}
+                              onChange={(e,) => update({ sttBaseUrl: e.target.value, },)}
+                              placeholder={getDefaultSttBaseUrl(settings.currentSttProvider,)
+                                || "https://example.com/v1"}
+                              className="w-full border border-gray-200 bg-white px-3 py-2 text-sm transition-all focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                              style={mono}
+                            />
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <label className="block text-xs text-gray-500" style={mono}>
                             STT API key
