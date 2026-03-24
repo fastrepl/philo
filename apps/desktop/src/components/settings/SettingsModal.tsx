@@ -1140,11 +1140,11 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                                     style={mono}
                                   />
                                 )}
-                                <p className="text-[11px] text-gray-400" style={mono}>
-                                  {showCustomSttModelInput
-                                    ? "Use a manual model ID if your provider needs something outside the presets."
-                                    : `Model ID: ${settings.currentSttModel}`}
-                                </p>
+                                {showCustomSttModelInput && (
+                                  <p className="text-[11px] text-gray-400" style={mono}>
+                                    Enter the exact model your provider expects.
+                                  </p>
+                                )}
                               </>
                             )}
                         </div>
