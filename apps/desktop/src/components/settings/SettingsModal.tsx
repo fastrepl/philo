@@ -778,10 +778,10 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
         onClick={(e,) => e.stopPropagation()}
       >
         <div
-          className="border-b border-gray-100 px-6 pb-4 pt-[52px]"
+          className="border-b border-gray-100"
           onMouseDown={handleHeaderMouseDown}
         >
-          <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
+          <div className="flex h-[38px] w-full items-center justify-between gap-4 px-3 pl-16">
             <h2 className="text-lg font-medium text-gray-900" style={mono}>
               Settings
             </h2>
@@ -791,7 +791,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
               className="rounded-md p-1 text-gray-400 transition-colors cursor-pointer hover:bg-gray-100 hover:text-gray-600"
               aria-label="Close settings"
             >
-              <X className="h-6 w-6" strokeWidth={1.75} />
+              <X className="h-5 w-5" strokeWidth={1.75} />
             </button>
           </div>
         </div>
