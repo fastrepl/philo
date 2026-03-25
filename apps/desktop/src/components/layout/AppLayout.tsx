@@ -1631,8 +1631,21 @@ export default function AppLayout() {
   }, [handleViewTransition,],);
 
   const goHome = useCallback(() => {
-    pushView({ kind: "home", },);
-  }, [pushView,],);
+    setViewState((current,) => {
+      const activeView = current.history[current.index] ?? { kind: "home", };
+      if (activeView.kind === "home") return current;
+
+      let homeIndex = current.index - 1;
+      while (homeIndex > 0 && current.history[homeIndex]?.kind !== "home") {
+        homeIndex -= 1;
+      }
+
+      const nextView = current.history[homeIndex] ?? { kind: "home", };
+      nextViewAnimationDirectionRef.current = "backward";
+      handleViewTransition(activeView, nextView,);
+      return { ...current, index: homeIndex, };
+    },);
+  }, [handleViewTransition,],);
 
   const openPageView = useCallback((title: string,) => {
     const normalizedTitle = sanitizePageTitle(title,);
