@@ -48,14 +48,11 @@ import {
 } from "../../../../services/widget-storage";
 import { CodeWidgetRenderer, } from "./code/Renderer";
 import {
-  WIDGET_BUILD_STATE_EVENT,
-  WIDGET_EDIT_REQUEST_EVENT,
-  WIDGET_EDIT_STATE_EVENT,
-  WIDGET_EDIT_SUBMIT_EVENT,
-  type WidgetBuildStateDetail,
-  type WidgetEditStateDetail,
-  type WidgetEditSubmitDetail,
-} from "./events";
+  registerWidgetEditController,
+  requestWidgetEdit,
+  setWidgetEditBuildState,
+  useWidgetEditSessionStore,
+} from "./edit-session";
 import { waitForNextPaint, } from "./loading";
 import type { SharedWidgetRuntimeApi, } from "./runtime";
 import { WidgetEditPreviewPanel, } from "./WidgetEditPreviewPanel";
@@ -212,7 +209,6 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const [manifest, setManifest,] = useState<SharedComponentManifest | null>(null,);
   const [sharedLoadError, setSharedLoadError,] = useState<string | null>(null,);
   const [runtimeRefreshToken, setRuntimeRefreshToken,] = useState(0,);
-  const [isEditingInChat, setIsEditingInChat,] = useState(false,);
   const [historyEnabled, setHistoryEnabled,] = useState(true,);
   const [historyOpen, setHistoryOpen,] = useState(false,);
   const [historyEntries, setHistoryEntries,] = useState<WidgetGitHistoryEntry[]>([],);
@@ -326,29 +322,6 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     window.addEventListener(SHARED_COMPONENTS_UPDATED_EVENT, handleSharedUpdate,);
     return () => window.removeEventListener(SHARED_COMPONENTS_UPDATED_EVENT, handleSharedUpdate,);
   }, [componentId, loadManifest,],);
-
-  useEffect(() => {
-    const handleWidgetEditState = (event: Event,) => {
-      const detail = (event as CustomEvent<WidgetEditStateDetail>).detail;
-      if (detail?.widgetId !== id) return;
-      setIsEditingInChat(detail.isEditing,);
-    };
-
-    const handleWidgetEditSubmit = (event: Event,) => {
-      const detail = (event as CustomEvent<WidgetEditSubmitDetail>).detail;
-      if (detail?.widgetId !== id) return;
-      const instruction = detail.instruction.trim();
-      if (!instruction) return;
-      void runGeneration(buildWidgetGenerationPrompt(prompt, generationContext, instruction,), prompt, "edit",);
-    };
-
-    window.addEventListener(WIDGET_EDIT_STATE_EVENT, handleWidgetEditState,);
-    window.addEventListener(WIDGET_EDIT_SUBMIT_EVENT, handleWidgetEditSubmit,);
-    return () => {
-      window.removeEventListener(WIDGET_EDIT_STATE_EVENT, handleWidgetEditState,);
-      window.removeEventListener(WIDGET_EDIT_SUBMIT_EVENT, handleWidgetEditSubmit,);
-    };
-  }, [generationContext, id, prompt,],);
 
   const loadHistory = useCallback(async (preferredCommitId?: string | null,) => {
     if (!file || !path || !historyEnabled) return;
@@ -604,11 +577,7 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
     historyReason: Extract<WidgetGitReason, "rebuild" | "edit"> = "rebuild",
   ) => {
     setPendingEditPreview(null,);
-    window.dispatchEvent(
-      new CustomEvent<WidgetBuildStateDetail>(WIDGET_BUILD_STATE_EVENT, {
-        detail: { widgetId: id, isBuilding: true, },
-      },),
-    );
+    setWidgetEditBuildState(id, true,);
     updateAttributes({ prompt: persistedPrompt, loading: true, error: "", },);
     await waitForNextPaint();
     try {
@@ -718,13 +687,23 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
         error: isAiKeyMissingError(errMsg,) ? getAiConfigurationMessage(errMsg,) : errMsg,
       },);
     } finally {
-      window.dispatchEvent(
-        new CustomEvent<WidgetBuildStateDetail>(WIDGET_BUILD_STATE_EVENT, {
-          detail: { widgetId: id, isBuilding: false, },
-        },),
-      );
+      setWidgetEditBuildState(id, false,);
     }
   };
+
+  useEffect(() => {
+    return registerWidgetEditController(id, {
+      submitInstruction: async (instruction: string,) => {
+        const normalizedInstruction = instruction.trim();
+        if (!normalizedInstruction) return;
+        await runGeneration(
+          buildWidgetGenerationPrompt(prompt, generationContext, normalizedInstruction,),
+          prompt,
+          "edit",
+        );
+      },
+    },);
+  }, [generationContext, id, prompt,],);
 
   const handleApplyPendingEdit = useCallback(async () => {
     if (!pendingEditPreview) return;
@@ -978,6 +957,8 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
   const rebuildTitle = loading || sharedLoading ? "Refreshing widget" : "Refresh widget";
   const showSaveAction = !isShared && !saved && Boolean(currentSource,);
   const showRenderOverlay = (loading || sharedLoading) && Boolean(currentSource,) && !pendingEditPreview;
+  const widgetEditState = useWidgetEditSessionStore();
+  const isEditingInChat = widgetEditState.session?.widgetId === id;
   const overlayText = isEditingInChat ? "Building new version..." : "Refreshing widget...";
   const overlayPrompt = isEditingInChat ? "Updating this widget with your latest edit." : prompt;
   const showLegacyWarning = !currentSource && !loading && !sharedLoading && generationContext?.runtime === "json";
@@ -1006,15 +987,10 @@ export function WidgetView({ node, updateAttributes, deleteNode, selected, }: No
             <button
               className={`widget-btn widget-btn-icon widget-btn-iterate ${isEditingInChat ? "widget-btn-active" : ""}`}
               onClick={() => {
-                setIsEditingInChat(true,);
-                window.dispatchEvent(
-                  new CustomEvent(WIDGET_EDIT_REQUEST_EVENT, {
-                    detail: {
-                      widgetId: id,
-                      title: toolbarTitle,
-                    },
-                  },),
-                );
+                requestWidgetEdit({
+                  widgetId: id,
+                  title: toolbarTitle,
+                },);
               }}
               disabled={loading || sharedLoading || applyingPendingEdit}
               title="Edit widget in chat"

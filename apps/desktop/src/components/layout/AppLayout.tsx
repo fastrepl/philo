@@ -98,13 +98,11 @@ import {
 import { AiComposer, } from "../ai/AiComposer";
 import { stripMeetingPageDoc, } from "../editor/extensions/meeting/MeetingPageExtensions";
 import {
-  WIDGET_BUILD_STATE_EVENT,
-  WIDGET_EDIT_REQUEST_EVENT,
-  WIDGET_EDIT_STATE_EVENT,
-  WIDGET_EDIT_SUBMIT_EVENT,
-  type WidgetBuildStateDetail,
-  type WidgetEditRequestDetail,
-} from "../editor/extensions/widget/events";
+  clearWidgetEditSession as clearWidgetEditSessionStore,
+  setWidgetEditBuildState,
+  submitWidgetEditInstruction,
+  useWidgetEditSessionStore,
+} from "../editor/extensions/widget/edit-session";
 import EditableNote, { type EditableNoteHandle, type EditableNoteSelection, } from "../journal/EditableNote";
 import { LibraryDrawer, } from "../library/LibraryDrawer";
 import { OnboardingModal, } from "../onboarding/OnboardingModal";
@@ -1411,8 +1409,6 @@ export default function AppLayout() {
   const [aiActiveChatId, setAiActiveChatId,] = useState<string | null>(null,);
   const [aiLatestChatId, setAiLatestChatId,] = useState<string | null>(null,);
   const [aiApplyingDates, setAiApplyingDates,] = useState<string[]>([],);
-  const [widgetEditSession, setWidgetEditSession,] = useState<WidgetEditRequestDetail | null>(null,);
-  const [widgetEditSubmitting, setWidgetEditSubmitting,] = useState(false,);
   const [activePage, setActivePage,] = useState<PageNote | null>(null,);
   const [meetingSummaryTargetTitle, setMeetingSummaryTargetTitle,] = useState<string | null>(null,);
   const [meetingSummaryError, setMeetingSummaryError,] = useState<string | null>(null,);
@@ -1423,7 +1419,6 @@ export default function AppLayout() {
   const aiAbortControllerRef = useRef<AbortController | null>(null,);
   const currentSelectionRef = useRef<EditableNoteSelection | null>(null,);
   const aiLastSubmittedPromptRef = useRef("",);
-  const widgetEditSessionRef = useRef<WidgetEditRequestDetail | null>(null,);
   const todayNoteRef = useRef<DailyNote | null>(null,);
   const todayEditorRef = useRef<EditableNoteHandle>(null,);
   const currentPageRef = useRef<PageNote | null>(null,);
@@ -1441,6 +1436,11 @@ export default function AppLayout() {
   const nextViewAnimationDirectionRef = useRef<"forward" | "backward" | null>(null,);
   const viewAnimationFrameRef = useRef<number | null>(null,);
   const viewAnimationResetRef = useRef<number | null>(null,);
+  const widgetEditState = useWidgetEditSessionStore();
+  const widgetEditSession = widgetEditState.session;
+  const widgetEditSubmitting = widgetEditState.isBuilding;
+  const widgetEditBuildSeenRef = useRef(false,);
+  const widgetEditOpenedRef = useRef<string | null>(null,);
   const currentView = viewState.history[viewState.index] ?? { kind: "home", };
   const currentPageTitle = currentView.kind === "page" ? currentView.title : null;
   const activeMeetingPageTitle = liveMeetingTranscript?.pageTitle ?? activeMeetingSessionRef.current?.pageTitle ?? null;
@@ -1463,10 +1463,6 @@ export default function AppLayout() {
   useEffect(() => {
     todayNoteRef.current = todayNote;
   }, [todayNote,],);
-
-  useEffect(() => {
-    widgetEditSessionRef.current = widgetEditSession;
-  }, [widgetEditSession,],);
 
   useEffect(() => {
     setMeetingSummaryError(null,);
@@ -1526,17 +1522,7 @@ export default function AppLayout() {
   }, [aiChatHistory, aiLatestChatId, upsertAiChatHistoryEntry,],);
 
   const clearWidgetEditSession = useCallback(() => {
-    const activeSession = widgetEditSessionRef.current;
-    if (activeSession?.widgetId) {
-      window.dispatchEvent(
-        new CustomEvent(WIDGET_EDIT_STATE_EVENT, {
-          detail: { widgetId: activeSession.widgetId, isEditing: false, },
-        },),
-      );
-    }
-    widgetEditSessionRef.current = null;
-    setWidgetEditSession(null,);
-    setWidgetEditSubmitting(false,);
+    clearWidgetEditSessionStore();
     setAiSelectedLabel(null,);
   }, [],);
 
@@ -2938,17 +2924,17 @@ export default function AppLayout() {
     if (widgetEditSession) {
       const instruction = aiPrompt.trim();
       if (!instruction) return;
-      setWidgetEditSubmitting(true,);
-      window.dispatchEvent(
-        new CustomEvent(WIDGET_EDIT_SUBMIT_EVENT, {
-          detail: { widgetId: widgetEditSession.widgetId, instruction, },
-        },),
-      );
+      setWidgetEditBuildState(widgetEditSession.widgetId, true,);
+      const submitted = await submitWidgetEditInstruction(instruction,);
+      if (!submitted) {
+        clearWidgetEditSession();
+        setAiError("Widget editor is no longer available.",);
+      }
       return;
     }
 
     await runAiPrompt(aiPrompt,);
-  }, [aiPrompt, closeAiComposer, runAiPrompt, widgetEditSession,],);
+  }, [aiPrompt, clearWidgetEditSession, runAiPrompt, widgetEditSession,],);
 
   const handleStopAi = useCallback(() => {
     aiAbortControllerRef.current?.abort();
@@ -3024,54 +3010,50 @@ export default function AppLayout() {
   }, [aiComposerOpen, closeAiComposer,],);
 
   useEffect(() => {
-    const handleWidgetEditRequest = (event: Event,) => {
-      const detail = (event as CustomEvent<WidgetEditRequestDetail>).detail;
-      if (!detail?.widgetId) return;
+    if (!widgetEditSession) {
+      widgetEditOpenedRef.current = null;
+      return;
+    }
 
-      clearWidgetEditSession();
-      setGlobalSearchOpen(false,);
-      setAiScope("recent",);
-      setAiSelectedText(null,);
-      setAiSelectedLabel(`[Edit widget] ${detail.title}`,);
-      setAiSelectionHighlight(null,);
-      setAiPrompt("",);
-      setAiError(null,);
-      setWidgetEditSession(detail,);
-      setAiComposerOpen(true,);
-      refreshAiAvailability();
-      window.dispatchEvent(
-        new CustomEvent(WIDGET_EDIT_STATE_EVENT, {
-          detail: { widgetId: detail.widgetId, isEditing: true, },
-        },),
-      );
-    };
+    if (widgetEditOpenedRef.current === widgetEditSession.widgetId) {
+      return;
+    }
 
-    window.addEventListener(WIDGET_EDIT_REQUEST_EVENT, handleWidgetEditRequest,);
-    return () => window.removeEventListener(WIDGET_EDIT_REQUEST_EVENT, handleWidgetEditRequest,);
-  }, [clearWidgetEditSession, refreshAiAvailability,],);
+    widgetEditOpenedRef.current = widgetEditSession.widgetId;
+    setGlobalSearchOpen(false,);
+    setAiScope("recent",);
+    setAiSelectedText(null,);
+    setAiSelectedLabel(`[Edit widget] ${widgetEditSession.title}`,);
+    setAiSelectionHighlight(null,);
+    setAiPrompt("",);
+    setAiError(null,);
+    setAiComposerOpen(true,);
+    refreshAiAvailability();
+  }, [refreshAiAvailability, widgetEditSession,],);
 
   useEffect(() => {
-    const handleWidgetBuildState = (event: Event,) => {
-      const detail = (event as CustomEvent<WidgetBuildStateDetail>).detail;
-      if (!detail?.widgetId) return;
-      if (detail.widgetId !== widgetEditSessionRef.current?.widgetId) return;
+    if (!widgetEditSession) {
+      widgetEditBuildSeenRef.current = false;
+      return;
+    }
 
-      setWidgetEditSubmitting(detail.isBuilding,);
-      if (detail.isBuilding) {
-        return;
-      }
+    if (widgetEditSubmitting) {
+      widgetEditBuildSeenRef.current = true;
+      return;
+    }
 
-      setAiPrompt("",);
-      setAiComposerOpen(false,);
-      setAiError(null,);
-      setAiSelectedText(null,);
-      setAiSelectionHighlight(null,);
-      clearWidgetEditSession();
-    };
+    if (!widgetEditBuildSeenRef.current) {
+      return;
+    }
 
-    window.addEventListener(WIDGET_BUILD_STATE_EVENT, handleWidgetBuildState,);
-    return () => window.removeEventListener(WIDGET_BUILD_STATE_EVENT, handleWidgetBuildState,);
-  }, [clearWidgetEditSession,],);
+    widgetEditBuildSeenRef.current = false;
+    setAiPrompt("",);
+    setAiComposerOpen(false,);
+    setAiError(null,);
+    setAiSelectedText(null,);
+    setAiSelectionHighlight(null,);
+    clearWidgetEditSession();
+  }, [clearWidgetEditSession, widgetEditSession, widgetEditSubmitting,],);
 
   const todayRef = useRef<HTMLDivElement>(null,);
   const scrollRef = useRef<HTMLDivElement>(null,);
