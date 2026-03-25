@@ -1,9 +1,8 @@
-import { checkPermissions, getCurrentPosition, requestPermissions, } from "@tauri-apps/plugin-geolocation";
+import { invoke, } from "@tauri-apps/api/core";
 import { useEffect, useState, } from "react";
 
 const CITY_CACHE_KEY = "philo:current-city";
 const CITY_CACHE_TTL_MS = 30 * 60 * 1000;
-const GEOLOCATION_TIMEOUT_MS = 10_000;
 const GEOCODE_LOOKUP_TIMEOUT_MS = 4_000;
 const REVERSE_GEOCODE_URL = "https://nominatim.openstreetmap.org/reverse";
 
@@ -13,6 +12,12 @@ type CurrentCityState = {
   city: string;
   source: CurrentCitySource;
   timezoneCity: string;
+};
+
+type NativeCurrentPosition = {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
 };
 
 function getTimeZoneCity(): string {
@@ -116,6 +121,14 @@ async function reverseGeocodeCity(latitude: number, longitude: number, signal: A
   return "";
 }
 
+async function getNativeCurrentPosition(): Promise<NativeCurrentPosition | null> {
+  try {
+    return await invoke<NativeCurrentPosition | null>("get_native_current_position",);
+  } catch {
+    return null;
+  }
+}
+
 export function useCurrentCity(): CurrentCityState {
   const [state, setState,] = useState<CurrentCityState>(() => {
     const timezoneCity = getTimeZoneCity();
@@ -138,22 +151,18 @@ export function useCurrentCity(): CurrentCityState {
 
   useEffect(() => {
     let disposed = false;
+    let refreshing = false;
     const timezoneCity = getTimeZoneCity();
 
     async function refresh() {
+      if (refreshing) return;
+      refreshing = true;
+
       try {
-        let permissions = await checkPermissions();
+        const position = await getNativeCurrentPosition();
         if (disposed) return;
 
-        if (
-          permissions.location === "prompt"
-          || permissions.location === "prompt-with-rationale"
-        ) {
-          permissions = await requestPermissions(["location",],);
-          if (disposed) return;
-        }
-
-        if (permissions.location !== "granted") {
+        if (!position) {
           clearCachedCity();
           setState((prev,) => (
             !prev.city && prev.source === "timezone" && prev.timezoneCity === timezoneCity
@@ -167,20 +176,13 @@ export function useCurrentCity(): CurrentCityState {
           return;
         }
 
-        const position = await getCurrentPosition({
-          enableHighAccuracy: false,
-          timeout: GEOLOCATION_TIMEOUT_MS,
-          maximumAge: CITY_CACHE_TTL_MS,
-        },);
-        if (disposed) return;
-
         const controller = new AbortController();
         const timeoutId = window.setTimeout(() => controller.abort(), GEOCODE_LOOKUP_TIMEOUT_MS,);
 
         try {
           const nextCity = await reverseGeocodeCity(
-            position.coords.latitude,
-            position.coords.longitude,
+            position.latitude,
+            position.longitude,
             controller.signal,
           );
           if (disposed) return;
@@ -224,6 +226,8 @@ export function useCurrentCity(): CurrentCityState {
               timezoneCity,
             }
         ));
+      } finally {
+        refreshing = false;
       }
     }
 

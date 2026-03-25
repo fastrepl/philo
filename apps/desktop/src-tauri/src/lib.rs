@@ -2,6 +2,8 @@
 #[macro_use]
 extern crate objc;
 
+#[cfg(target_os = "macos")]
+mod macos_location;
 pub mod philo_tools;
 pub mod settings_paths;
 pub mod widget_git;
@@ -214,6 +216,14 @@ enum HttpStreamEvent {
     },
 }
 
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NativeCurrentPosition {
+    latitude: f64,
+    longitude: f64,
+    accuracy: f64,
+}
+
 #[tauri::command]
 fn set_window_opacity(_app: AppHandle, _opacity: f64) -> Result<(), String> {
     #[cfg(target_os = "macos")]
@@ -226,6 +236,25 @@ fn set_window_opacity(_app: AppHandle, _opacity: f64) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[tauri::command]
+fn get_native_current_position(app: AppHandle) -> Result<Option<NativeCurrentPosition>, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let position = macos_location::get_current_position(app)?;
+        Ok(Some(NativeCurrentPosition {
+            latitude: position.latitude,
+            longitude: position.longitude,
+            accuracy: position.accuracy,
+        }))
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app;
+        Ok(None)
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -3633,6 +3662,7 @@ pub fn run() {
             run_ai_tool,
             build_unified_diff,
             set_window_opacity,
+            get_native_current_position,
             search_markdown_files,
             create_shared_component,
             list_shared_components,
