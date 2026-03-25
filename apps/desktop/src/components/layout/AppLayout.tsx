@@ -96,6 +96,7 @@ import {
   type PageNote,
 } from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
+import { stripMeetingPageDoc, } from "../editor/extensions/meeting/MeetingPageExtensions";
 import {
   WIDGET_BUILD_STATE_EVENT,
   WIDGET_EDIT_REQUEST_EVENT,
@@ -154,6 +155,7 @@ interface ActiveMeetingSession {
   pageTitle: string;
   startedAt: string;
   baseDoc: JSONContent;
+  existingTranscript: string;
   transcriptState: MeetingTranscriptState;
   failureReason: string | null;
 }
@@ -1612,6 +1614,9 @@ export default function AppLayout() {
     const baseDoc = activeSession?.pageTitle === pageTitle
       ? activeSession.baseDoc
       : splitMeetingCaptureDoc(currentDoc,).baseDoc;
+    const transcriptText = activeSession?.pageTitle === pageTitle
+      ? mergeTranscriptText(activeSession.existingTranscript, transcript,)
+      : transcript;
     const nextSummary = summaryResult
       ? (summaryResult.summary.length > 0 ? summaryResult.summary : [summaryResult.executiveSummary,])
       : undefined;
@@ -1628,7 +1633,7 @@ export default function AppLayout() {
       decisions: summaryResult?.decisions,
       keyTakeaways: summaryResult?.keyTakeaways,
       actionItems: nextActionItems,
-      transcript,
+      transcript: transcriptText,
     },);
     const nextStartedAt = page.startedAt ?? activeSession?.startedAt ?? null;
     const nextLocation = summaryResult?.location ?? page.location;
@@ -1860,7 +1865,10 @@ export default function AppLayout() {
     if (!activeSession) return;
 
     finalizeTranscriptState(activeSession.transcriptState,);
-    const transcript = getTranscriptText(activeSession.transcriptState, false,);
+    const transcript = mergeTranscriptText(
+      activeSession.existingTranscript,
+      getTranscriptText(activeSession.transcriptState, false,),
+    );
     const finalizedAt = endedAt ?? new Date().toISOString();
     const failureReason = errorMessage ?? activeSession.failureReason;
 
@@ -1946,9 +1954,10 @@ export default function AppLayout() {
 
     const preparedPage = buildMeetingStartPage(page, startedAt, location,);
     const pageEditor = pageEditorRef.current?.editor;
-    const baseDoc = currentView.kind === "page" && pageEditor && !pageEditor.isDestroyed
-      ? pageEditor.getJSON()
+    const currentDoc = currentView.kind === "page" && pageEditor && !pageEditor.isDestroyed
+      ? stripMeetingPageDoc(preparedPage, pageEditor.getJSON() as JSONContent,)
       : parseJsonContent(preparedPage.content,);
+    const splitDoc = splitMeetingCaptureDoc(currentDoc,);
 
     await persistPageUpdate(preparedPage,);
 
@@ -1958,7 +1967,8 @@ export default function AppLayout() {
       sessionId,
       pageTitle: preparedPage.title,
       startedAt: preparedPage.startedAt ?? startedAt,
-      baseDoc,
+      baseDoc: splitDoc.baseDoc,
+      existingTranscript: splitDoc.transcript,
       transcriptState: createMeetingTranscriptState(),
       failureReason: null,
     };
