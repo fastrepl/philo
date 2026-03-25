@@ -1,5 +1,8 @@
 ---
 import { getCollection, } from "astro:content";
+import SiteLayout from "../layouts/SiteLayout.astro";
+import { contentSections, isPublishedEntry, sortContentEntries, } from "../lib/content";
+import { buildHomeSchemas, siteConfig, withSiteName, } from "../lib/site";
 
 const capabilities = [
   {
@@ -29,34 +32,21 @@ const capabilities = [
   },
 ];
 
-const posts = await getCollection("blog");
-posts.sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime());
+const posts = sortContentEntries((await getCollection("blog",)).filter(isPublishedEntry,));
+const sectionCards = Object.entries(contentSections,)
+  .filter(([section,],) => section !== "blog",)
+  .map(([section, config,],) => ({
+    href: `/${section}`,
+    title: config.label,
+    description: config.description,
+  }));
 
-const heroMetaTitle = "Philo: The IDE for your daily notes";
+const heroMetaTitle = withSiteName(siteConfig.defaultTitle,);
 const heroMetaDescription =
   "Build widgets directly inside your notes — your notetaking app is your IDE.";
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{heroMetaTitle}</title>
-    <meta name="description" content={heroMetaDescription} />
-    <meta property="og:title" content={heroMetaTitle} />
-    <meta property="og:description" content={heroMetaDescription} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={heroMetaTitle} />
-    <meta name="twitter:description" content={heroMetaDescription} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div class="ambient"></div>
+<SiteLayout title={heroMetaTitle} description={heroMetaDescription} path="/" schema={buildHomeSchemas()}>
     <div class="page-layout">
       <main class="shell">
         <section class="hero enter" style="--delay: 70ms;">
@@ -251,7 +241,7 @@ const heroMetaDescription =
             {
               posts.map((post,) => (
                 <li>
-                  <a href={`/blog/${post.slug}`}>
+                  <a href={post.data.canonicalPath}>
                     {post.data.title}
                     <span>→</span>
                   </a>
@@ -262,6 +252,22 @@ const heroMetaDescription =
         </section>
 
         <section class="panel enter" style="--delay: 350ms;">
+          <h2>Explore the content system</h2>
+          <ul class="section-grid">
+            {
+              sectionCards.map((section,) => (
+                <li>
+                  <a href={section.href}>
+                    <p class="section-title">{section.title}</p>
+                    <p class="section-description">{section.description}</p>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+
+        <section class="panel enter" style="--delay: 420ms;">
           <h2>Built to sit beside your vault, not replace it</h2>
           <p class="item-copy">
             Philo is open source and free forever. Your notes stay as markdown files on disk, and
@@ -269,10 +275,12 @@ const heroMetaDescription =
           </p>
         </section>
 
-        <footer class="enter" style="--delay: 420ms;">
+        <footer class="enter" style="--delay: 490ms;">
           <nav>
             <a href="https://github.com/ComputelessComputer/philo">GitHub</a>
             <a href="/blog">Blog</a>
+            <a href="/guides">Guides</a>
+            <a href="/use-cases">Use cases</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
             <a href="mailto:john@hyprnote.com">Email</a>
@@ -296,8 +304,7 @@ const heroMetaDescription =
         </div>
       </aside>
     </div>
-  </body>
-</html>
+</SiteLayout>
 
 <script is:inline>
   (async () => {
@@ -374,46 +381,6 @@ const heroMetaDescription =
 </script>
 
 <style>
-  :root {
-    --bg: #f4f4f1;
-    --bg-soft: #f8f8f6;
-    --line: #e2e2db;
-    --text: #252525;
-    --muted: #646460;
-    --accent: #5f70d8;
-    --fs-xs: 11px;
-    --fs-sm: 12px;
-    --fs-md: 13px;
-    --fs-lg: 14px;
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
-    margin: 0;
-    min-height: 100vh;
-    overflow-x: hidden;
-    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
-    font-weight: 400;
-    font-size: var(--fs-md);
-    line-height: 1.6;
-    background: linear-gradient(150deg, #f6f6f4 0%, #efefeb 100%);
-    color: var(--text);
-    position: relative;
-  }
-
-  .ambient {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(circle at 5% 8%, #ffffff 0%, transparent 32%),
-      radial-gradient(circle at 92% 92%, #e8ebff 0%, transparent 38%);
-    opacity: 0.8;
-  }
-
   .page-layout {
     position: relative;
     width: min(100%, 1480px);
@@ -1123,6 +1090,40 @@ const heroMetaDescription =
     color: color-mix(in srgb, var(--text) 82%, var(--accent));
   }
 
+  .section-grid {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .section-grid li a {
+    display: block;
+    height: 100%;
+    padding: 14px;
+    text-decoration: none;
+    border: 1px solid color-mix(in srgb, var(--line) 84%, white);
+    background: color-mix(in srgb, var(--bg-soft) 90%, white);
+  }
+
+  .section-grid li a:hover .section-title {
+    color: color-mix(in srgb, var(--text) 80%, var(--accent));
+  }
+
+  .section-title {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--fs-md);
+    font-weight: 500;
+  }
+
+  .section-description {
+    margin: 6px 0 0;
+    color: var(--muted);
+  }
+
   .video-column {
     position: sticky;
     top: 0;
@@ -1291,6 +1292,10 @@ const heroMetaDescription =
 
     .link-list li {
       font-size: var(--fs-md);
+    }
+
+    .section-grid {
+      grid-template-columns: 1fr;
     }
 
     .detail-item,

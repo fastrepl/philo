@@ -1,0 +1,122 @@
+---
+import { getCollection, } from "astro:content";
+import CollectionLayout from "../../layouts/CollectionLayout.astro";
+import {
+  buildCollectionSchema,
+  contentSections,
+  formatContentDate,
+  isPublishedEntry,
+  type ContentSection,
+  sortContentEntries,
+} from "../../lib/content";
+import { withSiteName, } from "../../lib/site";
+
+export function getStaticPaths() {
+  return Object.keys(contentSections,).map((section,) => ({
+    params: { section, },
+    props: { section, },
+  }));
+}
+
+const { section, } = Astro.props as { section: ContentSection };
+const config = contentSections[section];
+const entries = sortContentEntries(
+  (await getCollection(config.collection,))
+    .filter(isPublishedEntry,),
+);
+---
+
+<CollectionLayout
+  title={withSiteName(config.title)}
+  description={config.description}
+  path={`/${section}`}
+  label={config.label}
+  schema={buildCollectionSchema(section,)}
+>
+  <section class="panel">
+    {
+      entries.length === 0 ? (
+        <p class="empty-state">No published entries yet. The content engine will land new pages here after review.</p>
+      ) : (
+        <ul class="post-list">
+          {
+            entries.map((entry,) => (
+              <li>
+                <a href={entry.data.canonicalPath}>
+                  <div class="post-copy">
+                    <p class="post-title">{entry.data.title}</p>
+                    <p class="post-summary">{entry.data.summary}</p>
+                  </div>
+                  <p class="post-date">{formatContentDate(entry.data.updatedAt,)}</p>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      )
+    }
+  </section>
+</CollectionLayout>
+
+<style>
+  .panel {
+    margin-top: 22px;
+  }
+
+  .empty-state {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .post-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .post-list li {
+    border-bottom: 1px dashed #e9e9e2;
+  }
+
+  .post-list a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    padding: 12px 0;
+    text-decoration: none;
+    color: var(--text);
+    align-items: start;
+  }
+
+  .post-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .post-summary {
+    margin: 5px 0 0;
+    font-size: var(--fs-md);
+    color: var(--muted);
+  }
+
+  .post-date {
+    margin: 0;
+    font-size: var(--fs-sm);
+    color: color-mix(in srgb, var(--muted) 92%, var(--accent));
+    white-space: nowrap;
+    padding-top: 1px;
+  }
+
+  .post-list a:hover .post-title {
+    color: color-mix(in srgb, var(--text) 80%, var(--accent));
+  }
+
+  @media (max-width: 720px) {
+    .post-list a {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+  }
+</style>

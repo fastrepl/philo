@@ -1,0 +1,372 @@
+---
+import { formatContentDate, } from "../lib/content";
+import { siteConfig, } from "../lib/site";
+import SiteLayout from "./SiteLayout.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  label: string;
+  summary: string;
+  publishedAt: Date;
+  updatedAt: Date;
+  schema?: Record<string, unknown> | Array<Record<string, unknown>>;
+  bestFor?: string[];
+  notFor?: string[];
+  faqs?: Array<{ question: string; answer: string }>;
+  relatedLinks?: Array<{ label: string; href: string }>;
+  image?: string;
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description,
+  path,
+  label,
+  summary,
+  publishedAt,
+  updatedAt,
+  schema,
+  bestFor = [],
+  notFor = [],
+  faqs = [],
+  relatedLinks = [],
+  image,
+  noindex = false,
+} = Astro.props;
+
+const publishedLabel = formatContentDate(publishedAt,);
+const updatedLabel = formatContentDate(updatedAt,);
+const metaLabel = publishedAt.getTime() === updatedAt.getTime()
+  ? `Published ${publishedLabel}`
+  : `Published ${publishedLabel} • Updated ${updatedLabel}`;
+---
+
+<SiteLayout
+  title={title}
+  description={description}
+  path={path}
+  image={image}
+  noindex={noindex}
+  publishedAt={publishedAt}
+  updatedAt={updatedAt}
+  schema={schema}
+>
+  <main class="content-shell">
+    <header class="page-header">
+      <a class="back-link" href="/">← Back to Philo</a>
+      <p class="label">{label}</p>
+      <h1>{title}</h1>
+      <p class="meta">{metaLabel}</p>
+      <p class="summary">{summary}</p>
+    </header>
+
+    {
+      image && (
+        <div class="hero-image">
+          <img src={image} alt={`${title} preview`} loading="eager" />
+        </div>
+      )
+    }
+
+    <article class="content">
+      <slot />
+    </article>
+
+    {
+      (bestFor.length > 0 || notFor.length > 0) && (
+        <section class="decision-grid">
+          {
+            bestFor.length > 0 && (
+              <div class="decision-card">
+                <h2>Best for</h2>
+                <ul>
+                  {bestFor.map((item,) => <li>{item}</li>)}
+                </ul>
+              </div>
+            )
+          }
+          {
+            notFor.length > 0 && (
+              <div class="decision-card">
+                <h2>Not for</h2>
+                <ul>
+                  {notFor.map((item,) => <li>{item}</li>)}
+                </ul>
+              </div>
+            )
+          }
+        </section>
+      )
+    }
+
+    {
+      faqs.length > 0 && (
+        <section class="faq-section">
+          <h2>FAQs</h2>
+          <ul class="faq-list">
+            {
+              faqs.map((item,) => (
+                <li>
+                  <p class="faq-question">{item.question}</p>
+                  <p>{item.answer}</p>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+      )
+    }
+
+    {
+      relatedLinks.length > 0 && (
+        <section class="related-section">
+          <h2>Further reading</h2>
+          <ul class="related-links">
+            {
+              relatedLinks.map((item,) => (
+                <li>
+                  <a href={item.href}>{item.label}</a>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+      )
+    }
+
+    <footer class="footer">
+      <nav>
+        <a href="/blog">Blog</a>
+        <a href="/guides">Guides</a>
+        <a href="/use-cases">Use cases</a>
+        <a href="/comparisons">Comparisons</a>
+        <a href="/glossary">Glossary</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href={siteConfig.repoUrl}>GitHub</a>
+        <a href={`mailto:${siteConfig.email}`}>Email</a>
+      </nav>
+    </footer>
+  </main>
+</SiteLayout>
+
+<style>
+  .content-shell {
+    position: relative;
+    width: min(100%, 780px);
+    margin: 0 auto;
+    padding: 56px 24px 88px;
+  }
+
+  .page-header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 18px;
+  }
+
+  .back-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .back-link:hover,
+  .related-links a:hover,
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+  .label {
+    margin: 20px 0 0;
+    color: #3f3f3d;
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin: 12px 0 0;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  .meta {
+    margin: 8px 0 0;
+    color: #6b6b66;
+    font-size: var(--fs-sm);
+  }
+
+  .summary {
+    margin: 10px 0 0;
+    color: #3f3f3d;
+    font-size: 15px;
+    line-height: 1.72;
+  }
+
+  .hero-image {
+    margin-top: 20px;
+    border: 1px solid color-mix(in srgb, var(--line) 86%, white);
+    background: color-mix(in srgb, var(--bg-soft) 88%, white);
+  }
+
+  .hero-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .content {
+    margin-top: 22px;
+    color: var(--muted);
+  }
+
+  .content :global(h2) {
+    margin: 24px 0 6px;
+    color: var(--text);
+    font-size: var(--fs-md);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .content :global(h3) {
+    margin: 18px 0 4px;
+    color: color-mix(in srgb, var(--text) 88%, var(--accent));
+    font-size: var(--fs-md);
+    font-weight: 500;
+  }
+
+  .content :global(p) {
+    margin: 10px 0;
+    color: var(--muted);
+    font-size: var(--fs-md);
+    line-height: 1.7;
+  }
+
+  .content :global(ul),
+  .content :global(ol),
+  .decision-card ul,
+  .faq-list,
+  .related-links {
+    margin: 10px 0;
+    padding-left: 18px;
+  }
+
+  .content :global(ol) {
+    list-style: none;
+    counter-reset: ol-counter;
+    padding-left: 0;
+  }
+
+  .content :global(ol) > :global(li) {
+    counter-increment: ol-counter;
+  }
+
+  .content :global(ol) > :global(li)::before {
+    content: counter(ol-counter) ".\00a0";
+  }
+
+  .content :global(li),
+  .decision-card li,
+  .faq-list li {
+    margin: 6px 0;
+    font-size: var(--fs-md);
+    color: var(--muted);
+  }
+
+  .content :global(a),
+  .related-links a,
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .content :global(code) {
+    background: color-mix(in srgb, var(--bg-soft) 80%, #ffffff);
+    border: 1px solid var(--line);
+    padding: 1px 4px;
+    font-size: var(--fs-sm);
+  }
+
+  .decision-grid {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .decision-card,
+  .faq-section,
+  .related-section {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+
+  .decision-card {
+    background: color-mix(in srgb, var(--bg-soft) 90%, white);
+    border: 1px solid color-mix(in srgb, var(--line) 82%, white);
+    padding: 16px;
+  }
+
+  .decision-card h2,
+  .faq-section h2,
+  .related-section h2 {
+    margin: 0;
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .faq-section,
+  .related-section {
+    margin-top: 24px;
+  }
+
+  .faq-list,
+  .related-links {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .faq-question {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--fs-md);
+    font-weight: 500;
+  }
+
+  .related-links li {
+    border-bottom: 1px dashed #e9e9e2;
+    padding: 8px 0;
+  }
+
+  .footer {
+    margin-top: 32px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  .footer nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  @media (max-width: 720px) {
+    .content-shell {
+      padding: 40px 18px 62px;
+    }
+
+    .decision-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

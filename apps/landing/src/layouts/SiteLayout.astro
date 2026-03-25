@@ -1,0 +1,130 @@
+---
+import { absoluteUrl, siteConfig, } from "../lib/site";
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  image?: string;
+  noindex?: boolean;
+  publishedAt?: Date;
+  updatedAt?: Date;
+  schema?: Record<string, unknown> | Array<Record<string, unknown>>;
+}
+
+const {
+  title,
+  description,
+  path,
+  image = siteConfig.defaultImagePath,
+  noindex = false,
+  publishedAt,
+  updatedAt,
+  schema = [],
+} = Astro.props;
+
+const canonicalUrl = absoluteUrl(path);
+const socialImageUrl = absoluteUrl(image);
+const jsonLd = Array.isArray(schema,) ? schema : [schema,];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content={publishedAt ? "article" : "website"} />
+    <meta property="og:site_name" content={siteConfig.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    {
+      publishedAt && <meta property="article:published_time" content={publishedAt.toISOString()} />
+    }
+    {
+      updatedAt && <meta property="article:modified_time" content={updatedAt.toISOString()} />
+    }
+    {
+      import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION && (
+        <meta
+          name="google-site-verification"
+          content={import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION}
+        />
+      )
+    }
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    {
+      jsonLd.map((entry,) => (
+        <script is:inline type="application/ld+json" set:html={JSON.stringify(entry,)} />
+      ))
+    }
+    <slot name="head" />
+  </head>
+  <body>
+    <div class="site-ambient"></div>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #f4f4f1;
+    --bg-soft: #f8f8f6;
+    --line: #e2e2db;
+    --text: #252525;
+    --muted: #646460;
+    --accent: #5f70d8;
+    --fs-xs: 11px;
+    --fs-sm: 12px;
+    --fs-md: 13px;
+    --fs-lg: 14px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: linear-gradient(150deg, #f6f6f4 0%, #efefeb 100%);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+    font-weight: 400;
+    font-size: var(--fs-md);
+    line-height: 1.6;
+    background: transparent;
+    color: var(--text);
+    position: relative;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  .site-ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 5% 8%, #ffffff 0%, transparent 32%),
+      radial-gradient(circle at 92% 92%, #e8ebff 0%, transparent 38%);
+    opacity: 0.8;
+  }
+</style>
