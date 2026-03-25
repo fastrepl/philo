@@ -10,6 +10,7 @@ on:
       - "apps/desktop/postcss.config.js"
       - "apps/desktop/tsconfig*.json"
       - "apps/desktop/vite.config.*"
+      - "apps/landing/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "dprint.json"
@@ -22,6 +23,7 @@ on:
       - "apps/desktop/postcss.config.js"
       - "apps/desktop/tsconfig*.json"
       - "apps/desktop/vite.config.*"
+      - "apps/landing/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "dprint.json"
@@ -51,7 +53,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck and build frontend
-        run: pnpm run build
+        run: pnpm run typecheck && pnpm --filter @philo/landing build && pnpm run build
 
       - name: Install dprint
         run: curl -fsSL https://dprint.dev/install.sh | sh && echo "$HOME/.dprint/bin" >> $GITHUB_PATH

@@ -1,0 +1,95 @@
+name: Content Engine
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 14 * * *"
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: content-engine
+  cancel-in-progress: true
+
+jobs:
+  refresh-content:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Update release input
+        if: github.event_name == 'release'
+        env:
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PUBLISHED_AT: ${{ github.event.release.published_at }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          node <<'EOF'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const filePath = path.join(process.cwd(), "apps/landing/content-engine/inputs/releases.json");
+          const existing = JSON.parse(fs.readFileSync(filePath, "utf8"));
+          const body = process.env.RELEASE_BODY ?? "";
+          const highlights = body
+            .split("\n")
+            .map((line) => line.replace(/^\s*[-*]\s*/, "").trim())
+            .filter(Boolean)
+            .slice(0, 6);
+          const summary = process.env.RELEASE_NAME || process.env.RELEASE_TAG || "Latest Philo release";
+          const next = [
+            {
+              version: process.env.RELEASE_TAG,
+              publishedAt: process.env.RELEASE_PUBLISHED_AT?.slice(0, 10),
+              summary,
+              highlights,
+            },
+            ...existing.filter((item) => item.version !== process.env.RELEASE_TAG),
+          ].slice(0, 8);
+          fs.writeFileSync(filePath, `${JSON.stringify(next, null, 2)}\n`);
+          EOF
+
+      - name: Refresh generated content
+        run: pnpm run content-engine:sync
+
+      - name: Validate content engine outputs
+        run: pnpm run content-engine:test && pnpm --filter @philo/landing build
+
+      - name: Create review PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: codex/content-engine-sync
+          delete-branch: true
+          commit-message: |
+            feat: refresh generated landing content
+
+            - sync repo-backed facts and opportunity scoring inputs
+            - refresh generated landing drafts and crawl artifacts
+            - keep changes in a review PR instead of auto-publishing
+          title: Refresh generated landing content
+          body: |
+            ## Summary
+
+            - refresh repo-backed content facts and opportunities
+            - update generated landing drafts and crawl artifacts
+            - keep generated content behind draft review before publish
+          draft: true
