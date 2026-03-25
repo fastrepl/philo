@@ -7,8 +7,18 @@ import { openPath, openUrl, } from "@tauri-apps/plugin-opener";
 import type { Editor as TiptapEditor, } from "@tiptap/core";
 import type { JSONContent, } from "@tiptap/react";
 import { ChevronLeft, ChevronRight, House, MapPin, X, } from "lucide-react";
-import { Fragment, type RefObject, useCallback, useEffect, useMemo, useRef, useState, } from "react";
+import {
+  Fragment,
+  type MouseEvent as ReactMouseEvent,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useCurrentDate, } from "../../hooks/useCurrentDate";
+import { showNativeContextMenu, } from "../../hooks/useNativeContextMenu";
 import { useCurrentCity, } from "../../hooks/useTimezoneCity";
 import { EMPTY_DOC, parseJsonContent, } from "../../lib/markdown";
 import { getAiConfigurationMessage, } from "../../services/ai";
@@ -50,6 +60,7 @@ import { summarizeMeeting, } from "../../services/meeting-summary";
 import {
   buildPageLinkTarget,
   getJournalDir,
+  getNotePath,
   getPagePath,
   getPagesDir,
   initJournalScope,
@@ -107,6 +118,28 @@ import { useWidgetEditComposer, } from "./useWidgetEditComposer";
 
 const LOCAL_SAVE_WATCH_SUPPRESSION_MS = 1000;
 const NOTE_SCROLL_OFFSET_PX = 56;
+
+async function showPathInFinder(path: string,) {
+  await invoke("show_path_in_folder", { path, },);
+}
+
+function showFinderContextMenu(
+  event: ReactMouseEvent<HTMLElement>,
+  id: string,
+  pathPromise: Promise<string>,
+) {
+  void showNativeContextMenu([
+    {
+      id,
+      text: "Show in Finder",
+      action: () => {
+        void pathPromise
+          .then((path,) => showPathInFinder(path,))
+          .catch(console.error,);
+      },
+    },
+  ], event,);
+}
 
 function noteChanged(current: DailyNote | null, incoming: DailyNote,): boolean {
   if (!current) return true;
@@ -1065,11 +1098,13 @@ function DateHeader({
   city,
   fallbackCity,
   onCityChange,
+  onTitleContextMenu,
 }: {
   date: string;
   city?: string | null;
   fallbackCity?: string | null;
   onCityChange?: (city: string | null,) => void;
+  onTitleContextMenu?: (event: ReactMouseEvent<HTMLElement>,) => void;
 },) {
   const showToday = isToday(date,);
   const [isEditingCity, setIsEditingCity,] = useState(false,);
@@ -1101,6 +1136,7 @@ function DateHeader({
       <h1
         className="text-2xl italic text-gray-900 dark:text-white"
         style={{ fontFamily: '"Instrument Serif", serif', }}
+        onContextMenu={onTitleContextMenu}
       >
         {formatDate(date,)}
       </h1>
@@ -1223,7 +1259,14 @@ function LazyNote({
       {note && (
         <>
           <div className="px-6 pt-12 pb-4">
-            <DateHeader date={note.date} city={note.city} onCityChange={handleCityChange} />
+            <DateHeader
+              date={note.date}
+              city={note.city}
+              onCityChange={handleCityChange}
+              onTitleContextMenu={(event,) => {
+                showFinderContextMenu(event, `show-note-in-finder-${note.date}`, getNotePath(note.date,),);
+              }}
+            />
           </div>
           <EditableNote
             note={note}
@@ -1323,6 +1366,13 @@ function PageView({
           <h1
             className="text-2xl italic text-gray-900 dark:text-white"
             style={{ fontFamily: '"Instrument Serif", serif', }}
+            onContextMenu={(event,) => {
+              showFinderContextMenu(
+                event,
+                `show-page-in-finder-${resolvedPage.title}`,
+                resolvedPage.path ? Promise.resolve(resolvedPage.path,) : getPagePath(resolvedPage.title,),
+              );
+            }}
           >
             {pageHeading}
           </h1>
@@ -3416,6 +3466,9 @@ export default function AppLayout() {
                           city={todayCity}
                           fallbackCity={fallbackTodayCity}
                           onCityChange={todayNote ? handleTodayCityChange : undefined}
+                          onTitleContextMenu={(event,) => {
+                            showFinderContextMenu(event, `show-note-in-finder-${today}`, getNotePath(today,),);
+                          }}
                         />
                       </div>
                       {todayNote && (
