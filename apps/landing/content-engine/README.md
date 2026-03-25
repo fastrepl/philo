@@ -18,6 +18,8 @@ This directory holds the inputs and generated state for Philo's repo-backed land
   - First-party release summaries and highlights.
 - `inputs/geo-prompts.json`
   - A fixed weekly prompt suite for directional GEO checks.
+- `inputs/engine-config.json`
+  - Batch limits and the default audit brief for generated drafts.
 
 ## State
 
@@ -29,6 +31,8 @@ This directory holds the inputs and generated state for Philo's repo-backed land
   - Pages created by the last draft run.
 - `state/refresh-report.json`
   - Pages updated or skipped by the last refresh run.
+- `state/audit-queue.json`
+  - The small set of generated drafts that should go through the local `audit` skill before publishing.
 
 The JSON files in `state/` are intentionally ignored in git. They are generated execution artifacts, not hand-maintained source files.
 
@@ -44,5 +48,7 @@ The JSON files in `state/` are intentionally ignored in git. They are generated 
 ## Publishing model
 
 - Generated pages are written with `status: draft` and `ownership: generated`.
+- The engine keeps only a small tracked batch of generated drafts at a time.
 - The public Astro routes only include `published` entries.
 - Manual pages keep `ownership: manual` and are never rewritten by `refresh`.
+- The queued drafts in `state/audit-queue.json` are the ones to humanize before review.

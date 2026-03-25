@@ -14,6 +14,16 @@ const SOURCE_TYPE_PRIORITY = {
   asset: 1,
 };
 
+const DEFAULT_ENGINE_CONFIG = {
+  maxGeneratedDrafts: 4,
+  auditQueueSize: 4,
+  auditDefaults: {
+    platform: "blog",
+    tone: "technical",
+    lowercaseMode: false,
+  },
+};
+
 const TAG_RULES = [
   { tag: "daily-notes", patterns: [/\bdaily notes?\b/i, /\bjournal(?:ing)?\b/i, /\bdaily planning\b/i,], },
   { tag: "timeline", patterns: [/\btimeline\b/i, /\bcontinuous feed\b/i, /\bpast notes\b/i,], },
@@ -1005,27 +1015,33 @@ export async function prioritizeContent(options = {},) {
 
 export async function draftContentPages(options = {},) {
   const paths = resolveEnginePaths(options.root,);
+  const config = await readEngineConfig(paths,);
   const opportunitiesPayload = await readJson(path.join(paths.stateDir, "opportunities.json",), {
     opportunities: [],
   },);
   const factsPayload = await readJson(path.join(paths.stateDir, "facts.json",), { facts: [], },);
   const opportunities = opportunitiesPayload.opportunities ?? [];
   const factsById = new Map((factsPayload.facts ?? []).map((fact,) => [fact.id, fact,]),);
-  const existing = await indexContentFiles(paths.contentDir, paths.root,);
+  let existing = await indexContentFiles(paths.contentDir, paths.root,);
+  const selection = selectDraftTargets(opportunities, existing, paths, config.maxGeneratedDrafts,);
+  const selectedKeys = new Set(selection.selected.map((opportunity,) => getOpportunityKey(opportunity,)),);
 
   const created = [];
-  const skipped = [];
+  const skipped = [...selection.skipped,];
+  const pruned = await pruneGeneratedDraftPages(paths, selectedKeys,);
+  existing = await indexContentFiles(paths.contentDir, paths.root,);
 
-  for (const opportunity of opportunities) {
+  for (const opportunity of selection.selected) {
     const targetPath = path.join(paths.contentDir, opportunity.section, `${opportunity.slug}.mdx`,);
-    const duplicate = findDuplicate(existing, opportunity, targetPath,);
-    if (duplicate) {
-      skipped.push({ slug: opportunity.slug, reason: duplicate.reason, filePath: duplicate.filePath, },);
-      continue;
-    }
-
     if (await fileExists(targetPath,)) {
-      skipped.push({ slug: opportunity.slug, reason: "exists", filePath: toRepoPath(targetPath, paths.root,), },);
+      const currentRaw = await fs.readFile(targetPath, "utf8",);
+      const reason = (
+          readScalarFrontmatter(currentRaw, "ownership",) === "generated"
+          && readScalarFrontmatter(currentRaw, "status",) === "draft"
+        )
+        ? "tracked"
+        : "exists";
+      skipped.push({ slug: opportunity.slug, reason, filePath: toRepoPath(targetPath, paths.root,), },);
       continue;
     }
 
@@ -1048,16 +1064,22 @@ export async function draftContentPages(options = {},) {
   const report = {
     generatedAt: formatDateTime(options.now ?? new Date(),),
     created,
+    pruned,
     skipped,
   };
 
   await writeJson(path.join(paths.stateDir, "draft-report.json",), report,);
+  await writeAuditQueue(paths, opportunities, config, {
+    now: options.now,
+    createdKeys: new Set(created.map((item,) => getContentKey(item.filePath,)),),
+  },);
 
   return report;
 }
 
 export async function refreshGeneratedContent(options = {},) {
   const paths = resolveEnginePaths(options.root,);
+  const config = await readEngineConfig(paths,);
   const opportunitiesPayload = await readJson(path.join(paths.stateDir, "opportunities.json",), {
     opportunities: [],
   },);
@@ -1118,6 +1140,10 @@ export async function refreshGeneratedContent(options = {},) {
   };
 
   await writeJson(path.join(paths.stateDir, "refresh-report.json",), report,);
+  await writeAuditQueue(paths, opportunitiesPayload.opportunities ?? [], config, {
+    now: options.now,
+    updatedKeys: new Set(updated.map((item,) => getContentKey(item.filePath,)),),
+  },);
 
   return report;
 }
@@ -1228,6 +1254,152 @@ export function renderOpportunityPage(opportunity, factsById, options = {},) {
 
 export function hasMaterialChange(currentRaw, nextRaw,) {
   return stripVolatileFrontmatter(currentRaw,) !== stripVolatileFrontmatter(nextRaw,);
+}
+
+async function readEngineConfig(paths,) {
+  const config = await readJson(path.join(paths.inputsDir, "engine-config.json",), {},);
+  const auditDefaults = config.auditDefaults ?? {};
+
+  return {
+    maxGeneratedDrafts: normalizePositiveInteger(config.maxGeneratedDrafts, DEFAULT_ENGINE_CONFIG.maxGeneratedDrafts,),
+    auditQueueSize: normalizePositiveInteger(config.auditQueueSize, DEFAULT_ENGINE_CONFIG.auditQueueSize,),
+    auditDefaults: {
+      platform: typeof auditDefaults.platform === "string"
+        ? auditDefaults.platform
+        : DEFAULT_ENGINE_CONFIG.auditDefaults.platform,
+      tone: typeof auditDefaults.tone === "string" ? auditDefaults.tone : DEFAULT_ENGINE_CONFIG.auditDefaults.tone,
+      lowercaseMode: typeof auditDefaults.lowercaseMode === "boolean"
+        ? auditDefaults.lowercaseMode
+        : DEFAULT_ENGINE_CONFIG.auditDefaults.lowercaseMode,
+    },
+  };
+}
+
+function normalizePositiveInteger(value, fallback,) {
+  const normalized = Number(value,);
+  return Number.isInteger(normalized,) && normalized > 0 ? normalized : fallback;
+}
+
+function selectDraftTargets(opportunities, indexedFiles, paths, limit,) {
+  const eligible = [];
+  const skipped = [];
+
+  for (const opportunity of opportunities) {
+    const targetPath = path.join(paths.contentDir, opportunity.section, `${opportunity.slug}.mdx`,);
+    const duplicate = findDuplicate(indexedFiles, opportunity, targetPath,);
+    if (duplicate) {
+      skipped.push({ slug: opportunity.slug, reason: duplicate.reason, filePath: duplicate.filePath, },);
+      continue;
+    }
+
+    eligible.push({ opportunity, targetPath, },);
+  }
+
+  const selected = [];
+  const selectedKeys = new Set();
+  const coveredSections = new Set();
+
+  for (const item of eligible) {
+    if (selected.length >= limit) {
+      break;
+    }
+
+    if (coveredSections.has(item.opportunity.section,)) {
+      continue;
+    }
+
+    selected.push(item.opportunity,);
+    selectedKeys.add(getOpportunityKey(item.opportunity,),);
+    coveredSections.add(item.opportunity.section,);
+  }
+
+  for (const item of eligible) {
+    if (selected.length >= limit) {
+      break;
+    }
+
+    const key = getOpportunityKey(item.opportunity,);
+    if (selectedKeys.has(key,)) {
+      continue;
+    }
+
+    selected.push(item.opportunity,);
+    selectedKeys.add(key,);
+  }
+
+  for (const item of eligible) {
+    if (selectedKeys.has(getOpportunityKey(item.opportunity,),)) {
+      continue;
+    }
+
+    skipped.push({
+      slug: item.opportunity.slug,
+      reason: "batch-limit",
+      filePath: toRepoPath(item.targetPath, paths.root,),
+    },);
+  }
+
+  return { selected, skipped, };
+}
+
+async function pruneGeneratedDraftPages(paths, keepKeys,) {
+  const drafts = await collectGeneratedDraftFiles(paths,);
+  const pruned = [];
+
+  for (const draft of drafts) {
+    if (keepKeys.has(draft.key,)) {
+      continue;
+    }
+
+    await fs.unlink(draft.filePath,);
+    pruned.push({ slug: draft.slug, filePath: draft.repoPath, reason: "batch-limit", },);
+  }
+
+  return pruned;
+}
+
+async function writeAuditQueue(paths, opportunities, config, options = {},) {
+  await ensureDir(paths.stateDir,);
+
+  const createdKeys = options.createdKeys ?? new Set();
+  const updatedKeys = options.updatedKeys ?? new Set();
+  const opportunityMap = new Map(opportunities.map((opportunity,) => [getOpportunityKey(opportunity,), opportunity,]),);
+  const items = (await collectGeneratedDraftFiles(paths,))
+    .map((draft,) => {
+      const opportunity = opportunityMap.get(draft.key,);
+      return {
+        slug: draft.slug,
+        section: draft.section,
+        title: opportunity?.title ?? draft.title,
+        filePath: draft.repoPath,
+        score: opportunity?.score ?? 0,
+        change: createdKeys.has(draft.key,)
+          ? "created"
+          : updatedKeys.has(draft.key,)
+          ? "updated"
+          : "tracked",
+      };
+    },)
+    .sort((left, right,) => right.score - left.score || left.filePath.localeCompare(right.filePath,))
+    .slice(0, config.auditQueueSize,)
+    .map((item,) => ({
+      ...item,
+      audit: {
+        skill: "audit",
+        ...config.auditDefaults,
+      },
+    }));
+
+  const payload = {
+    generatedAt: formatDateTime(options.now ?? new Date(),),
+    maxGeneratedDrafts: config.maxGeneratedDrafts,
+    instruction: "Run the local audit skill on queued drafts before changing status from draft to published.",
+    auditDefaults: config.auditDefaults,
+    items,
+  };
+
+  await writeJson(path.join(paths.stateDir, "audit-queue.json",), payload,);
+  return payload;
 }
 
 async function buildDiscoverSources(paths,) {
@@ -1571,9 +1743,40 @@ async function indexContentFiles(contentDir, root,) {
   return indexed;
 }
 
+async function collectGeneratedDraftFiles(paths,) {
+  const files = await listFiles(paths.contentDir, (filePath,) => filePath.endsWith(".mdx",),);
+  const drafts = [];
+
+  for (const filePath of files) {
+    const raw = await fs.readFile(filePath, "utf8",);
+    if (readScalarFrontmatter(raw, "ownership",) !== "generated") {
+      continue;
+    }
+
+    if (readScalarFrontmatter(raw, "status",) !== "draft") {
+      continue;
+    }
+
+    drafts.push({
+      key: getContentKey(toRepoPath(filePath, paths.root,),),
+      slug: path.basename(filePath, ".mdx",),
+      section: path.basename(path.dirname(filePath,),),
+      title: readScalarFrontmatter(raw, "title",) ?? path.basename(filePath, ".mdx",),
+      filePath,
+      repoPath: toRepoPath(filePath, paths.root,),
+    },);
+  }
+
+  return drafts;
+}
+
 function findDuplicate(indexedFiles, opportunity, targetPath,) {
   for (const [filePath, metadata,] of indexedFiles.entries()) {
     if (filePath === targetPath) {
+      if (metadata.ownership === "manual") {
+        return { reason: "manual-owned", filePath: metadata.filePath, };
+      }
+
       continue;
     }
 
@@ -1604,6 +1807,17 @@ function stripQuotes(value,) {
 
 function stripVolatileFrontmatter(raw,) {
   return raw.replace(/^updatedAt:\s*.+$/m, "updatedAt: <stable>",).trim();
+}
+
+function getOpportunityKey(opportunity,) {
+  return `${opportunity.section}/${opportunity.slug}`;
+}
+
+function getContentKey(filePath,) {
+  const normalizedPath = filePath.replaceAll("\\", "/",);
+  const section = normalizedPath.split("/",).at(-2,);
+  const slug = path.basename(normalizedPath, ".mdx",);
+  return `${section}/${slug}`;
 }
 
 function dedupeFacts(facts,) {

@@ -168,11 +168,68 @@ test("hasMaterialChange ignores updatedAt-only churn", () => {
   assert.equal(hasMaterialChange(current, changedBody,), true,);
 });
 
+test("draftContentPages caps generated drafts and writes an audit queue", async () => {
+  const root = await createFixtureRepo();
+  const now = new Date("2026-03-24T00:00:00.000Z",);
+
+  await writeEngineConfig(root, {
+    maxGeneratedDrafts: 2,
+    auditQueueSize: 2,
+  },);
+
+  await discoverContentFacts({ root, now, },);
+  await prioritizeContent({ root, now, },);
+  const report = await draftContentPages({ root, now, },);
+  const auditQueue = JSON.parse(
+    await fs.readFile(path.join(root, "apps/landing/content-engine/state/audit-queue.json",), "utf8",),
+  );
+
+  assert.equal(report.created.length, 2,);
+  assert.ok(report.skipped.some((item,) => item.reason === "batch-limit"),);
+  assert.equal(auditQueue.items.length, 2,);
+  assert.deepEqual(auditQueue.items[0].audit, {
+    skill: "audit",
+    platform: "blog",
+    tone: "technical",
+    lowercaseMode: false,
+  },);
+});
+
+test("draftContentPages prunes tracked generated drafts down to the configured limit", async () => {
+  const root = await createFixtureRepo();
+  const now = new Date("2026-03-24T00:00:00.000Z",);
+
+  await writeEngineConfig(root, {
+    maxGeneratedDrafts: 4,
+    auditQueueSize: 2,
+  },);
+
+  await discoverContentFacts({ root, now, },);
+  await prioritizeContent({ root, now, },);
+  await draftContentPages({ root, now, },);
+
+  await writeEngineConfig(root, {
+    maxGeneratedDrafts: 2,
+    auditQueueSize: 2,
+  },);
+
+  const report = await draftContentPages({ root, now, },);
+  const generatedDrafts = await listGeneratedDraftPages(root,);
+
+  assert.equal(report.pruned.length, 2,);
+  assert.equal(generatedDrafts.length, 2,);
+});
+
 test("refresh updates generated pages without touching manual pages", async () => {
   const root = await createFixtureRepo();
   const now = new Date("2026-03-24T00:00:00.000Z",);
   const releaseFile = path.join(root, "apps/landing/content-engine/inputs/releases.json",);
   const manualGuide = path.join(root, "apps/landing/src/content/guides/task-rollover-in-daily-notes.mdx",);
+
+  await writeEngineConfig(root, {
+    maxGeneratedDrafts: 10,
+    auditQueueSize: 3,
+  },);
 
   await discoverContentFacts({ root, now, },);
   await prioritizeContent({ root, now, },);
@@ -235,6 +292,50 @@ function hashCode(value,) {
   }
 
   return hash;
+}
+
+async function writeEngineConfig(root, config,) {
+  await fs.writeFile(
+    path.join(root, "apps/landing/content-engine/inputs/engine-config.json",),
+    `${JSON.stringify(config, null, 2,)}\n`,
+    "utf8",
+  );
+}
+
+async function listGeneratedDraftPages(root,) {
+  const contentRoot = path.join(root, "apps/landing/src/content",);
+  const files = await collectFiles(contentRoot, ".mdx",);
+  const drafts = [];
+
+  for (const filePath of files) {
+    const raw = await fs.readFile(filePath, "utf8",);
+    if (!raw.includes("ownership: generated",) || !raw.includes("status: draft",)) {
+      continue;
+    }
+
+    drafts.push(filePath,);
+  }
+
+  return drafts;
+}
+
+async function collectFiles(root, extension,) {
+  const entries = await fs.readdir(root, { withFileTypes: true, },);
+  const files = [];
+
+  for (const entry of entries) {
+    const nextPath = path.join(root, entry.name,);
+    if (entry.isDirectory()) {
+      files.push(...(await collectFiles(nextPath, extension,)),);
+      continue;
+    }
+
+    if (nextPath.endsWith(extension,)) {
+      files.push(nextPath,);
+    }
+  }
+
+  return files;
 }
 
 async function createFixtureRepo() {
