@@ -49,13 +49,26 @@ function getRecurrenceDescription(date: string, recurrence: string,) {
 const INITIAL_PAGE_RESULTS = 5;
 const PAGE_RESULTS_INCREMENT = 3;
 
-const MentionMenu = forwardRef<
-  { onKeyDown: (props: { event: KeyboardEvent; },) => boolean; },
-  { items: MentionSuggestion[]; command: (items: MentionSuggestion[],) => void; referenceDate?: string; }
->(function MentionMenu({ items, command, referenceDate, }, ref,) {
+type MentionMenuProps = {
+  items: MentionSuggestion[];
+  command: (items: MentionSuggestion[],) => void;
+  referenceDate?: string;
+};
+
+function MentionMenuBody(
+  {
+    items,
+    command,
+    defaultDate,
+    forwardedRef,
+  }: MentionMenuProps & {
+    defaultDate: string;
+    forwardedRef: React.ForwardedRef<{ onKeyDown: (props: { event: KeyboardEvent; },) => boolean; }>;
+  },
+) {
   const [selectedIndex, setSelectedIndex,] = useState(0,);
   const [showDatePicker, setShowDatePicker,] = useState(false,);
-  const [selectedDate, setSelectedDate,] = useState(getToday(),);
+  const [selectedDate, setSelectedDate,] = useState(defaultDate,);
   const [recurrence, setRecurrence,] = useState<DatePickerRecurrence>("",);
   const [visiblePageCount, setVisiblePageCount,] = useState(INITIAL_PAGE_RESULTS,);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([],);
@@ -64,10 +77,6 @@ const MentionMenu = forwardRef<
     setSelectedIndex(0,);
     setVisiblePageCount(INITIAL_PAGE_RESULTS,);
   }, [items,],);
-
-  useEffect(() => {
-    setSelectedDate(getToday(),);
-  }, [referenceDate,],);
 
   const renderedItems = useMemo(() => {
     const pageItems = items.filter((item,) => item.group === "page");
@@ -117,7 +126,7 @@ const MentionMenu = forwardRef<
     command([item,],);
   };
 
-  useImperativeHandle(ref, () => ({
+  useImperativeHandle(forwardedRef, () => ({
     onKeyDown: ({ event, },) => {
       if (showDatePicker) {
         return handleDatePickerKeyDown({
@@ -236,6 +245,14 @@ const MentionMenu = forwardRef<
       )}
     </div>
   );
+}
+
+const MentionMenu = forwardRef<
+  { onKeyDown: (props: { event: KeyboardEvent; },) => boolean; },
+  MentionMenuProps
+>(function MentionMenu(props, ref,) {
+  const defaultDate = props.referenceDate?.trim() || getToday();
+  return <MentionMenuBody key={defaultDate} {...props} defaultDate={defaultDate} forwardedRef={ref} />;
 },);
 
 export function buildMentionChipSuggestion(

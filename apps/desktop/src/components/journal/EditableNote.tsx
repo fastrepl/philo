@@ -708,6 +708,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
             if (!("date" in currentNote)) return null;
             return onCreatePageRef.current?.(currentNote.date,) ?? null;
           },
+          referenceDate: getReferenceDate(note,),
         },),
         PersistentSelectionHighlightExtension,
         CustomListKeymap,

@@ -75,20 +75,24 @@ interface SlashCommandItem {
     | "attach_file";
 }
 
-function SlashCommandMenu({
-  items,
-  insertMention,
-  runCommand,
-  setOnKeyDown,
-}: {
+type SlashCommandMenuProps = {
   items: SlashCommandItem[];
   insertMention: (items: MentionSuggestion[],) => void;
   runCommand: (item: SlashCommandItem,) => void;
+  referenceDate?: string;
   setOnKeyDown: (handler: ((props: { event: KeyboardEvent; },) => boolean) | null,) => void;
-},) {
+};
+
+function SlashCommandMenuBody({
+  items,
+  insertMention,
+  runCommand,
+  defaultDate,
+  setOnKeyDown,
+}: SlashCommandMenuProps & { defaultDate: string; },) {
   const [selectedIndex, setSelectedIndex,] = useState(0,);
   const [showDatePicker, setShowDatePicker,] = useState(false,);
-  const [selectedDate, setSelectedDate,] = useState(getToday(),);
+  const [selectedDate, setSelectedDate,] = useState(defaultDate,);
   const [recurrence, setRecurrence,] = useState<DatePickerRecurrence>("",);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([],);
 
@@ -292,14 +296,21 @@ function SlashCommandMenu({
   );
 }
 
+function SlashCommandMenu(props: SlashCommandMenuProps,) {
+  const defaultDate = props.referenceDate?.trim() || getToday();
+  return <SlashCommandMenuBody key={defaultDate} {...props} defaultDate={defaultDate} />;
+}
+
 export const SlashCommandExtension = Extension.create<{
   onAttachPage?: () => Promise<string | null> | string | null;
+  referenceDate?: string;
 }>({
   name: "pageSlashCommand",
 
   addOptions() {
     return {
       onAttachPage: undefined,
+      referenceDate: undefined,
     };
   },
 
@@ -610,6 +621,7 @@ export const SlashCommandExtension = Extension.create<{
                 insertMention: (items: MentionSuggestion[],) => {
                   insertMentionItems(props.editor, props.range, items,);
                 },
+                referenceDate: this.options.referenceDate,
                 runCommand: (item: SlashCommandItem,) => {
                   props.command(item,);
                 },
@@ -644,6 +656,7 @@ export const SlashCommandExtension = Extension.create<{
               insertMention: (items: MentionSuggestion[],) => {
                 insertMentionItems(props.editor, props.range, items,);
               },
+              referenceDate: this.options.referenceDate,
               runCommand: (item: SlashCommandItem,) => {
                 props.command(item,);
               },
