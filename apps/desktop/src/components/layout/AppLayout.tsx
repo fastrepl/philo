@@ -2901,7 +2901,7 @@ export default function AppLayout() {
     >
       {/* Titlebar: drag region + pin button */}
       <div
-        className="sticky top-0 z-50 h-[38px] w-full shrink-0 px-3 flex items-center justify-between relative"
+        className="sticky top-0 z-50 h-[38px] w-full flex items-center justify-between shrink-0 px-3"
         onMouseDown={(e,) => {
           if (e.buttons === 1 && !(e.target as HTMLElement).closest("button, input",)) {
             e.detail === 2
@@ -2910,9 +2910,6 @@ export default function AppLayout() {
           }
         }}
       >
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-linear-to-r from-white via-white/92 to-transparent backdrop-blur-md dark:from-gray-900 dark:via-gray-900/92" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-linear-to-l from-white via-white/92 to-transparent backdrop-blur-md dark:from-gray-900 dark:via-gray-900/92" />
-
         <div className="flex items-center gap-1 pl-16">
           <button
             type="button"
