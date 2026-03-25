@@ -246,7 +246,12 @@ function MeetingMetaView({ node, }: NodeViewProps,) {
 function MeetingTranscriptView({ node, }: NodeViewProps,) {
   const readOnly = node.attrs.readOnly === true;
   return (
-    <NodeViewWrapper className={`meeting-transcript-node ${readOnly ? "meeting-transcript-node--readonly" : ""}`}>
+    <NodeViewWrapper
+      className={`meeting-transcript-node ${readOnly ? "meeting-transcript-node--readonly" : ""}`}
+      contentEditable={readOnly ? false : undefined}
+      data-read-only={readOnly ? "true" : undefined}
+      aria-readonly={readOnly || undefined}
+    >
       <div className="meeting-transcript-node__label" contentEditable={false}>
         Transcript
       </div>

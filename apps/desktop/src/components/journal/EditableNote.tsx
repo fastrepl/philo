@@ -125,6 +125,70 @@ function getMeetingDecorationKey(note: DailyNote | PageNote, transcriptReadOnly:
   },);
 }
 
+function findReadOnlyTranscriptRange(doc: ProseMirrorNode,) {
+  let range: { from: number; to: number; } | null = null;
+
+  doc.descendants((node, pos,) => {
+    if (node.type.name !== "meetingTranscript" || node.attrs.readOnly !== true) {
+      return true;
+    }
+
+    range = {
+      from: pos,
+      to: pos + node.nodeSize,
+    };
+    return false;
+  },);
+
+  return range;
+}
+
+function selectionTouchesRange(selection: Selection, range: { from: number; to: number; },) {
+  return selection.from < range.to && selection.to > range.from;
+}
+
+function getSelectionNear(doc: ProseMirrorNode, pos: number, bias: -1 | 1,) {
+  const clampedPos = Math.max(0, Math.min(pos, doc.content.size,),);
+  return Selection.near(doc.resolve(clampedPos,), bias,);
+}
+
+function getSelectionOutsideReadOnlyTranscript(
+  doc: ProseMirrorNode,
+  selection: Selection,
+  transcriptReadOnly: boolean,
+) {
+  const readOnlyTranscriptRange = transcriptReadOnly ? findReadOnlyTranscriptRange(doc,) : null;
+  if (!readOnlyTranscriptRange || !selectionTouchesRange(selection, readOnlyTranscriptRange,)) {
+    return selection;
+  }
+
+  try {
+    return getSelectionNear(doc, readOnlyTranscriptRange.from, -1,);
+  } catch {
+    try {
+      return getSelectionNear(doc, readOnlyTranscriptRange.to, 1,);
+    } catch {
+      return Selection.atStart(doc,);
+    }
+  }
+}
+
+function getSelectionAfterExternalContentUpdate(
+  doc: ProseMirrorNode,
+  previousSelection: Selection,
+  transcriptReadOnly: boolean,
+) {
+  let nextSelection: Selection;
+
+  try {
+    nextSelection = Selection.fromJSON(doc, previousSelection.toJSON(),);
+  } catch {
+    nextSelection = getSelectionNear(doc, previousSelection.from, 1,);
+  }
+
+  return getSelectionOutsideReadOnlyTranscript(doc, nextSelection, transcriptReadOnly,);
+}
+
 function isDateChipKind(kind: MentionKind,): kind is "date" | "recurring" {
   return kind === "date" || kind === "recurring";
 }
@@ -799,7 +863,9 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         selfUpdateRef.current = false;
         return;
       }
+
       const incoming = getEditorNoteContent(note, transcriptReadOnly,);
+      const previousSelection = editor.state.selection;
       editor
         .chain()
         .command(({ tr, },) => {
@@ -807,6 +873,12 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           return true;
         },)
         .setContent(incoming, { emitUpdate: false, },)
+        .command(({ tr, },) => {
+          tr.setSelection(
+            getSelectionAfterExternalContentUpdate(tr.doc, previousSelection, transcriptReadOnly,),
+          );
+          return true;
+        },)
         .run();
     }, [meetingDecorationKey, note.content, transcriptReadOnly,],);
 

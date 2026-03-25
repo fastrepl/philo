@@ -1108,15 +1108,6 @@ function PageView({
           </div>
         )}
         {pageIsTypedGitHub && <GitHubPageHeader page={resolvedPage} />}
-        {resolvedPage.attachedTo && (
-          <button
-            type="button"
-            onClick={() => onOpenDate?.(resolvedPage.attachedTo!,)}
-            className="mt-3 text-sm text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-          >
-            Attached to {formatDate(resolvedPage.attachedTo,)}
-          </button>
-        )}
       </div>
       <EditableNote
         ref={editorRef}
