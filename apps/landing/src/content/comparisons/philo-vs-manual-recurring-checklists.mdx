@@ -1,0 +1,63 @@
+---
+title: "Philo vs manual recurring checklists"
+summary: "Why automatic recurrence changes the planning burden in a markdown workflow."
+publishedAt: 2026-03-25
+updatedAt: 2026-03-25
+pageType: comparison
+canonicalPath: /comparisons/philo-vs-manual-recurring-checklists
+primaryQuery: "philo vs manual recurring checklists"
+evidenceIds:
+  - "48c3fe78614e"
+  - "e022bdb7e8df"
+  - "b849b1bfb0c7"
+  - "1fc1734f4379"
+  - "a3bb8dca7bc5"
+  - "5a22705ac926"
+status: draft
+ownership: generated
+bestFor:
+  - "People whose checklists should rebuild themselves"
+  - "Users who want recurrence visible in plain text"
+notFor:
+  - "People who deliberately rewrite routines from scratch"
+  - "Workflows that do not repeat often enough to justify automation"
+faqs:
+  - question: "What is the real benefit of recurrence?"
+    answer: "It reduces decisions you never needed to make again, which makes the planning surface calmer."
+  - question: "Why keep recurrence inline?"
+    answer: "Because the rule stays editable where the task already lives instead of hiding in a separate settings surface."
+relatedLinks:
+  - label: "Recurring task tags in Philo"
+    href: "/guides/recurring-task-tags"
+  - label: "From recurring tasks to recurring systems"
+    href: "/blog/from-recurring-tasks-to-recurring-systems"
+image: /philo-hero-screenshot.svg
+---
+Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON.
+
+## Quick take
+
+Choose Philo when the center of gravity is the note itself. Choose manual recurring checklists when the center of gravity is somewhere else.
+
+## Comparison table
+
+| Decide this way if... | Philo | Manual recurring checklists |
+| --- | --- | --- |
+| You are rewriting the same routine every day | Removes that step by bringing recurring tasks back on schedule. | Keeps the burden on you every time. |
+| You want recurrence logic visible in the task text | Uses inline tags inside the markdown. | Usually relies on memory or copy-forward rituals. |
+| You prefer explicit manual control over every recurrence step | Less ideal if you do not want automation. | Better fit. |
+
+## What Philo is actually optimizing for
+
+Let unfinished and recurring work come back automatically.
+
+Philo is built to make daily notes lighter, not turn them into another subscription silo.
+
+## Evidence trail
+
+- `48c3fe78614e` Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON. (docs/markdown-sync.md)
+- `e022bdb7e8df` Let unfinished and recurring work come back automatically. (README.md)
+- `b849b1bfb0c7` Philo is built to make daily notes lighter, not turn them into another subscription silo. (README.md)
+- `1fc1734f4379` Philo is the IDE for your daily notes. (README.md)
+- `a3bb8dca7bc5` recurring work should reappear automatically (README.md)
+- `5a22705ac926` otherwise Philo searches the configured Excalidraw folder, vault root, and journal root (docs/data-storage-and-configuration.md)

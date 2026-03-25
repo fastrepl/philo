@@ -1,0 +1,47 @@
+---
+title: "Disposable widgets"
+summary: "Temporary inline tools that are cheap to create and safe to delete when the note no longer needs them."
+publishedAt: 2026-03-25
+updatedAt: 2026-03-25
+pageType: glossary
+canonicalPath: /glossary/disposable-widgets
+primaryQuery: "disposable widgets definition"
+evidenceIds:
+  - "0f6076bcdab8"
+  - "845c6970faff"
+  - "baeb8c956840"
+  - "249b8b61ca69"
+  - "1a7a539136c1"
+  - "060a53771959"
+status: draft
+ownership: generated
+bestFor:
+  - "People who want the shortest definition of Philo's widget model"
+notFor:
+  - "People who need a product walkthrough instead of a concept definition"
+faqs:
+  - question: "What happens when a disposable widget becomes useful long term?"
+    answer: "Philo lets you keep the winners in a small reusable library."
+relatedLinks:
+  - label: "Disposable widgets in notes"
+    href: "/guides/disposable-widgets-in-notes"
+image: /philo-hero-screenshot.svg
+---
+Philo makes widgets cheap to create, easy to delete, and reusable only when they earn it.
+
+## In Philo
+
+Archived library widgets reuse the archived widget file when that canonical file is known, so repeated library inserts share that file's state.
+
+## Why the term matters
+
+This document is the implementation reference for how Philo stores widgets, updates them, saves them to the library, and tracks revisions.
+
+## Evidence trail
+
+- `0f6076bcdab8` Philo makes widgets cheap to create, easy to delete, and reusable only when they earn it. (README.md)
+- `845c6970faff` Archived library widgets reuse the archived widget file when that canonical file is known, so repeated library inserts share that file's state. (docs/widget-persistence-and-lifecycle.md)
+- `baeb8c956840` This document is the implementation reference for how Philo stores widgets, updates them, saves them to the library, and tracks revisions. (docs/widget-persistence-and-lifecycle.md)
+- `249b8b61ca69` This keeps note widgets and library state from drifting. (docs/widget-persistence-and-lifecycle.md)
+- `1a7a539136c1` changing vaultDir does not migrate existing widget files, library items, or chat-history files into the new root (docs/data-storage-and-configuration.md)
+- `060a53771959` Notes, images, Excalidraw files, widget files, widget-library files, and chat-history files live under the resolved content directory. (docs/data-storage-and-configuration.md)

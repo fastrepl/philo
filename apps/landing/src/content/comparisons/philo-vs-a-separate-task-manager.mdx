@@ -1,0 +1,63 @@
+---
+title: "Philo vs a separate task manager"
+summary: "When the task list should live with the note and when it should stay separate."
+publishedAt: 2026-03-25
+updatedAt: 2026-03-25
+pageType: comparison
+canonicalPath: /comparisons/philo-vs-a-separate-task-manager
+primaryQuery: "philo vs a separate task manager"
+evidenceIds:
+  - "48c3fe78614e"
+  - "5c003e16fdef"
+  - "4337412202be"
+  - "c30c4e88e712"
+  - "aeb2e6ea1588"
+  - "fa84266dd63a"
+status: draft
+ownership: generated
+bestFor:
+  - "People whose task list only makes sense next to the note that produced it"
+  - "Users who want fewer handoffs between note capture and execution"
+notFor:
+  - "Teams that need a centralized task workflow"
+  - "People who prefer tasks fully detached from notes"
+faqs:
+  - question: "Is Philo trying to replace every task manager?"
+    answer: "No. It is trying to make the daily note itself better at execution for people who already plan there."
+  - question: "When is a separate task manager still the better fit?"
+    answer: "When the center of gravity is a shared task system rather than a personal note-driven workflow."
+relatedLinks:
+  - label: "Task rollover in daily notes"
+    href: "/guides/task-rollover-in-daily-notes"
+  - label: "Running recurring systems from daily notes"
+    href: "/use-cases/running-recurring-systems-from-daily-notes"
+image: /philo-hero-screenshot.svg
+---
+Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON.
+
+## Quick take
+
+Choose Philo when the center of gravity is the note itself. Choose a separate task manager when the center of gravity is somewhere else.
+
+## Comparison table
+
+| Decide this way if... | Philo | A separate task manager |
+| --- | --- | --- |
+| You want task context to stay attached to the note | Strong fit because planning happens in the note itself. | Often requires jumping between capture and execution surfaces. |
+| You want recurring work to rebuild your note automatically | Built around bringing recurring tasks back on schedule inside daily notes. | Possible, but usually outside the note and detached from writing context. |
+| You want a dedicated shared task system for a team | Less ideal. Philo is centered on a personal daily planning loop. | Often the better fit. |
+
+## What Philo is actually optimizing for
+
+Daily notes do not inline the full widget payload.
+
+The scope refresh covers the current journal root, vault root, assets directory, Excalidraw directory, and widgets directory.
+
+## Evidence trail
+
+- `48c3fe78614e` Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON. (docs/markdown-sync.md)
+- `5c003e16fdef` Daily notes do not inline the full widget payload. (docs/data-storage-and-configuration.md)
+- `4337412202be` The scope refresh covers the current journal root, vault root, assets directory, Excalidraw directory, and widgets directory. (docs/data-storage-and-configuration.md)
+- `c30c4e88e712` widget files: widgets/ under the vault root, or under the resolved journal root in default mode (docs/data-storage-and-configuration.md)
+- `aeb2e6ea1588` widget library: library/ under the vault root or resolved journal root (docs/data-storage-and-configuration.md)
+- `fa84266dd63a` Recent work keeps widgets, recurrence, and execution closer to the daily note. (apps/landing/content-engine/inputs/releases.json#0.0.10)

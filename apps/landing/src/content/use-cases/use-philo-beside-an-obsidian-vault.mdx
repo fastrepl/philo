@@ -1,0 +1,63 @@
+---
+title: "Use Philo beside an Obsidian vault"
+summary: "When an existing vault is still the source of truth, but you want a tighter planning loop."
+publishedAt: 2026-03-25
+updatedAt: 2026-03-25
+pageType: use-case
+canonicalPath: /use-cases/use-philo-beside-an-obsidian-vault
+primaryQuery: "use philo beside an obsidian vault"
+evidenceIds:
+  - "6fd3b8f3b927"
+  - "a2c1db37e865"
+  - "0a6aa4c0458d"
+  - "4337412202be"
+  - "c30c4e88e712"
+  - "aeb2e6ea1588"
+status: draft
+ownership: generated
+bestFor:
+  - "People who already store notes in an Obsidian vault"
+  - "Users who want execution features without abandoning markdown ownership"
+notFor:
+  - "People looking for a cloud migration path"
+  - "Workflows that are not built around a vault"
+faqs:
+  - question: "Does Philo force an Obsidian user to migrate?"
+    answer: "No. Philo is meant to sit beside your vault, not replace it."
+  - question: "What does Philo add on top?"
+    answer: "It focuses on keeping planning, unfinished work, recurrence, and lightweight tools closer to the note itself."
+relatedLinks:
+  - label: "Using Philo with an Obsidian vault"
+    href: "/guides/using-philo-with-an-obsidian-vault"
+  - label: "Philo vs static markdown daily notes"
+    href: "/comparisons/philo-vs-static-markdown-daily-notes"
+image: /philo-hero-screenshot.svg
+---
+Philo still stores notes as markdown on disk and can work beside an existing vault.
+
+## Where this workflow fits
+
+Philo is designed for people already invested in Obsidian. The product direction is about keeping the loop between writing, deciding, and running as short as possible.
+
+## Capability checklist
+
+- Philo still stores notes as markdown on disk and can work beside an existing vault.
+- When Philo is pointed at a vault, serialization uses tab indentation (\{ style: "tab", size: 1 \}) so the file on disk matches Obsidian's layout more closely.
+- Mention links and Excalidraw embeds intentionally use Obsidian-friendly syntax so the markdown stays portable.
+- The scope refresh covers the current journal root, vault root, assets directory, Excalidraw directory, and widgets directory.
+- widget files: widgets/ under the vault root, or under the resolved journal root in default mode
+
+## Why this workflow feels lighter
+
+When Philo is pointed at a vault, serialization uses tab indentation (\{ style: "tab", size: 1 \}) so the file on disk matches Obsidian's layout more closely.
+
+Mention links and Excalidraw embeds intentionally use Obsidian-friendly syntax so the markdown stays portable.
+
+## Evidence trail
+
+- `6fd3b8f3b927` Philo still stores notes as markdown on disk and can work beside an existing vault. (apps/landing/content-engine/inputs/releases.json#0.0.10)
+- `a2c1db37e865` When Philo is pointed at a vault, serialization uses tab indentation (\{ style: "tab", size: 1 \}) so the file on disk matches Obsidian's layout more closely. (docs/markdown-sync.md)
+- `0a6aa4c0458d` Mention links and Excalidraw embeds intentionally use Obsidian-friendly syntax so the markdown stays portable. (docs/markdown-sync.md)
+- `4337412202be` The scope refresh covers the current journal root, vault root, assets directory, Excalidraw directory, and widgets directory. (docs/data-storage-and-configuration.md)
+- `c30c4e88e712` widget files: widgets/ under the vault root, or under the resolved journal root in default mode (docs/data-storage-and-configuration.md)
+- `aeb2e6ea1588` widget library: library/ under the vault root or resolved journal root (docs/data-storage-and-configuration.md)

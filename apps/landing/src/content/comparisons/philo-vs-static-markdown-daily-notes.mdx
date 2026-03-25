@@ -1,0 +1,63 @@
+---
+title: "Philo vs static markdown daily notes"
+summary: "When a plain daily note file is enough and when Philo earns the extra layer."
+publishedAt: 2026-03-25
+updatedAt: 2026-03-25
+pageType: comparison
+canonicalPath: /comparisons/philo-vs-static-markdown-daily-notes
+primaryQuery: "philo vs static markdown daily notes"
+evidenceIds:
+  - "48c3fe78614e"
+  - "3207bae257b9"
+  - "b849b1bfb0c7"
+  - "1fc1734f4379"
+  - "a11d444a27ea"
+  - "6fd3b8f3b927"
+status: draft
+ownership: generated
+bestFor:
+  - "People who already like markdown but want a stronger execution loop"
+  - "Users who are tired of manually rebuilding context every morning"
+notFor:
+  - "People who only need text capture and nothing else"
+  - "Workflows where manual carry-forward is not a problem"
+faqs:
+  - question: "Why not stay with plain markdown files only?"
+    answer: "You can, but plain files typically push rollover, recurrence, and tool building back onto the user every day."
+  - question: "Does Philo stop being markdown-native?"
+    answer: "No. The file on disk remains markdown; Philo changes the planning behavior around it."
+relatedLinks:
+  - label: "Markdown notes on disk"
+    href: "/guides/markdown-notes-on-disk"
+  - label: "Daily planning in markdown notes"
+    href: "/use-cases/daily-planning-in-markdown-notes"
+image: /philo-hero-screenshot.svg
+---
+Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON.
+
+## Quick take
+
+Choose Philo when the center of gravity is the note itself. Choose static markdown daily notes when the center of gravity is somewhere else.
+
+## Comparison table
+
+| Decide this way if... | Philo | Static markdown daily notes |
+| --- | --- | --- |
+| You want planning context to persist across days | Built for it with timeline context and automatic carry-forward behavior. | Possible, but usually requires manual reconstruction and copying. |
+| You want notes to stay as markdown on disk | Yes. Markdown remains the source of truth. | Yes. This is the baseline strength. |
+| You want one-off tools inline in the note | Built for inline widgets and a reusable library. | Usually requires separate tools or custom setup. |
+
+## What Philo is actually optimizing for
+
+Keep daily planning in one timeline.
+
+Philo is built to make daily notes lighter, not turn them into another subscription silo.
+
+## Evidence trail
+
+- `48c3fe78614e` Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON. (docs/markdown-sync.md)
+- `3207bae257b9` Keep daily planning in one timeline. (README.md)
+- `b849b1bfb0c7` Philo is built to make daily notes lighter, not turn them into another subscription silo. (README.md)
+- `1fc1734f4379` Philo is the IDE for your daily notes. (README.md)
+- `a11d444a27ea` Philo 0.0.10 tightens the execution loop around markdown notes. (apps/landing/content-engine/inputs/releases.json#0.0.10)
+- `6fd3b8f3b927` Philo still stores notes as markdown on disk and can work beside an existing vault. (apps/landing/content-engine/inputs/releases.json#0.0.10)

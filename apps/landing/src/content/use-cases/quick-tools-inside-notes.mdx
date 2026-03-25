@@ -1,0 +1,63 @@
+---
+title: "Quick tools inside notes"
+summary: "When inline widgets are better than opening or building a separate tool."
+publishedAt: 2026-03-25
+updatedAt: 2026-03-25
+pageType: use-case
+canonicalPath: /use-cases/quick-tools-inside-notes
+primaryQuery: "quick tools inside notes"
+evidenceIds:
+  - "aeb2e6ea1588"
+  - "5c003e16fdef"
+  - "060a53771959"
+  - "0f6076bcdab8"
+  - "1a7a539136c1"
+  - "e44287b63bee"
+status: draft
+ownership: generated
+bestFor:
+  - "People who need a one-off tracker, calculator, or checklist while planning"
+  - "Users who want a widget to live in the same note as the decision it supports"
+notFor:
+  - "People who only want reusable permanent tools"
+  - "Teams that need a broad internal tooling platform"
+faqs:
+  - question: "What kinds of tools fit this model?"
+    answer: "Temporary trackers, calculators, experiments, and small planning utilities fit the disposable widget model well."
+  - question: "What happens when a quick tool becomes useful long term?"
+    answer: "Philo lets you save the winners into a small reusable library instead of committing every experiment up front."
+relatedLinks:
+  - label: "Disposable widgets in notes"
+    href: "/guides/disposable-widgets-in-notes"
+  - label: "Glossary: widget library"
+    href: "/glossary/widget-library"
+image: /philo-hero-screenshot.svg
+---
+widget library: library/ under the vault root or resolved journal root
+
+## Where this workflow fits
+
+Philo is designed for people solving temporary problems while planning. The product direction is about keeping the loop between writing, deciding, and running as short as possible.
+
+## Capability checklist
+
+- widget library: library/ under the vault root or resolved journal root
+- Daily notes do not inline the full widget payload.
+- Notes, images, Excalidraw files, widget files, widget-library files, and chat-history files live under the resolved content directory.
+- Philo makes widgets cheap to create, easy to delete, and reusable only when they earn it.
+- changing vaultDir does not migrate existing widget files, library items, or chat-history files into the new root
+
+## Why this workflow feels lighter
+
+Daily notes do not inline the full widget payload.
+
+Notes, images, Excalidraw files, widget files, widget-library files, and chat-history files live under the resolved content directory.
+
+## Evidence trail
+
+- `aeb2e6ea1588` widget library: library/ under the vault root or resolved journal root (docs/data-storage-and-configuration.md)
+- `5c003e16fdef` Daily notes do not inline the full widget payload. (docs/data-storage-and-configuration.md)
+- `060a53771959` Notes, images, Excalidraw files, widget files, widget-library files, and chat-history files live under the resolved content directory. (docs/data-storage-and-configuration.md)
+- `0f6076bcdab8` Philo makes widgets cheap to create, easy to delete, and reusable only when they earn it. (README.md)
+- `1a7a539136c1` changing vaultDir does not migrate existing widget files, library items, or chat-history files into the new root (docs/data-storage-and-configuration.md)
+- `e44287b63bee` Repeated inserts therefore share the archived widget's file-backed state. (docs/data-storage-and-configuration.md)

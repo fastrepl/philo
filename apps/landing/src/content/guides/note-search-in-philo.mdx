@@ -1,0 +1,64 @@
+---
+title: "Note search in Philo"
+summary: "How Philo keeps note search close to the daily planning loop."
+publishedAt: 2026-03-25
+updatedAt: 2026-03-25
+pageType: guide
+canonicalPath: /guides/note-search-in-philo
+primaryQuery: "note search in philo"
+evidenceIds:
+  - "26506253a13d"
+  - "30c6d0aebd42"
+  - "ca74ce123d5e"
+  - "02647941cc95"
+  - "bb9f06e3cf0f"
+  - "48c3fe78614e"
+status: draft
+ownership: generated
+bestFor:
+  - "People who want search without leaving their note workflow"
+  - "Users who need to recover context quickly while planning"
+notFor:
+  - "People who already centralize search in another app"
+  - "Workflows that do not care about fast historical note recall"
+faqs:
+  - question: "Does Philo include search?"
+    answer: "Yes. Search is one of the optional AI-adjacent features available inside the app."
+  - question: "Why pair search with daily notes?"
+    answer: "It shortens the loop between finding context and deciding what to do next."
+relatedLinks:
+  - label: "Note chat in Philo"
+    href: "/guides/note-chat-in-philo"
+  - label: "A calmer daily planning loop"
+    href: "/blog/a-calmer-daily-planning-loop"
+image: /philo-hero-screenshot.svg
+---
+Philo is a fit for people who want note search in the same app they plan from because it keeps the note, the plan, and the supporting workflow closer together.
+
+## Direct answer
+
+The release keeps daily planning, note chat, and search inside the app.
+
+Includes optional AI features for note chat, search, and dry-run edits inside the app
+
+## What this looks like in Philo
+
+- The release keeps daily planning, note chat, and search inside the app.
+- Includes optional AI features for note chat, search, and dry-run edits inside the app
+- App shell, top-level timeline layout, global search, modal wiring.
+- Filesystem commands, search indexing, Obsidian detection, window behavior, menu wiring.
+
+## Why it matters
+
+App shell, top-level timeline layout, global search, modal wiring.
+
+Filesystem commands, search indexing, Obsidian detection, window behavior, menu wiring.
+
+## Evidence trail
+
+- `26506253a13d` The release keeps daily planning, note chat, and search inside the app. (apps/landing/content-engine/inputs/releases.json#0.0.10)
+- `30c6d0aebd42` Includes optional AI features for note chat, search, and dry-run edits inside the app (README.md)
+- `ca74ce123d5e` App shell, top-level timeline layout, global search, modal wiring. (docs/repo-structure.md)
+- `02647941cc95` Filesystem commands, search indexing, Obsidian detection, window behavior, menu wiring. (docs/repo-structure.md)
+- `bb9f06e3cf0f` AI chat history: chats/ under the vault root or resolved journal root (docs/data-storage-and-configuration.md)
+- `48c3fe78614e` Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON. (docs/markdown-sync.md)

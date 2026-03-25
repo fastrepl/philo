@@ -1135,7 +1135,7 @@ export function extractFactsFromSource(source, root = REPO_ROOT,) {
   const text = stripCodeBlocks(stripFrontmatter(source.text,),);
   const lines = text
     .split("\n",)
-    .map((line,) => normalizeStatement(line,))
+    .flatMap((line,) => splitIntoStatements(normalizeStatement(line,),))
     .filter(isUsefulStatement,);
   const seen = new Set();
 
@@ -1337,6 +1337,14 @@ function scoreFactForTopic(topic, fact,) {
   const optionalMatches = (topic.optionalTags ?? []).filter((tag,) => fact.tags.includes(tag,)).length;
   const textMatches = overlapCount(tokenize(topic.primaryQuery,), tokenize(fact.statement,),);
 
+  if (topic.template === "release" && fact.sourceType !== "release" && optionalMatches === 0) {
+    return 0;
+  }
+
+  if (requiredMatches === 0 && optionalMatches === 0) {
+    return 0;
+  }
+
   return requiredMatches * 40 + optionalMatches * 10 + textMatches;
 }
 
@@ -1367,19 +1375,19 @@ Philo is a fit for ${opportunity.audience} because it keeps the note, the plan, 
 
 ## Direct answer
 
-${facts[0].statement}
+${escapeMdxText(facts[0].statement,)}
 
-${facts[1].statement}
+${escapeMdxText(facts[1].statement,)}
 
 ## What this looks like in Philo
 
-${facts.slice(0, 4,).map((fact,) => `- ${fact.statement}`).join("\n",)}
+${facts.slice(0, 4,).map((fact,) => `- ${escapeMdxText(fact.statement,)}`).join("\n",)}
 
 ## Why it matters
 
-${facts[2].statement}
+${escapeMdxText(facts[2].statement,)}
 
-${facts[3]?.statement ?? facts[1].statement}
+${escapeMdxText(facts[3]?.statement ?? facts[1].statement,)}
 
 ## Evidence trail
 
@@ -1389,7 +1397,7 @@ ${renderEvidenceList(facts,)}
 
 function renderUseCaseTemplate(opportunity, facts,) {
   return `
-${facts[0].statement}
+${escapeMdxText(facts[0].statement,)}
 
 ## Where this workflow fits
 
@@ -1397,13 +1405,13 @@ Philo is designed for ${opportunity.audience}. The product direction is about ke
 
 ## Capability checklist
 
-${facts.slice(0, 5,).map((fact,) => `- ${fact.statement}`).join("\n",)}
+${facts.slice(0, 5,).map((fact,) => `- ${escapeMdxText(fact.statement,)}`).join("\n",)}
 
 ## Why this workflow feels lighter
 
-${facts[1].statement}
+${escapeMdxText(facts[1].statement,)}
 
-${facts[2].statement}
+${escapeMdxText(facts[2].statement,)}
 
 ## Evidence trail
 
@@ -1417,7 +1425,7 @@ function renderComparisonTemplate(opportunity, facts,) {
   );
 
   return `
-${facts[0].statement}
+${escapeMdxText(facts[0].statement,)}
 
 ## Quick take
 
@@ -1431,9 +1439,9 @@ ${rows}
 
 ## What Philo is actually optimizing for
 
-${facts[1].statement}
+${escapeMdxText(facts[1].statement,)}
 
-${facts[2].statement}
+${escapeMdxText(facts[2].statement,)}
 
 ## Evidence trail
 
@@ -1443,15 +1451,15 @@ ${renderEvidenceList(facts,)}
 
 function renderGlossaryTemplate(opportunity, facts,) {
   return `
-${facts[0].statement}
+${escapeMdxText(facts[0].statement,)}
 
 ## In Philo
 
-${facts[1].statement}
+${escapeMdxText(facts[1].statement,)}
 
 ## Why the term matters
 
-${facts[2].statement}
+${escapeMdxText(facts[2].statement,)}
 
 ## Evidence trail
 
@@ -1461,17 +1469,17 @@ ${renderEvidenceList(facts,)}
 
 function renderReleaseTemplate(opportunity, facts,) {
   return `
-${facts[0].statement}
+${escapeMdxText(facts[0].statement,)}
 
 ## What changed
 
-${facts.slice(0, 5,).map((fact,) => `- ${fact.statement}`).join("\n",)}
+${facts.slice(0, 5,).map((fact,) => `- ${escapeMdxText(fact.statement,)}`).join("\n",)}
 
 ## Why it matters
 
-${facts[1].statement}
+${escapeMdxText(facts[1].statement,)}
 
-${facts[2].statement}
+${escapeMdxText(facts[2].statement,)}
 
 ## Evidence trail
 
@@ -1480,7 +1488,15 @@ ${renderEvidenceList(facts,)}
 }
 
 function renderEvidenceList(facts,) {
-  return facts.map((fact,) => `- \`${fact.id}\` ${fact.statement} (${fact.sourcePath})`).join("\n",);
+  return facts.map((fact,) => `- \`${fact.id}\` ${escapeMdxText(fact.statement,)} (${fact.sourcePath})`).join("\n",);
+}
+
+function escapeMdxText(value,) {
+  return value
+    .replaceAll("{", "\\{",)
+    .replaceAll("}", "\\}",)
+    .replaceAll("<", "&lt;",)
+    .replaceAll(">", "&gt;",);
 }
 
 function serializeFrontmatter(frontmatter,) {
@@ -1624,6 +1640,13 @@ function normalizeStatement(line,) {
     .trim();
 }
 
+function splitIntoStatements(line,) {
+  return line
+    .split(/(?<=[.!?])\s+/u,)
+    .map((statement,) => statement.trim())
+    .filter(Boolean,);
+}
+
 function isUsefulStatement(line,) {
   if (!line) {
     return false;
@@ -1639,6 +1662,10 @@ function isUsefulStatement(line,) {
   }
 
   if (line.length < 28 || line.length > 220) {
+    return false;
+  }
+
+  if (/(?:apps\/|src\/|services\/|components\/|\.tsx?\b|\.md\b|\.widget\b|\/journal\/|<vaultDir>)/.test(line,)) {
     return false;
   }
 
