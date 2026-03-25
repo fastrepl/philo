@@ -44,6 +44,7 @@ export function SpokenLanguagesField(
 
   const suggestions = useMemo(() => getLanguageSuggestions(value, query,), [query, value,],);
   const activeIndex = suggestions.length === 0 ? -1 : Math.min(selectedIndex, suggestions.length - 1,);
+  const hideIdleInput = value.length > 0 && !focused && !query;
 
   const selectLanguage = (code: string,) => {
     if (value.includes(code,)) return;
@@ -152,7 +153,11 @@ export function SpokenLanguagesField(
           aria-activedescendant={activeIndex >= 0 ? `spoken-language-option-${activeIndex}` : undefined}
           aria-label="Add spoken language"
           placeholder={value.length === 0 ? "Search languages" : ""}
-          className="min-w-[140px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+          className={`bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 ${
+            hideIdleInput
+              ? "w-0 min-w-0 flex-none opacity-0"
+              : "min-w-[96px] flex-1"
+          }`}
           style={mono}
         />
       </div>
