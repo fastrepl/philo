@@ -11,6 +11,7 @@ import TaskList from "@tiptap/extension-task-list";
 import { Fragment, type Node as ProseMirrorNode, } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, } from "@tiptap/pm/state";
 import { EditorContent, useEditor, } from "@tiptap/react";
+import type { JSONContent, } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, } from "react";
 import { useDebounceCallback, } from "usehooks-ts";
@@ -43,6 +44,12 @@ import {
 import { ExcalidrawExtension, } from "../editor/extensions/excalidraw/ExcalidrawExtension";
 import { HashtagExtension, } from "../editor/extensions/hashtag/HashtagExtension";
 import { CustomListKeymap, } from "../editor/extensions/list-keymap";
+import {
+  decorateMeetingPageDoc,
+  MeetingMetaExtension,
+  MeetingTranscriptExtension,
+  stripMeetingPageDoc,
+} from "../editor/extensions/meeting/MeetingPageExtensions";
 import { buildMentionChipSuggestion, MentionChipExtension, } from "../editor/extensions/mention/MentionChipExtension";
 import { CustomParagraph, } from "../editor/extensions/paragraph/ParagraphExtension";
 import {
@@ -96,6 +103,23 @@ const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp",]
 function getReferenceDate(note: DailyNote | PageNote,) {
   if ("date" in note) return note.date;
   return note.attachedTo ?? getToday();
+}
+
+function getEditorNoteContent(note: DailyNote | PageNote,) {
+  return "date" in note
+    ? parseJsonContent(note.content,)
+    : decorateMeetingPageDoc(note, parseJsonContent(note.content,),);
+}
+
+function getMeetingDecorationKey(note: DailyNote | PageNote,) {
+  if ("date" in note || note.type !== "meeting") return "";
+  return JSON.stringify({
+    endedAt: note.endedAt,
+    location: note.location,
+    participants: note.participants,
+    sessionKind: note.sessionKind,
+    startedAt: note.startedAt,
+  },);
 }
 
 function isDateChipKind(kind: MentionKind,): kind is "date" | "recurring" {
@@ -375,6 +399,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
     onCreatePageRef.current = onCreatePage;
 
     const selfUpdateRef = useRef(false,);
+    const meetingDecorationKey = getMeetingDecorationKey(note,);
     const [editingDateChip, setEditingDateChip,] = useState<EditableDateChipState | null>(null,);
     const dateChipPopoverRef = useRef<HTMLDivElement | null>(null,);
     const editingDateChipRef = useRef<EditableDateChipState | null>(null,);
@@ -555,6 +580,8 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           ],
         },),
         HashtagExtension,
+        MeetingMetaExtension,
+        MeetingTranscriptExtension,
         ExcalidrawExtension,
         WidgetExtension,
         UrlSummaryExtension.configure({
@@ -614,7 +641,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           },
         },),
       ],
-      content: parseJsonContent(note.content,),
+      content: getEditorNoteContent(note,),
       editable: true,
       immediatelyRender: false,
       editorProps: {
@@ -709,7 +736,10 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         },
       },
       onUpdate: ({ editor, },) => {
-        saveDebounced(JSON.stringify(editor.getJSON(),),);
+        const nextContent = "date" in noteRef.current
+          ? editor.getJSON()
+          : stripMeetingPageDoc(noteRef.current, editor.getJSON() as JSONContent,);
+        saveDebounced(JSON.stringify(nextContent,),);
       },
     },);
 
@@ -765,9 +795,9 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
         selfUpdateRef.current = false;
         return;
       }
-      const incoming = parseJsonContent(note.content,);
+      const incoming = getEditorNoteContent(note,);
       editor.commands.setContent(incoming, { emitUpdate: false, },);
-    }, [note.content,],);
+    }, [meetingDecorationKey, note.content,],);
 
     useEffect(() => {
       if (!editor || !onSelectionChange) return;

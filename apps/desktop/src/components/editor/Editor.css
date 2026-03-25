@@ -197,6 +197,66 @@
   color: #b91c1c;
 }
 
+.tiptap .meeting-meta-node {
+  margin: 0 0 1.25rem;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  padding: 0.875rem 1rem;
+}
+
+.tiptap .meeting-meta-node__label {
+  margin-bottom: 0.625rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.tiptap .meeting-meta-node__grid {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.tiptap .meeting-meta-node__row {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.tiptap .meeting-meta-node__key {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.tiptap .meeting-meta-node__value {
+  color: #0f172a;
+}
+
+.tiptap .meeting-transcript-node {
+  margin-top: 1.5rem;
+  border: 1px solid #e5e7eb;
+  background: #fcfcfd;
+  padding: 1rem;
+}
+
+.tiptap .meeting-transcript-node__label {
+  margin-bottom: 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.tiptap .meeting-transcript-node__content > *:first-child {
+  margin-top: 0;
+}
+
+.tiptap .meeting-transcript-node__content > *:last-child {
+  margin-bottom: 0;
+}
+
 .ai-diff-preview .tiptap {
   font-family: "IBM Plex Mono", monospace;
   font-size: 12px;
