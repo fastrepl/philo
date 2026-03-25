@@ -203,6 +203,11 @@ function normalizeAiProvider(value: unknown,): AiProvider {
     : DEFAULT_AI_PROVIDER;
 }
 
+function normalizeAiModel(provider: AiProvider, value: unknown,) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  return AI_PROVIDER_SUGGESTED_MODELS[provider].includes(trimmed,) ? trimmed : "";
+}
+
 function normalizeSttProvider(value: unknown,): SttProvider {
   return typeof value === "string" && STT_PROVIDERS.includes(value as SttProvider,)
     ? value as SttProvider
@@ -416,9 +421,8 @@ export function getSttProviderApiKey(settings: Settings, provider: SttProvider,)
 export function resolveActiveAiConfig(settings: Settings,): ActiveAiConfig | null {
   const provider = normalizeAiProvider(settings.aiProvider,);
   const apiKey = getAiProviderApiKey(settings, provider,);
-  const model = typeof settings.aiModel === "string" && settings.aiModel.trim()
-    ? settings.aiModel.trim()
-    : getDefaultAiModel(provider, "assistant",);
+  const model = normalizeAiModel(provider, settings.aiModel,)
+    || getDefaultAiModel(provider, "assistant",);
   if (!apiKey) return null;
   return { provider, model, apiKey, };
 }
@@ -465,7 +469,7 @@ export async function loadSettings(): Promise<Settings> {
       ...DEFAULT_SETTINGS,
       ...parsed,
       aiProvider: normalizeAiProvider(parsed.aiProvider,),
-      aiModel: typeof parsed.aiModel === "string" ? parsed.aiModel.trim() : "",
+      aiModel: normalizeAiModel(normalizeAiProvider(parsed.aiProvider,), parsed.aiModel,),
       currentSttProvider: normalizeSttProvider(parsed.currentSttProvider,),
       currentSttModel: typeof parsed.currentSttModel === "string"
         ? parsed.currentSttModel.trim() || getDefaultSttModel(normalizeSttProvider(parsed.currentSttProvider,),)
@@ -503,7 +507,7 @@ export async function saveSettings(settings: Settings,): Promise<void> {
     JSON.stringify(
       {
         ...settings,
-        aiModel: settings.aiModel.trim(),
+        aiModel: normalizeAiModel(normalizeAiProvider(settings.aiProvider,), settings.aiModel,),
         currentSttProvider: normalizeSttProvider(settings.currentSttProvider,),
         currentSttModel: settings.currentSttModel.trim(),
         sttBaseUrl: settings.sttBaseUrl.trim(),

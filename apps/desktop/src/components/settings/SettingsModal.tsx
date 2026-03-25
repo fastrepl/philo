@@ -61,7 +61,6 @@ const STT_PROVIDER_HINTS: Record<SttProvider, string> = {
 };
 
 const CUSTOM_STT_MODEL_VALUE = "__philo_custom_stt_model__";
-const CUSTOM_AI_MODEL_VALUE = "__philo_custom_ai_model__";
 
 const GOOGLE_EMAIL_OPEN_CLIENT_LABELS: Record<GoogleEmailOpenClient, string> = {
   gmail: "Gmail",
@@ -446,7 +445,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const filenamePatternInputRef = useRef<HTMLInputElement>(null,);
   const sttApiKeyInputRef = useRef<HTMLInputElement>(null,);
   const sttModelInputRef = useRef<HTMLInputElement>(null,);
-  const aiModelInputRef = useRef<HTMLInputElement>(null,);
   const settingsRef = useRef<Settings | null>(null,);
   const lastSavedSettingsRef = useRef<Settings | null>(null,);
   const activeSaveRef = useRef<Promise<void> | null>(null,);
@@ -674,19 +672,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
     const currentSettings = settingsRef.current ?? settings;
     if (!currentSettings) return;
     const defaultModel = getDefaultAiModel(currentSettings.aiProvider, "assistant",);
-    const suggestedModels = getSuggestedAiModels(currentSettings.aiProvider,);
-    const normalizedCurrentModel = currentSettings.aiModel.trim() || defaultModel;
-    const hasPresetAiModel = suggestedModels.includes(normalizedCurrentModel,);
-
-    if (model === CUSTOM_AI_MODEL_VALUE) {
-      update({ aiModel: hasPresetAiModel ? "" : currentSettings.aiModel, },);
-      requestAnimationFrame(() => {
-        aiModelInputRef.current?.focus();
-        aiModelInputRef.current?.select();
-      },);
-      return;
-    }
-
     update({ aiModel: model === defaultModel ? "" : model, },);
   };
 
@@ -927,9 +912,6 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
   const selectedAiKey = getAiProviderDraftKey(settings, selectedAiProvider,);
   const suggestedAiModels = getSuggestedAiModels(selectedAiProvider,);
   const normalizedCurrentAiModel = settings.aiModel.trim() || getDefaultAiModel(selectedAiProvider, "assistant",);
-  const hasPresetAiModel = suggestedAiModels.includes(normalizedCurrentAiModel,);
-  const selectedAiModelValue = hasPresetAiModel ? normalizedCurrentAiModel : CUSTOM_AI_MODEL_VALUE;
-  const showCustomAiModelInput = selectedAiModelValue === CUSTOM_AI_MODEL_VALUE;
   const trimmedOpenAiApiKey = settings.openaiApiKey.trim();
   const isReusingOpenAiSttKey = settings.currentSttProvider === "openai"
     && !settings.sttApiKey.trim()
@@ -1022,37 +1004,14 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
                       <div className="space-y-2">
                         <SharpSelectField
                           label="Model"
-                          options={[
-                            ...suggestedAiModels.map((model,) => ({
-                              hint: getAiModelHint(model,),
-                              label: getAiModelLabel(model,),
-                              value: model,
-                            })),
-                            {
-                              hint: "Manual",
-                              label: "Custom",
-                              value: CUSTOM_AI_MODEL_VALUE,
-                            },
-                          ]}
-                          value={selectedAiModelValue}
+                          options={suggestedAiModels.map((model,) => ({
+                            hint: getAiModelHint(model,),
+                            label: getAiModelLabel(model,),
+                            value: model,
+                          }))}
+                          value={normalizedCurrentAiModel}
                           onChange={handleAiModelChange}
                         />
-                        {showCustomAiModelInput && (
-                          <input
-                            ref={aiModelInputRef}
-                            type="text"
-                            value={settings.aiModel}
-                            onChange={(e,) => update({ aiModel: e.target.value, },)}
-                            placeholder={getDefaultAiModel(selectedAiProvider, "assistant",)}
-                            className="w-full border border-gray-200 bg-white px-3 py-2 text-sm transition-all focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-                            style={mono}
-                          />
-                        )}
-                        <p className="text-[11px] text-gray-400" style={mono}>
-                          {showCustomAiModelInput
-                            ? "Paste the exact model ID your provider expects."
-                            : `Model ID: ${normalizedCurrentAiModel}`}
-                        </p>
                       </div>
                       <div className="space-y-2">
                         <label className="block text-xs text-gray-500" style={mono}>
