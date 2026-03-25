@@ -288,6 +288,31 @@ function createTranscriptContent(
   return content;
 }
 
+function getContentAfterHeading(doc: JSONContent, label: string,) {
+  const content = normalizeDocContent(doc,);
+  const section: JSONContent[] = [];
+  let capturing = false;
+
+  for (const node of content) {
+    if (node.type === "heading") {
+      const text = getNodeText(node,).trim();
+      if (text === label) {
+        capturing = true;
+        continue;
+      }
+      if (capturing) {
+        break;
+      }
+    }
+
+    if (capturing) {
+      section.push(node,);
+    }
+  }
+
+  return trimTrailingEmptyParagraphs(section,);
+}
+
 function normalizeDocContent(doc: JSONContent,): JSONContent[] {
   const content = Array.isArray(doc.content,) ? [...doc.content,] : [];
   if (content.length !== 1 || content[0]?.type !== "paragraph" || getNodeText(content[0],).trim()) {
@@ -329,6 +354,7 @@ function buildMeetingCaptureDoc({
   transcript,
   transcriptBlocks,
   transcriptPrefix,
+  transcriptContent,
 }: {
   sessionKind?: MeetingSessionKind | null;
   summary?: string[];
@@ -338,10 +364,13 @@ function buildMeetingCaptureDoc({
   transcript?: string;
   transcriptBlocks?: MeetingTranscriptBlock[];
   transcriptPrefix?: string;
+  transcriptContent?: JSONContent[];
 },): JSONContent {
   const content: JSONContent[] = [];
   const summaryList = createBulletList(summary ?? [],);
-  const transcriptContent = createTranscriptContent(transcript, transcriptBlocks, transcriptPrefix,);
+  const nextTranscriptContent = transcriptContent?.length
+    ? transcriptContent
+    : createTranscriptContent(transcript, transcriptBlocks, transcriptPrefix,);
 
   if (summaryList) {
     content.push(createHeading(2, "Summary",), summaryList,);
@@ -373,8 +402,8 @@ function buildMeetingCaptureDoc({
     );
   }
 
-  if (transcriptContent.length > 0) {
-    content.push(createHeading(2, "Transcript",), ...transcriptContent,);
+  if (nextTranscriptContent.length > 0) {
+    content.push(createHeading(2, "Transcript",), ...nextTranscriptContent,);
   }
 
   return content.length > 0 ? { type: "doc", content, } : EMPTY_DOC;
@@ -591,20 +620,35 @@ function getTranscriptText(state: MeetingTranscriptState, includePartial = true,
     : state.fallbackFinalText.trim();
 }
 
-function getLiveTranscriptCaption(transcript: string, maxWords = 18,) {
+function getLiveTranscriptCaption(transcript: string, maxCharacters = 28,) {
   const normalized = transcript.replace(/\s+/g, " ",).trim();
   if (!normalized) return "Listening...";
 
-  const words = normalized.split(" ",);
-  if (words.length <= maxWords) return normalized;
-  return words.slice(-maxWords,).join(" ",);
+  const words = normalized.split(" ",).filter(Boolean,);
+  let currentLine = "";
+
+  for (const word of words) {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+    if (currentLine && nextLine.length > maxCharacters) {
+      currentLine = word;
+      continue;
+    }
+
+    currentLine = nextLine;
+  }
+
+  return currentLine || normalized;
 }
 
-function createLiveMeetingTranscript(pageTitle: string, transcript: string,): LiveMeetingTranscript {
+function createLiveMeetingTranscript(
+  pageTitle: string,
+  transcript: string,
+  liveCaptionText = "",
+): LiveMeetingTranscript {
   const fullText = transcript.trim();
   return {
     pageTitle,
-    captionText: getLiveTranscriptCaption(fullText,),
+    captionText: getLiveTranscriptCaption(liveCaptionText,),
     fullText,
   };
 }
@@ -643,13 +687,8 @@ function LiveMeetingTranscriptOverlay({
           <span className="h-2 w-2 rounded-full bg-red-500" />
           live transcript
         </div>
-        <p
-          className="overflow-hidden whitespace-nowrap text-sm leading-6 text-gray-900"
-          style={{ direction: "rtl", textAlign: "left", textOverflow: "ellipsis", }}
-        >
-          <span style={{ direction: "ltr", unicodeBidi: "plaintext", }}>
-            {transcript.captionText}
-          </span>
+        <p className="overflow-hidden whitespace-nowrap text-sm leading-6 text-gray-900">
+          {transcript.captionText}
         </p>
       </button>
 
@@ -1819,12 +1858,14 @@ export default function AppLayout() {
     endedAt,
     summaryResult,
     transcriptBlocks,
+    preserveTranscriptFormatting = false,
   }: {
     pageTitle: string;
     transcript: string;
     endedAt?: string | null;
     summaryResult?: Awaited<ReturnType<typeof summarizeMeeting>>;
     transcriptBlocks?: MeetingTranscriptBlock[];
+    preserveTranscriptFormatting?: boolean;
   },) => {
     const page = currentPageRef.current?.title === pageTitle
       ? currentPageRef.current
@@ -1849,6 +1890,9 @@ export default function AppLayout() {
     const nextActionItems = summaryResult
       ? (summaryResult.sessionKind === "decision_making" ? summaryResult.actionItems : [])
       : page.actionItems;
+    const preservedTranscriptContent = preserveTranscriptFormatting && !transcriptBlocks
+      ? getContentAfterHeading(currentDoc, "Transcript",)
+      : undefined;
     const nextCaptureDoc = buildMeetingCaptureDoc({
       sessionKind: nextSessionKind,
       summary: nextSummary,
@@ -1860,6 +1904,7 @@ export default function AppLayout() {
       transcriptPrefix: transcriptBlocks?.length && activeSession?.pageTitle === pageTitle
         ? activeSession.existingTranscript
         : undefined,
+      transcriptContent: preservedTranscriptContent,
     },);
     const nextStartedAt = page.startedAt ?? activeSession?.startedAt ?? null;
     const nextLocation = summaryResult?.location ?? page.location;
@@ -1944,6 +1989,7 @@ export default function AppLayout() {
         transcript,
         endedAt: endedAtOverride ?? page.endedAt,
         summaryResult: result,
+        preserveTranscriptFormatting: true,
       },);
 
       setMeetingSummaryTargetTitle(null,);
@@ -2220,13 +2266,18 @@ export default function AppLayout() {
           const activeSession = activeMeetingSessionRef.current;
           if (!activeSession || event.session_id !== activeSession.sessionId) return;
           if (event.type !== "stream_response") return;
+          const response = event.response;
+          if (response.type !== "Results") return;
 
-          applyTranscriptResponse(activeSession.transcriptState, event.response,);
+          applyTranscriptResponse(activeSession.transcriptState, response,);
           const transcript = mergeTranscriptText(
             activeSession.existingTranscript,
             getTranscriptText(activeSession.transcriptState, true,),
           );
-          setLiveMeetingTranscript(createLiveMeetingTranscript(activeSession.pageTitle, transcript,),);
+          const liveCaptionText = response.channel.alternatives[0]?.transcript ?? "";
+          setLiveMeetingTranscript(
+            createLiveMeetingTranscript(activeSession.pageTitle, transcript, liveCaptionText,),
+          );
 
           try {
             await updateMeetingPage({
