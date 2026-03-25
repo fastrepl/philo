@@ -231,7 +231,6 @@ function MeetingMetaView({ node, }: NodeViewProps,) {
 
   return (
     <NodeViewWrapper className="meeting-meta-node" contentEditable={false}>
-      <div className="meeting-meta-node__label">Meeting info</div>
       <div className="meeting-meta-node__grid">
         {rows.map((row,) => (
           <div key={row.label} className="meeting-meta-node__row">
