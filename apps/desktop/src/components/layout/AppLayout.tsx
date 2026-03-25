@@ -140,6 +140,7 @@ interface MeetingTranscriptWord {
   startMs: number;
   endMs: number;
   channel: number;
+  speaker: number | null;
 }
 
 interface MeetingTranscriptState {
@@ -166,6 +167,12 @@ interface LiveMeetingTranscript {
   fullText: string;
 }
 
+interface MeetingTranscriptBlock {
+  speakerKey: string;
+  startMs: number;
+  text: string;
+}
+
 function getNodeText(node: JSONContent | undefined,): string {
   if (!node) return "";
   if (typeof node.text === "string") return node.text;
@@ -177,6 +184,13 @@ function createParagraph(text = "",): JSONContent {
   return text
     ? { type: "paragraph", content: [{ type: "text", text, },], }
     : { type: "paragraph", };
+}
+
+function createStrongParagraph(text: string,): JSONContent {
+  return {
+    type: "paragraph",
+    content: [{ type: "text", text, marks: [{ type: "bold", },], },],
+  };
 }
 
 function createPageLinkParagraph(title: string,): JSONContent {
@@ -227,6 +241,59 @@ function createParagraphsFromText(text: string,): JSONContent[] {
     .map((line,) => createParagraph(line,));
 }
 
+function formatTranscriptTimestamp(milliseconds: number,) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000,),);
+  const hours = Math.floor(totalSeconds / 3600,);
+  const minutes = Math.floor((totalSeconds % 3600) / 60,);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return [
+      String(hours,).padStart(2, "0",),
+      String(minutes,).padStart(2, "0",),
+      String(seconds,).padStart(2, "0",),
+    ].join(":",);
+  }
+
+  return [
+    String(minutes,).padStart(2, "0",),
+    String(seconds,).padStart(2, "0",),
+  ].join(":",);
+}
+
+function getTranscriptSpeakerKey(word: MeetingTranscriptWord,) {
+  return word.speaker !== null ? `speaker:${word.speaker}` : `channel:${word.channel}`;
+}
+
+function createTranscriptContent(
+  transcript: string | undefined,
+  transcriptBlocks?: MeetingTranscriptBlock[],
+  transcriptPrefix?: string,
+) {
+  if (!transcriptBlocks?.length) {
+    const transcriptText = transcript?.trim() ?? "";
+    return transcriptText ? createParagraphsFromText(transcriptText,) : [];
+  }
+
+  const content: JSONContent[] = [];
+  const prefixText = transcriptPrefix?.trim() ?? "";
+  if (prefixText) {
+    content.push(...createParagraphsFromText(prefixText,),);
+  }
+
+  const speakerOrder = new Map<string, number>();
+  for (const block of transcriptBlocks) {
+    const speakerIndex = speakerOrder.get(block.speakerKey,) ?? speakerOrder.size + 1;
+    speakerOrder.set(block.speakerKey, speakerIndex,);
+    content.push(
+      createStrongParagraph(`Speaker ${speakerIndex} - ${formatTranscriptTimestamp(block.startMs,)}`,),
+      createParagraph(block.text,),
+    );
+  }
+
+  return content;
+}
+
 function normalizeDocContent(doc: JSONContent,): JSONContent[] {
   const content = Array.isArray(doc.content,) ? [...doc.content,] : [];
   if (content.length !== 1 || content[0]?.type !== "paragraph" || getNodeText(content[0],).trim()) {
@@ -266,6 +333,8 @@ function buildMeetingCaptureDoc({
   keyTakeaways,
   actionItems,
   transcript,
+  transcriptBlocks,
+  transcriptPrefix,
 }: {
   sessionKind?: MeetingSessionKind | null;
   summary?: string[];
@@ -273,10 +342,12 @@ function buildMeetingCaptureDoc({
   keyTakeaways?: string[];
   actionItems?: string[];
   transcript?: string;
+  transcriptBlocks?: MeetingTranscriptBlock[];
+  transcriptPrefix?: string;
 },): JSONContent {
   const content: JSONContent[] = [];
   const summaryList = createBulletList(summary ?? [],);
-  const transcriptText = transcript?.trim() ?? "";
+  const transcriptContent = createTranscriptContent(transcript, transcriptBlocks, transcriptPrefix,);
 
   if (summaryList) {
     content.push(createHeading(2, "Summary",), summaryList,);
@@ -308,8 +379,8 @@ function buildMeetingCaptureDoc({
     );
   }
 
-  if (transcriptText) {
-    content.push(createHeading(2, "Transcript",), ...createParagraphsFromText(transcriptText,),);
+  if (transcriptContent.length > 0) {
+    content.push(createHeading(2, "Transcript",), ...transcriptContent,);
   }
 
   return content.length > 0 ? { type: "doc", content, } : EMPTY_DOC;
@@ -395,6 +466,7 @@ function toMeetingTranscriptWords(response: ListenerStreamResponse,): MeetingTra
     startMs: Math.round(word.start * 1000,),
     endMs: Math.round(word.end * 1000,),
     channel,
+    speaker: word.speaker,
   }));
 }
 
@@ -467,6 +539,44 @@ function finalizeTranscriptState(state: MeetingTranscriptState,) {
 
     state.partialWordsByChannel[channel] = [];
   }
+}
+
+function buildFinalTranscriptBlocks(state: MeetingTranscriptState,) {
+  const words = Object.values(state.finalWordsByChannel,).flat().sort((left, right,) => {
+    if (left.startMs !== right.startMs) return left.startMs - right.startMs;
+    if (left.endMs !== right.endMs) return left.endMs - right.endMs;
+    return left.channel - right.channel;
+  },);
+
+  const blocks: Array<MeetingTranscriptBlock & { endMs: number; }> = [];
+  for (const word of words) {
+    const speakerKey = getTranscriptSpeakerKey(word,);
+    const previousBlock = blocks[blocks.length - 1];
+    if (
+      !previousBlock
+      || previousBlock.speakerKey !== speakerKey
+      || word.startMs - previousBlock.endMs >= 4000
+    ) {
+      blocks.push({
+        speakerKey,
+        startMs: word.startMs,
+        endMs: word.endMs,
+        text: word.text,
+      },);
+      continue;
+    }
+
+    previousBlock.text += word.text;
+    previousBlock.endMs = Math.max(previousBlock.endMs, word.endMs,);
+  }
+
+  return blocks
+    .map(({ speakerKey, startMs, text, },) => ({
+      speakerKey,
+      startMs,
+      text: text.trim(),
+    }))
+    .filter((block,) => block.text.length > 0);
 }
 
 function getTranscriptText(state: MeetingTranscriptState, includePartial = true,) {
@@ -1718,11 +1828,13 @@ export default function AppLayout() {
     transcript,
     endedAt,
     summaryResult,
+    transcriptBlocks,
   }: {
     pageTitle: string;
     transcript: string;
     endedAt?: string | null;
     summaryResult?: Awaited<ReturnType<typeof summarizeMeeting>>;
+    transcriptBlocks?: MeetingTranscriptBlock[];
   },) => {
     const page = currentPageRef.current?.title === pageTitle
       ? currentPageRef.current
@@ -1754,6 +1866,10 @@ export default function AppLayout() {
       keyTakeaways: summaryResult?.keyTakeaways,
       actionItems: nextActionItems,
       transcript: transcriptText,
+      transcriptBlocks,
+      transcriptPrefix: transcriptBlocks?.length && activeSession?.pageTitle === pageTitle
+        ? activeSession.existingTranscript
+        : undefined,
     },);
     const nextStartedAt = page.startedAt ?? activeSession?.startedAt ?? null;
     const nextLocation = summaryResult?.location ?? page.location;
@@ -1985,6 +2101,7 @@ export default function AppLayout() {
     if (!activeSession) return;
 
     finalizeTranscriptState(activeSession.transcriptState,);
+    const transcriptBlocks = buildFinalTranscriptBlocks(activeSession.transcriptState,);
     const transcript = mergeTranscriptText(
       activeSession.existingTranscript,
       getTranscriptText(activeSession.transcriptState, false,),
@@ -1997,6 +2114,7 @@ export default function AppLayout() {
         pageTitle: activeSession.pageTitle,
         transcript,
         endedAt: finalizedAt,
+        transcriptBlocks,
       },);
     } catch (error) {
       console.error(error,);
