@@ -7,7 +7,7 @@ interface WidgetSdkBridge {
 }
 
 interface WidgetSdkStateApi {
-  getValue: (key: string,) => unknown;
+  getValue: <T,>(key: string, initialValue?: T,) => T | undefined;
   setValue: (key: string, value: unknown,) => void;
 }
 
@@ -55,42 +55,45 @@ export function WidgetSdkProvider({
   bridge: WidgetSdkBridge;
   children: ReactNode;
 },) {
-  const [values, setValues,] = useState<Record<string, unknown>>({},);
   const [mutationVersion, setMutationVersion,] = useState(0,);
+  const [stateVersion, setStateVersion,] = useState(0,);
+  const valuesRef = useRef<Record<string, unknown>>({},);
 
   const state = useMemo<WidgetSdkStateApi>(() => ({
-    getValue: (key: string,) => values[key],
-    setValue: (key: string, value: unknown,) => {
-      setValues((current,) => ({ ...current, [key]: value, }));
+    getValue: <T,>(key: string, initialValue?: T,) => {
+      if (Object.prototype.hasOwnProperty.call(valuesRef.current, key,)) {
+        return valuesRef.current[key] as T;
+      }
+
+      if (initialValue !== undefined) {
+        valuesRef.current = { ...valuesRef.current, [key]: initialValue, };
+      }
+
+      return initialValue;
     },
-  }), [values,],);
+    setValue: (key: string, value: unknown,) => {
+      if (Object.is(valuesRef.current[key], value,)) {
+        return;
+      }
+
+      valuesRef.current = { ...valuesRef.current, [key]: value, };
+      setStateVersion((version,) => version + 1);
+    },
+  }), [],);
 
   const contextValue = useMemo<WidgetSdkContextValue>(() => ({
     bridge,
     state,
     mutationVersion,
     bumpMutationVersion: () => setMutationVersion((value,) => value + 1),
-  }), [bridge, mutationVersion, state,],);
+  }), [bridge, mutationVersion, state, stateVersion,],);
 
   return <WidgetSdkContext.Provider value={contextValue}>{children}</WidgetSdkContext.Provider>;
 }
 
 export function useWidgetState<T,>(key: string, initialValue: T,) {
   const context = useWidgetSdkContext();
-  const initializedRef = useRef(false,);
-  const currentValue = context.state.getValue(key,) as T | undefined;
-
-  useEffect(() => {
-    if (initializedRef.current) return;
-    if (currentValue !== undefined) {
-      initializedRef.current = true;
-      return;
-    }
-    context.state.setValue(key, initialValue,);
-    initializedRef.current = true;
-  }, [context.state, currentValue, initialValue, key,],);
-
-  const value = currentValue === undefined ? initialValue : currentValue;
+  const value = context.state.getValue<T>(key, initialValue,) as T;
   const setValue = (next: T | ((current: T,) => T),) => {
     const resolved = typeof next === "function"
       ? (next as (current: T,) => T)(value,)
