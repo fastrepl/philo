@@ -97,17 +97,13 @@ import {
 } from "../../types/note";
 import { AiComposer, } from "../ai/AiComposer";
 import { stripMeetingPageDoc, } from "../editor/extensions/meeting/MeetingPageExtensions";
-import {
-  clearWidgetEditSession as clearWidgetEditSessionStore,
-  setWidgetEditBuildState,
-  submitWidgetEditInstruction,
-  useWidgetEditSessionStore,
-} from "../editor/extensions/widget/edit-session";
+import { clearWidgetEditSession as clearWidgetEditSessionStore, } from "../editor/extensions/widget/edit-session";
 import EditableNote, { type EditableNoteHandle, type EditableNoteSelection, } from "../journal/EditableNote";
 import { LibraryDrawer, } from "../library/LibraryDrawer";
 import { OnboardingModal, } from "../onboarding/OnboardingModal";
 import { SettingsModal, } from "../settings/SettingsModal";
 import { UpdateBanner, } from "../UpdateBanner";
+import { useWidgetEditComposer, } from "./useWidgetEditComposer";
 
 const LOCAL_SAVE_WATCH_SUPPRESSION_MS = 1000;
 const NOTE_SCROLL_OFFSET_PX = 56;
@@ -1436,11 +1432,6 @@ export default function AppLayout() {
   const nextViewAnimationDirectionRef = useRef<"forward" | "backward" | null>(null,);
   const viewAnimationFrameRef = useRef<number | null>(null,);
   const viewAnimationResetRef = useRef<number | null>(null,);
-  const widgetEditState = useWidgetEditSessionStore();
-  const widgetEditSession = widgetEditState.session;
-  const widgetEditSubmitting = widgetEditState.isBuilding;
-  const widgetEditBuildSeenRef = useRef(false,);
-  const widgetEditOpenedRef = useRef<string | null>(null,);
   const currentView = viewState.history[viewState.index] ?? { kind: "home", };
   const currentPageTitle = currentView.kind === "page" ? currentView.title : null;
   const activeMeetingPageTitle = liveMeetingTranscript?.pageTitle ?? activeMeetingSessionRef.current?.pageTitle ?? null;
@@ -1520,11 +1511,6 @@ export default function AppLayout() {
       pendingChanges: result?.pendingChanges ?? [],
     },),);
   }, [aiChatHistory, aiLatestChatId, upsertAiChatHistoryEntry,],);
-
-  const clearWidgetEditSession = useCallback(() => {
-    clearWidgetEditSessionStore();
-    setAiSelectedLabel(null,);
-  }, [],);
 
   const syncTodayNoteFromDisk = useCallback(() => {
     loadDailyNote(today,)
@@ -1956,6 +1942,13 @@ export default function AppLayout() {
       throw error;
     }
   }, [getMeetingLocationHint, updateMeetingPage,],);
+
+  const clearWidgetEditSession = useCallback((widgetId?: string | null,) => {
+    const didClear = clearWidgetEditSessionStore(widgetId,);
+    if (didClear || !widgetId) {
+      setAiSelectedLabel(null,);
+    }
+  }, [],);
 
   const openGlobalSearch = useCallback(() => {
     clearWidgetEditSession();
@@ -2920,22 +2913,6 @@ export default function AppLayout() {
     upsertAiChatHistoryEntry,
   ],);
 
-  const handleAiSubmit = useCallback(async () => {
-    if (widgetEditSession) {
-      const instruction = aiPrompt.trim();
-      if (!instruction) return;
-      setWidgetEditBuildState(widgetEditSession.widgetId, true,);
-      const submitted = await submitWidgetEditInstruction(instruction,);
-      if (!submitted) {
-        clearWidgetEditSession();
-        setAiError("Widget editor is no longer available.",);
-      }
-      return;
-    }
-
-    await runAiPrompt(aiPrompt,);
-  }, [aiPrompt, clearWidgetEditSession, runAiPrompt, widgetEditSession,],);
-
   const handleStopAi = useCallback(() => {
     aiAbortControllerRef.current?.abort();
   }, [],);
@@ -3009,51 +2986,23 @@ export default function AppLayout() {
     closeAiComposer();
   }, [aiComposerOpen, closeAiComposer,],);
 
-  useEffect(() => {
-    if (!widgetEditSession) {
-      widgetEditOpenedRef.current = null;
-      return;
-    }
-
-    if (widgetEditOpenedRef.current === widgetEditSession.widgetId) {
-      return;
-    }
-
-    widgetEditOpenedRef.current = widgetEditSession.widgetId;
-    setGlobalSearchOpen(false,);
-    setAiScope("recent",);
-    setAiSelectedText(null,);
-    setAiSelectedLabel(`[Edit widget] ${widgetEditSession.title}`,);
-    setAiSelectionHighlight(null,);
-    setAiPrompt("",);
-    setAiError(null,);
-    setAiComposerOpen(true,);
-    refreshAiAvailability();
-  }, [refreshAiAvailability, widgetEditSession,],);
-
-  useEffect(() => {
-    if (!widgetEditSession) {
-      widgetEditBuildSeenRef.current = false;
-      return;
-    }
-
-    if (widgetEditSubmitting) {
-      widgetEditBuildSeenRef.current = true;
-      return;
-    }
-
-    if (!widgetEditBuildSeenRef.current) {
-      return;
-    }
-
-    widgetEditBuildSeenRef.current = false;
-    setAiPrompt("",);
-    setAiComposerOpen(false,);
-    setAiError(null,);
-    setAiSelectedText(null,);
-    setAiSelectionHighlight(null,);
-    clearWidgetEditSession();
-  }, [clearWidgetEditSession, widgetEditSession, widgetEditSubmitting,],);
+  const {
+    handleAiSubmit,
+    widgetEditSession,
+    widgetEditSubmitting,
+  } = useWidgetEditComposer({
+    aiPrompt,
+    clearWidgetEditSession,
+    refreshAiAvailability,
+    runAiPrompt,
+    setAiComposerOpen,
+    setAiError,
+    setAiPrompt,
+    setAiScope,
+    setAiSelectedLabel,
+    setAiSelectedText,
+    setAiSelectionHighlight,
+  },);
 
   const todayRef = useRef<HTMLDivElement>(null,);
   const scrollRef = useRef<HTMLDivElement>(null,);

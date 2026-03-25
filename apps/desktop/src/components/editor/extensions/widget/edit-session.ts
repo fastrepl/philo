@@ -9,6 +9,11 @@ type WidgetEditController = {
   submitInstruction: (instruction: string,) => Promise<void> | void;
 };
 
+type WidgetEditComposerController = {
+  finishBuild: (widgetId: string,) => void;
+  openSession: (session: WidgetEditSession,) => void;
+};
+
 type WidgetEditSessionState = {
   isBuilding: boolean;
   session: WidgetEditSession | null;
@@ -16,6 +21,7 @@ type WidgetEditSessionState = {
 
 const listeners = new Set<() => void>();
 const controllers = new Map<string, WidgetEditController>();
+let composerController: WidgetEditComposerController | null = null;
 
 let state: WidgetEditSessionState = {
   isBuilding: false,
@@ -47,15 +53,16 @@ export function requestWidgetEdit(session: WidgetEditSession,) {
     session,
   };
   emit();
+  composerController?.openSession(session,);
 }
 
 export function clearWidgetEditSession(widgetId?: string | null,) {
   if (widgetId && state.session?.widgetId !== widgetId) {
-    return;
+    return false;
   }
 
   if (!state.session && !state.isBuilding) {
-    return;
+    return false;
   }
 
   state = {
@@ -63,6 +70,7 @@ export function clearWidgetEditSession(widgetId?: string | null,) {
     session: null,
   };
   emit();
+  return true;
 }
 
 export function setWidgetEditBuildState(widgetId: string, isBuilding: boolean,) {
@@ -70,11 +78,16 @@ export function setWidgetEditBuildState(widgetId: string, isBuilding: boolean,) 
     return;
   }
 
+  const didFinishBuild = state.isBuilding && !isBuilding;
   state = {
     ...state,
     isBuilding,
   };
   emit();
+
+  if (didFinishBuild) {
+    composerController?.finishBuild(widgetId,);
+  }
 }
 
 export function registerWidgetEditController(widgetId: string, controller: WidgetEditController,) {
@@ -83,6 +96,16 @@ export function registerWidgetEditController(widgetId: string, controller: Widge
   return () => {
     if (controllers.get(widgetId,) === controller) {
       controllers.delete(widgetId,);
+    }
+  };
+}
+
+export function registerWidgetEditComposerController(controller: WidgetEditComposerController,) {
+  composerController = controller;
+
+  return () => {
+    if (composerController === controller) {
+      composerController = null;
     }
   };
 }
