@@ -603,7 +603,7 @@ function getLiveTranscriptCaption(transcript: string, maxWords = 18,) {
 
   const words = normalized.split(" ",);
   if (words.length <= maxWords) return normalized;
-  return `…${words.slice(-maxWords,).join(" ",)}`;
+  return words.slice(-maxWords,).join(" ",);
 }
 
 function createLiveMeetingTranscript(pageTitle: string, transcript: string,): LiveMeetingTranscript {
@@ -649,8 +649,13 @@ function LiveMeetingTranscriptOverlay({
           <span className="h-2 w-2 rounded-full bg-red-500" />
           live transcript
         </div>
-        <p className="truncate text-sm leading-6 text-gray-900">
-          {transcript.captionText}
+        <p
+          className="overflow-hidden whitespace-nowrap text-sm leading-6 text-gray-900"
+          style={{ direction: "rtl", textAlign: "left", textOverflow: "ellipsis", }}
+        >
+          <span style={{ direction: "ltr", unicodeBidi: "plaintext", }}>
+            {transcript.captionText}
+          </span>
         </p>
       </button>
 
