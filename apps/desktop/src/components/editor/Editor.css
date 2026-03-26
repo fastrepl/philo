@@ -35,22 +35,22 @@
 }
 
 .tiptap ul[data-type="taskList"] .task-item-toggle {
-  width: 0;
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 50%;
+  width: 16px;
   height: 16px;
-  margin-right: 0;
   padding: 0;
   border: 0;
   background: transparent;
   color: #9ca3af;
   opacity: 0;
-  overflow: hidden;
   pointer-events: none;
   transition:
     opacity 120ms ease,
     color 120ms ease,
-    transform 120ms ease,
-    width 120ms ease,
-    margin-right 120ms ease;
+    transform 120ms ease;
+  transform: translateY(-50%);
 }
 
 .tiptap ul[data-type="taskList"] .task-item-toggle svg {
@@ -61,8 +61,6 @@
 }
 
 .tiptap ul[data-type="taskList"] li.task-item--has-children > label .task-item-toggle {
-  width: 16px;
-  margin-right: 4px;
   pointer-events: auto;
 }
 
