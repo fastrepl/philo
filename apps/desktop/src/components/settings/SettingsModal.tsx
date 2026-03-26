@@ -438,7 +438,7 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
     }
   >(null,);
   const [googleError, setGoogleError,] = useState("",);
-  const [googleSessionAccounts, setGoogleSessionAccounts,] = useState<string[]>([],);
+  const [googleSessionAccounts, setGoogleSessionAccounts,] = useState<null | string[]>(null,);
   const [isObsidianVault, setIsObsidianVault,] = useState(false,);
   const inputRef = useRef<HTMLInputElement>(null,);
   const modalRef = useRef<HTMLDivElement>(null,);
@@ -463,7 +463,7 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
         setIsFilenamePatternFocused(false,);
         setGoogleAction(null,);
         setGoogleError("",);
-        setGoogleSessionAccounts([],);
+        setGoogleSessionAccounts(null,);
       },);
       // Resolve the default journal dir for display
       getJournalDir().then(setDefaultJournalDir,);
@@ -515,7 +515,7 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
       },)
       .catch(() => {
         if (!cancelled) {
-          setGoogleSessionAccounts([],);
+          setGoogleSessionAccounts(null,);
         }
       },);
 
@@ -572,6 +572,25 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
     googleOAuthClientId: (partial.googleOAuthClientId ?? current.googleOAuthClientId).trim(),
     googleAccounts: partial.googleAccounts ?? current.googleAccounts,
   });
+
+  const upsertGoogleSessionAccount = (accountEmail: string,) => {
+    const normalizedEmail = accountEmail.trim().toLowerCase();
+    if (!normalizedEmail) return;
+    setGoogleSessionAccounts((currentAccounts,) => {
+      if (currentAccounts === null) return [normalizedEmail,];
+      if (currentAccounts.includes(normalizedEmail,)) return currentAccounts;
+      return [...currentAccounts, normalizedEmail,];
+    },);
+  };
+
+  const removeGoogleSessionAccount = (accountEmail: string,) => {
+    const normalizedEmail = accountEmail.trim().toLowerCase();
+    if (!normalizedEmail) return;
+    setGoogleSessionAccounts((currentAccounts,) => {
+      if (currentAccounts === null) return null;
+      return currentAccounts.filter((account,) => account !== normalizedEmail);
+    },);
+  };
 
   const persistSettingsNow = async (nextSettings: Settings,) => {
     const task = (async () => {
@@ -705,6 +724,10 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
       const googlePatch = await connectGoogleAccount(currentSettings, { signal: controller.signal, },);
       if (controller.signal.aborted) return;
       await persistGooglePatch(googlePatch,);
+      const connectedAccount = googlePatch.googleAccounts[googlePatch.googleAccounts.length - 1];
+      if (connectedAccount) {
+        upsertGoogleSessionAccount(connectedAccount.email,);
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
@@ -733,6 +756,7 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
       },);
       if (controller.signal.aborted) return;
       await persistGooglePatch(googlePatch,);
+      upsertGoogleSessionAccount(accountEmail,);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
@@ -766,6 +790,7 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
       settingsRef.current = nextSettings;
       lastSavedSettingsRef.current = nextSettings;
       setSettings(nextSettings,);
+      removeGoogleSessionAccount(accountEmail,);
     } finally {
       setGoogleAction(null,);
     }
@@ -1226,7 +1251,8 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
                       const isRefreshing = refreshingGoogleAccount === account.email;
                       const isDisconnecting = googleAction?.type === "disconnecting"
                         && googleAction.email === account.email;
-                      const hasSecureSession = googleSessionAccounts.includes(account.email.trim().toLowerCase(),);
+                      const hasSecureSession = googleSessionAccounts === null
+                        || googleSessionAccounts.includes(account.email.trim().toLowerCase(),);
                       const isRefreshDisabled = isGoogleBusy && !isRefreshing;
                       return (
                         <div key={account.email} className="flex min-w-0 items-start gap-1">
