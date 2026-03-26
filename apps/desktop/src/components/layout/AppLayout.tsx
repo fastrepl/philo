@@ -709,64 +709,56 @@ function LiveMeetingTranscriptOverlay({
   if (!transcript) return null;
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="fixed bottom-5 left-1/2 z-[70] flex w-[min(720px,calc(100%-3rem))] -translate-x-1/2 flex-col gap-2 rounded-2xl border border-gray-200 bg-white/96 px-4 py-3 text-left shadow-[0_18px_60px_rgba(15,23,42,0.16)] backdrop-blur"
-      >
-        <div
-          className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-gray-400"
-          style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-        >
-          <span className="h-2 w-2 rounded-full bg-red-500" />
-          live transcript
-        </div>
-        <p className="overflow-hidden whitespace-nowrap text-sm leading-6 text-gray-900">
-          {transcript.captionText}
-        </p>
-      </button>
-
-      {open && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center px-6 py-16">
+    <div className="fixed inset-x-0 bottom-0 z-[90] transition-transform duration-300 ease-out">
+      <div className="mx-auto w-full max-w-3xl px-4 pb-4">
+        <div className="overflow-hidden border border-gray-200 bg-white/98 shadow-[0_-20px_60px_rgba(15,23,42,0.16)] backdrop-blur transition-[border-radius,box-shadow] duration-300 ease-out">
           <button
             type="button"
-            aria-label="Close transcript"
-            className="absolute inset-0 bg-black/18 backdrop-blur-[2px]"
-            onClick={onClose}
-          />
-          <div className="relative flex w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-gray-200 bg-white shadow-[0_28px_120px_rgba(15,23,42,0.22)]">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
-              <div className="min-w-0">
-                <p
-                  className="text-[11px] uppercase tracking-[0.18em] text-gray-400"
-                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                >
-                  live transcript
-                </p>
-                <p className="mt-2 truncate text-lg text-gray-900">{transcript.pageTitle}</p>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-full border border-gray-200 p-2 text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700"
-                aria-label="Close transcript"
+            onClick={open ? onClose : onOpen}
+            className="flex w-full flex-col gap-2 px-4 py-3 text-left"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div
+                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-gray-400"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", }}
               >
-                <X className="h-4 w-4" strokeWidth={2} />
-              </button>
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                live transcript
+              </div>
+              {open && (
+                <span className="rounded-full border border-gray-200 p-2 text-gray-500">
+                  <X className="h-4 w-4" strokeWidth={2} />
+                </span>
+              )}
             </div>
-            <div
-              ref={scrollRef}
-              className="max-h-[68vh] overflow-y-auto px-6 py-5"
+            <p
+              className={`${
+                open ? "text-base leading-7" : "overflow-hidden whitespace-nowrap text-sm leading-6"
+              } text-gray-900`}
             >
-              <p className="whitespace-pre-wrap text-base leading-8 text-gray-900">
-                {transcript.fullText || "Listening..."}
-              </p>
+              {open ? transcript.pageTitle : transcript.captionText}
+            </p>
+          </button>
+
+          <div
+            className={`grid transition-[grid-template-rows,border-color] duration-300 ease-out ${
+              open ? "grid-rows-[1fr] border-t border-gray-200" : "grid-rows-[0fr] border-t border-transparent"
+            }`}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div
+                ref={scrollRef}
+                className="max-h-[60vh] overflow-y-auto px-4 py-4 sm:px-6 sm:py-5"
+              >
+                <p className="whitespace-pre-wrap text-sm leading-7 text-gray-900 sm:text-base sm:leading-8">
+                  {transcript.fullText || "Listening..."}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }
 
