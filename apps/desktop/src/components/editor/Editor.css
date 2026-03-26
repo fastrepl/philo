@@ -36,7 +36,7 @@
 
 .tiptap ul[data-type="taskList"] .task-item-toggle {
   position: absolute;
-  right: calc(100% + 6px);
+  right: calc(100% + 2px);
   top: 50%;
   width: 16px;
   height: 16px;
