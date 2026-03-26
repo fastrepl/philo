@@ -62,9 +62,10 @@
 
 .tiptap ul[data-type="taskList"] li.task-item--has-children > label .task-item-toggle {
   pointer-events: auto;
-  opacity: 1;
 }
 
+.tiptap ul[data-type="taskList"] li.task-item--has-children:hover > label .task-item-toggle,
+.tiptap ul[data-type="taskList"] li.task-item--has-children:focus-within > label .task-item-toggle,
 .tiptap ul[data-type="taskList"] li.task-item--collapsed > label .task-item-toggle {
   opacity: 1;
 }
