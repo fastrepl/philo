@@ -161,6 +161,7 @@ interface AiSelectionHighlight {
 }
 
 type AppView = { kind: "home"; } | { kind: "page"; title: string; };
+type SettingsTab = "ai" | "dictation";
 
 interface MeetingTranscriptWord {
   text: string;
@@ -1459,6 +1460,7 @@ export default function AppLayout() {
   const fallbackTodayCity = currentCity.city.trim();
   const pastDates = useMemo(() => Array.from({ length: 30, }, (_, i,) => getDaysAgo(i + 1,),), [today,],);
   const [settingsOpen, setSettingsOpen,] = useState(false,);
+  const [settingsInitialTab, setSettingsInitialTab,] = useState<SettingsTab>("ai",);
   const [libraryOpen, setLibraryOpen,] = useState(false,);
   const [onboardingOpen, setOnboardingOpen,] = useState(false,);
   const [isConfigured, setIsConfigured,] = useState(false,);
@@ -1493,6 +1495,11 @@ export default function AppLayout() {
   const [aiChatHistory, setAiChatHistory,] = useState<ChatHistoryEntry[]>([],);
   const [aiActiveChatId, setAiActiveChatId,] = useState<string | null>(null,);
   const [aiLatestChatId, setAiLatestChatId,] = useState<string | null>(null,);
+
+  const openSettings = useCallback((tab: SettingsTab = "ai",) => {
+    setSettingsInitialTab(tab,);
+    setSettingsOpen(true,);
+  }, [],);
   const [aiApplyingDates, setAiApplyingDates,] = useState<string[]>([],);
   const [activePage, setActivePage,] = useState<PageNote | null>(null,);
   const [meetingSummaryTargetTitle, setMeetingSummaryTargetTitle,] = useState<string | null>(null,);
@@ -2262,7 +2269,7 @@ export default function AppLayout() {
     const settings = await loadSettings();
     const sttConfig = resolveActiveSttConfig(settings,);
     if (!sttConfig) {
-      setSettingsOpen(true,);
+      openSettings("dictation",);
       return;
     }
 
@@ -2427,6 +2434,7 @@ export default function AppLayout() {
     today,
     updateMeetingPage,
     clearMeetingListeners,
+    openSettings,
   ],);
 
   const openGlobalSearchResult = useCallback(async (result: GlobalSearchResult | undefined,) => {
@@ -2506,7 +2514,7 @@ export default function AppLayout() {
 
   // Listen for macOS menu bar events
   useEffect(() => {
-    const unlistenSettings = listen("open-settings", () => setSettingsOpen(true,),);
+    const unlistenSettings = listen("open-settings", () => openSettings(),);
     const unlistenLibrary = listen("toggle-library", toggleLibrary,);
     const unlistenGlobalSearch = listen("open-global-search", () => openGlobalSearch(),);
     const unlistenUpdate = listen("update-available", () => {
@@ -2520,7 +2528,7 @@ export default function AppLayout() {
       unlistenGlobalSearch.then((fn,) => fn());
       unlistenUpdate.then((fn,) => fn());
     };
-  }, [openGlobalSearch, toggleLibrary,],);
+  }, [openGlobalSearch, toggleLibrary, openSettings,],);
 
   useEffect(() => {
     const handleHotkey = (event: KeyboardEvent,) => {
@@ -2878,7 +2886,7 @@ export default function AppLayout() {
   const handleMeetingSummaryFabClick = useCallback(async () => {
     if (!activePage) return;
     if (!hasAiConfigured) {
-      setSettingsOpen(true,);
+      openSettings("ai",);
       return;
     }
 
@@ -2888,12 +2896,12 @@ export default function AppLayout() {
       const message = error instanceof Error ? error.message : "Could not summarize meeting.";
       if (message === "AI is not configured.") {
         setHasAiConfigured(false,);
-        setSettingsOpen(true,);
+        openSettings("ai",);
         return;
       }
       setMeetingSummaryError(message,);
     }
-  }, [activePage, hasAiConfigured, summarizeMeetingPageNote,],);
+  }, [activePage, hasAiConfigured, summarizeMeetingPageNote, openSettings,],);
 
   const runAiPrompt = useCallback(async (promptText: string,) => {
     const todayNoteValue = getCurrentTodayNoteForAi();
@@ -3582,7 +3590,7 @@ export default function AppLayout() {
         onApplyChange={handleApplyAiChange}
         onDiscardChange={handleDiscardAiChange}
         onOpenSettings={() => {
-          setSettingsOpen(true,);
+          openSettings("ai",);
           refreshAiAvailability();
         }}
       />
@@ -3657,6 +3665,7 @@ export default function AppLayout() {
       {/* Settings modal — triggered by macOS menu bar Cmd+, */}
       <SettingsModal
         open={settingsOpen}
+        initialTab={settingsInitialTab}
         onClose={() => {
           setSettingsOpen(false,);
           refreshAiAvailability();

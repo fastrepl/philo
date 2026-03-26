@@ -36,6 +36,7 @@ import { SpokenLanguagesField, } from "./SpokenLanguagesField";
 
 interface SettingsModalProps {
   open: boolean;
+  initialTab?: ProviderSettingsTab;
   onClose: () => void;
 }
 
@@ -423,7 +424,7 @@ function SharpSelectField<T extends string,>(
   );
 }
 
-export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
+export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsModalProps,) {
   const [settings, setSettings,] = useState<Settings | null>(null,);
   const [providerSettingsTab, setProviderSettingsTab,] = useState<ProviderSettingsTab>("ai",);
   const [saveState, setSaveState,] = useState<"idle" | "saving" | "error">("idle",);
@@ -456,7 +457,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
         settingsRef.current = s;
         lastSavedSettingsRef.current = s;
         setSettings(s,);
-        setProviderSettingsTab("ai",);
+        setProviderSettingsTab(initialTab,);
         setSaveState("idle",);
         setValidationErrors({},);
         setIsFilenamePatternFocused(false,);
@@ -468,7 +469,7 @@ export function SettingsModal({ open, onClose, }: SettingsModalProps,) {
       getJournalDir().then(setDefaultJournalDir,);
       setTimeout(() => inputRef.current?.focus(), 100,);
     }
-  }, [open,],);
+  }, [open, initialTab,],);
 
   useEffect(() => {
     if (open) return;
