@@ -232,7 +232,7 @@ export const CustomTaskItem = TaskItem.extend({
         contentDOM: content,
         stopEvent: event => {
           const target = event.target;
-          return target instanceof HTMLElement && (toggle.contains(target,) || checkbox.contains(target,));
+          return target instanceof Node && (toggle.contains(target,) || checkbox.contains(target,));
         },
         update: (updatedNode,) => {
           if (updatedNode.type !== this.type) {
