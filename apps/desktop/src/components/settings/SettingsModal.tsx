@@ -573,6 +573,26 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
     googleAccounts: partial.googleAccounts ?? current.googleAccounts,
   });
 
+  const shouldRefreshJournalScope = (previous: Settings | null, next: Settings,) => {
+    return !previous
+      || previous.journalDir !== next.journalDir
+      || previous.vaultDir !== next.vaultDir
+      || previous.dailyLogsFolder !== next.dailyLogsFolder
+      || previous.excalidrawFolder !== next.excalidrawFolder
+      || previous.assetsFolder !== next.assetsFolder;
+  };
+
+  const refreshJournalScopeInBackground = (next: Settings,) => {
+    void (async () => {
+      try {
+        await resetJournalDir(next.journalDir || undefined,);
+        await initJournalScope();
+      } catch (err) {
+        console.error("Failed to refresh journal scope:", err,);
+      }
+    })();
+  };
+
   const upsertGoogleSessionAccount = (accountEmail: string,) => {
     const normalizedEmail = accountEmail.trim().toLowerCase();
     if (!normalizedEmail) return;
@@ -596,24 +616,16 @@ export function SettingsModal({ open, initialTab = "ai", onClose, }: SettingsMod
     const task = (async () => {
       try {
         const normalized = await buildPersistedSettings(nextSettings,);
-        await saveSettings(normalized,);
-
         const previous = lastSavedSettingsRef.current;
-        const scopeChanged = !previous
-          || previous.journalDir !== normalized.journalDir
-          || previous.vaultDir !== normalized.vaultDir
-          || previous.dailyLogsFolder !== normalized.dailyLogsFolder
-          || previous.excalidrawFolder !== normalized.excalidrawFolder
-          || previous.assetsFolder !== normalized.assetsFolder;
-
-        if (scopeChanged) {
-          await resetJournalDir(normalized.journalDir || undefined,);
-          await initJournalScope();
-        }
+        await saveSettings(normalized,);
 
         lastSavedSettingsRef.current = normalized;
         settingsRef.current = normalized;
         setSettings(normalized,);
+
+        if (shouldRefreshJournalScope(previous, normalized,)) {
+          refreshJournalScopeInBackground(normalized,);
+        }
       } catch (err) {
         console.error("Failed to save settings:", err,);
         setSaveState("error",);
