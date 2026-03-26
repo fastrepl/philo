@@ -29,6 +29,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_fs::FsExt;
+use tauri_plugin_permissions::{Permission, PermissionStatus, PermissionsPluginExt};
 #[cfg(desktop)]
 use tauri_plugin_updater::UpdaterExt;
 use widget_git::{
@@ -3577,6 +3578,46 @@ fn extend_fs_scope(app: AppHandle, path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn ensure_microphone_permission(app: AppHandle) -> Result<(), String> {
+    let mut status = app
+        .permissions()
+        .check(Permission::Microphone)
+        .await
+        .map_err(|e| format!("Could not check microphone permission: {e}"))?;
+
+    if matches!(status, PermissionStatus::NeverRequested) {
+        app.permissions()
+            .request(Permission::Microphone)
+            .await
+            .map_err(|e| format!("Could not request microphone permission: {e}"))?;
+
+        for _ in 0..20 {
+            std::thread::sleep(Duration::from_millis(250));
+            status = app
+                .permissions()
+                .check(Permission::Microphone)
+                .await
+                .map_err(|e| format!("Could not check microphone permission: {e}"))?;
+            if !matches!(status, PermissionStatus::NeverRequested) {
+                break;
+            }
+        }
+    }
+
+    match status {
+        PermissionStatus::Authorized => Ok(()),
+        PermissionStatus::Denied => {
+            let _ = app.permissions().open(Permission::Microphone).await;
+            Err("Microphone access is required to record meetings. Allow Philo in System Settings > Privacy & Security > Microphone.".to_string())
+        }
+        PermissionStatus::NeverRequested => Err(
+            "Microphone permission request did not finish. Try recording again and allow access when prompted."
+                .to_string(),
+        ),
+    }
+}
+
+#[tauri::command]
 fn ensure_widget_git_history_baseline(
     app: AppHandle,
     input: EnsureWidgetGitBaselineInput,
@@ -3664,6 +3705,7 @@ pub fn run() {
             open_in_apple_mail,
             open_in_apple_calendar,
             show_path_in_folder,
+            ensure_microphone_permission,
             run_ai_tool,
             build_unified_diff,
             set_window_opacity,

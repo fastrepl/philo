@@ -68,6 +68,7 @@ import {
   parsePageTitleFromPath,
   sanitizePageTitle,
 } from "../../services/paths";
+import { ensureMicrophonePermission, } from "../../services/permissions";
 import {
   getFilenamePattern,
   hasActiveAiProvider,
@@ -2270,6 +2271,15 @@ export default function AppLayout() {
     const sttConfig = resolveActiveSttConfig(settings,);
     if (!sttConfig) {
       openSettings("dictation",);
+      return;
+    }
+
+    try {
+      await ensureMicrophonePermission();
+    } catch (error) {
+      setMeetingRecordingError(
+        error instanceof Error ? error.message : "Microphone access is required to record meetings.",
+      );
       return;
     }
 
