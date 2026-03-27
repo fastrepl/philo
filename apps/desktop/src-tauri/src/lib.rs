@@ -3614,10 +3614,10 @@ async fn ensure_microphone_permission(app: AppHandle) -> Result<(), String> {
     }
 }
 
+#[cfg(target_os = "macos")]
 fn microphone_permission_error_message() -> String {
     let mut message = "Microphone access is required to record meetings. Allow the app in System Settings > Privacy & Security > Microphone.".to_string();
 
-    #[cfg(target_os = "macos")]
     if cfg!(debug_assertions) && !is_running_inside_app_bundle() {
         message.push_str(
             " You are running an unpackaged dev build, so macOS may list the launcher app instead of a separate Philo Dev entry. Check the app that started `pnpm tauri dev`, like Warp, Ghostty, or Terminal, or open /Applications/Philo.app and grant Philo there.",
@@ -3627,12 +3627,17 @@ fn microphone_permission_error_message() -> String {
     message
 }
 
+#[cfg(not(target_os = "macos"))]
+fn microphone_permission_error_message() -> String {
+    "Microphone access is required to record meetings. Allow the app in System Settings > Privacy & Security > Microphone.".to_string()
+}
+
+#[cfg(target_os = "macos")]
 fn microphone_permission_pending_message() -> String {
     let mut message =
         "Microphone permission request did not finish. Try recording again and allow access when prompted."
             .to_string();
 
-    #[cfg(target_os = "macos")]
     if cfg!(debug_assertions) && !is_running_inside_app_bundle() {
         message.push_str(
             " If no prompt appears, macOS may be treating this as the launcher app instead of Philo Dev. Check the terminal app that started `pnpm tauri dev`, or try the installed /Applications/Philo.app.",
@@ -3640,6 +3645,11 @@ fn microphone_permission_pending_message() -> String {
     }
 
     message
+}
+
+#[cfg(not(target_os = "macos"))]
+fn microphone_permission_pending_message() -> String {
+    "Microphone permission request did not finish. Try recording again and allow access when prompted.".to_string()
 }
 
 #[cfg(target_os = "macos")]
