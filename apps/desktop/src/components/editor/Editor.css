@@ -23,7 +23,6 @@
 
 .tiptap ul[data-type="taskList"] li {
   min-height: var(--editor-line-height);
-  position: relative;
 }
 
 .tiptap ul[data-type="taskList"] li > label {
@@ -35,9 +34,9 @@
   display: none;
 }
 
-.tiptap ul[data-type="taskList"] li > .task-item-toggle {
+.tiptap ul[data-type="taskList"] .task-item-toggle {
   position: absolute;
-  left: -18px;
+  right: calc(100% + 2px);
   top: 50%;
   width: 16px;
   height: 16px;
@@ -54,14 +53,14 @@
   transform: translateY(-50%);
 }
 
-.tiptap ul[data-type="taskList"] li > .task-item-toggle svg {
+.tiptap ul[data-type="taskList"] .task-item-toggle svg {
   display: block;
   width: 16px;
   height: 16px;
   transition: transform 120ms ease;
 }
 
-.tiptap ul[data-type="taskList"] li.task-item--has-children > .task-item-toggle {
+.tiptap ul[data-type="taskList"] li.task-item--has-children > label .task-item-toggle {
   pointer-events: auto;
 }
 
@@ -69,17 +68,17 @@
   display: none;
 }
 
-.tiptap ul[data-type="taskList"] li.task-item--has-children:hover > .task-item-toggle,
-.tiptap ul[data-type="taskList"] li.task-item--has-children:focus-within > .task-item-toggle,
-.tiptap ul[data-type="taskList"] li.task-item--collapsed > .task-item-toggle {
+.tiptap ul[data-type="taskList"] li.task-item--has-children:hover > label .task-item-toggle,
+.tiptap ul[data-type="taskList"] li.task-item--has-children:focus-within > label .task-item-toggle,
+.tiptap ul[data-type="taskList"] li.task-item--collapsed > label .task-item-toggle {
   opacity: 1;
 }
 
-.tiptap ul[data-type="taskList"] li.task-item--has-children > .task-item-toggle:hover {
+.tiptap ul[data-type="taskList"] li.task-item--has-children > label .task-item-toggle:hover {
   color: #4b5563;
 }
 
-.tiptap ul[data-type="taskList"] li.task-item--has-children:not(.task-item--collapsed) > .task-item-toggle svg {
+.tiptap ul[data-type="taskList"] li.task-item--has-children:not(.task-item--collapsed) > label .task-item-toggle svg {
   transform: rotate(90deg);
 }
 

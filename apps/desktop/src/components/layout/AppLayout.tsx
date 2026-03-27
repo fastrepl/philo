@@ -3206,10 +3206,13 @@ export default function AppLayout() {
   }, [currentView.kind,],);
 
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-white dark:bg-gray-900">
+    <div
+      ref={scrollRef}
+      className="hide-scrollbar h-screen bg-white dark:bg-gray-900 overflow-y-auto overflow-x-hidden relative"
+    >
       {/* Titlebar: drag region + pin button */}
       <div
-        className="z-50 h-[38px] w-full shrink-0 flex items-center justify-between px-3"
+        className="sticky top-0 z-50 h-[38px] w-full flex items-center justify-between shrink-0 px-3"
         onMouseDown={(e,) => {
           if (e.buttons === 1 && !(e.target as HTMLElement).closest("button, input",)) {
             e.detail === 2
@@ -3305,240 +3308,235 @@ export default function AppLayout() {
         </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="hide-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
-      >
-        {globalSearchOpen
-          ? (
-            <div className="w-full max-w-3xl px-6 pt-6 pb-10">
-              <div className="flex items-center justify-between gap-3">
-                <h2
-                  className="text-sm uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400"
-                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                >
-                  Global Search
-                </h2>
-                <button
-                  onClick={closeGlobalSearch}
-                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                >
-                  esc
-                </button>
-              </div>
-
-              <input
-                ref={searchInputRef}
-                value={globalSearchQuery}
-                onChange={(event,) => setGlobalSearchQuery(event.target.value,)}
-                placeholder="Search all markdown notes..."
-                className="mt-3 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/80 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-hidden focus:border-gray-400 dark:focus:border-gray-500"
+      {globalSearchOpen
+        ? (
+          <div className="w-full max-w-3xl px-6 pt-6 pb-10">
+            <div className="flex items-center justify-between gap-3">
+              <h2
+                className="text-sm uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400"
                 style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-              />
-
-              <div className="mt-4 space-y-2">
-                {globalSearchLoading && (
-                  <p
-                    className="text-xs text-gray-400 dark:text-gray-500"
-                    style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                  >
-                    searching...
-                  </p>
-                )}
-
-                {globalSearchError && (
-                  <p
-                    className="text-xs text-red-500"
-                    style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                  >
-                    {globalSearchError}
-                  </p>
-                )}
-
-                {!globalSearchLoading && !globalSearchError && globalSearchQuery.trim()
-                  && globalSearchResults.length === 0 && (
-                  <p
-                    className="text-xs text-gray-400 dark:text-gray-500"
-                    style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                  >
-                    no results
-                  </p>
-                )}
-
-                {globalSearchResults.map((result, index,) => (
-                  <button
-                    key={result.path}
-                    ref={(element,) => {
-                      searchResultRefs.current[index] = element;
-                    }}
-                    className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
-                      globalSearchSelectedIndex === index
-                        ? "border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-800/80"
-                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600"
-                    }`}
-                    onMouseEnter={() => {
-                      if (searchNavigationModeRef.current !== "mouse") return;
-                      setGlobalSearchSelectedIndex(index,);
-                    }}
-                    onClick={() => {
-                      openGlobalSearchResult(result,);
-                    }}
-                  >
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{result.title}</p>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      {renderSearchSnippet(result.snippet,)}
-                    </p>
-                    <p
-                      className="mt-2 text-[10px] text-gray-400 dark:text-gray-500"
-                      style={{ fontFamily: "'IBM Plex Mono', monospace", }}
-                    >
-                      {result.relativePath}
-                    </p>
-                  </button>
-                ))}
-              </div>
+              >
+                Global Search
+              </h2>
+              <button
+                onClick={closeGlobalSearch}
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+              >
+                esc
+              </button>
             </div>
-          )
-          : (
-            <>
-              {postUpdateInfo
-                ? (
-                  <UpdateBanner
-                    mode="updated"
-                    update={postUpdateInfo}
-                    onDismiss={() => setPostUpdateInfo(null,)}
+
+            <input
+              ref={searchInputRef}
+              value={globalSearchQuery}
+              onChange={(event,) => setGlobalSearchQuery(event.target.value,)}
+              placeholder="Search all markdown notes..."
+              className="mt-3 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/80 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-hidden focus:border-gray-400 dark:focus:border-gray-500"
+              style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+            />
+
+            <div className="mt-4 space-y-2">
+              {globalSearchLoading && (
+                <p
+                  className="text-xs text-gray-400 dark:text-gray-500"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                >
+                  searching...
+                </p>
+              )}
+
+              {globalSearchError && (
+                <p
+                  className="text-xs text-red-500"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                >
+                  {globalSearchError}
+                </p>
+              )}
+
+              {!globalSearchLoading && !globalSearchError && globalSearchQuery.trim()
+                && globalSearchResults.length === 0 && (
+                <p
+                  className="text-xs text-gray-400 dark:text-gray-500"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                >
+                  no results
+                </p>
+              )}
+
+              {globalSearchResults.map((result, index,) => (
+                <button
+                  key={result.path}
+                  ref={(element,) => {
+                    searchResultRefs.current[index] = element;
+                  }}
+                  className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
+                    globalSearchSelectedIndex === index
+                      ? "border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-800/80"
+                      : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                  onMouseEnter={() => {
+                    if (searchNavigationModeRef.current !== "mouse") return;
+                    setGlobalSearchSelectedIndex(index,);
+                  }}
+                  onClick={() => {
+                    openGlobalSearchResult(result,);
+                  }}
+                >
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{result.title}</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {renderSearchSnippet(result.snippet,)}
+                  </p>
+                  <p
+                    className="mt-2 text-[10px] text-gray-400 dark:text-gray-500"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace", }}
+                  >
+                    {result.relativePath}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+        : (
+          <>
+            {postUpdateInfo
+              ? (
+                <UpdateBanner
+                  mode="updated"
+                  update={postUpdateInfo}
+                  onDismiss={() => setPostUpdateInfo(null,)}
+                />
+              )
+              : updateInfo && <UpdateBanner update={updateInfo} onDismiss={() => setUpdateInfo(null,)} />}
+            {currentView.kind === "page"
+              ? (
+                <div
+                  className="overflow-x-hidden will-change-transform"
+                  style={viewTransitionStyle}
+                >
+                  <PageView
+                    title={currentView.title}
+                    pagesRevision={pagesRevision}
+                    pageOverride={activePage}
+                    transcriptReadOnly={isMeetingRecording
+                      && activeMeetingPageTitle === currentView.title}
+                    transcriptHidden={isMeetingRecording
+                      && activeMeetingPageTitle === currentView.title}
+                    meetingRecordingError={meetingRecordingError}
+                    onOpenDate={scrollToDate}
+                    onOpenPage={openPageView}
+                    onAskAiPrompt={openAiComposerWithPrompt}
+                    onSave={handlePageSave}
+                    onInteract={handleEditorInteract}
+                    editorRef={pageEditorRef}
+                    onPageChange={handleCurrentPageChange}
                   />
-                )
-                : updateInfo && <UpdateBanner update={updateInfo} onDismiss={() => setUpdateInfo(null,)} />}
-              {currentView.kind === "page"
-                ? (
+                </div>
+              )
+              : (
+                <>
                   <div
-                    className="overflow-x-hidden will-change-transform"
+                    className="w-full max-w-3xl overflow-x-hidden will-change-transform"
                     style={viewTransitionStyle}
                   >
-                    <PageView
-                      title={currentView.title}
-                      pagesRevision={pagesRevision}
-                      pageOverride={activePage}
-                      transcriptReadOnly={isMeetingRecording
-                        && activeMeetingPageTitle === currentView.title}
-                      transcriptHidden={isMeetingRecording
-                        && activeMeetingPageTitle === currentView.title}
-                      meetingRecordingError={meetingRecordingError}
-                      onOpenDate={scrollToDate}
-                      onOpenPage={openPageView}
-                      onAskAiPrompt={openAiComposerWithPrompt}
-                      onSave={handlePageSave}
-                      onInteract={handleEditorInteract}
-                      editorRef={pageEditorRef}
-                      onPageChange={handleCurrentPageChange}
-                    />
-                  </div>
-                )
-                : (
-                  <>
-                    <div
-                      className="w-full max-w-3xl overflow-x-hidden will-change-transform"
-                      style={viewTransitionStyle}
-                    >
-                      {hasFocusedFutureDate && (
-                        <div
-                          key={`${focusedFutureDate}-${storageRevision}-${pagesRevision}`}
-                          data-note-date={focusedFutureDate}
-                        >
-                          <LazyNote
-                            date={focusedFutureDate}
-                            pagesRevision={pagesRevision}
-                            onOpenDate={scrollToDate}
-                            onOpenPage={openPageView}
-                            onCreatePage={handleCreateAttachedPage}
-                            onInteract={handleEditorInteract}
-                            onChatSelection={openAiComposer}
-                            onSelectionChange={handleAiSelectionChange}
-                            onSelectionBlur={handleAiSelectionBlur}
-                            persistentSelectionRange={aiSelectionHighlight?.noteDate === focusedFutureDate
-                              ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
-                              : null}
-                          />
-                        </div>
-                      )}
-
+                    {hasFocusedFutureDate && (
                       <div
-                        ref={todayRef}
-                        data-note-date={today}
-                        className="min-h-[400px]"
-                        onClick={() => todayEditorRef.current?.focus()}
+                        key={`${focusedFutureDate}-${storageRevision}-${pagesRevision}`}
+                        data-note-date={focusedFutureDate}
                       >
-                        {hasFocusedFutureDate && <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />}
-                        <div className={`px-6 pb-4 ${hasFocusedFutureDate ? "pt-12" : "pt-6"}`}>
-                          <DateHeader
-                            date={today}
-                            city={todayCity}
-                            fallbackCity={fallbackTodayCity}
-                            onCityChange={todayNote ? handleTodayCityChange : undefined}
-                            onTitleContextMenu={(event,) => {
-                              showFinderContextMenu(event, `show-note-in-finder-${today}`, getNotePath(today,),);
-                            }}
-                          />
-                        </div>
-                        {todayNote && (
-                          <EditableNote
-                            ref={todayEditorRef}
-                            note={todayNote}
-                            onOpenDate={scrollToDate}
-                            onOpenPage={openPageView}
-                            onSave={handleTodaySave}
-                            onCreatePage={handleCreateAttachedPage}
-                            onInteract={handleEditorInteract}
-                            onChatSelection={openAiComposer}
-                            onSelectionChange={handleAiSelectionChange}
-                            onSelectionBlur={handleAiSelectionBlur}
-                            persistentSelectionRange={aiSelectionHighlight?.noteDate === todayNote.date
-                              ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
-                              : null}
-                          />
-                        )}
+                        <LazyNote
+                          date={focusedFutureDate}
+                          pagesRevision={pagesRevision}
+                          onOpenDate={scrollToDate}
+                          onOpenPage={openPageView}
+                          onCreatePage={handleCreateAttachedPage}
+                          onInteract={handleEditorInteract}
+                          onChatSelection={openAiComposer}
+                          onSelectionChange={handleAiSelectionChange}
+                          onSelectionBlur={handleAiSelectionBlur}
+                          persistentSelectionRange={aiSelectionHighlight?.noteDate === focusedFutureDate
+                            ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                            : null}
+                        />
                       </div>
+                    )}
 
-                      {pastDates.map((date,) => (
-                        <div key={`${date}-${storageRevision}-${pagesRevision}`} data-note-date={date}>
-                          <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />
-                          <LazyNote
-                            date={date}
-                            pagesRevision={pagesRevision}
-                            onOpenDate={scrollToDate}
-                            onOpenPage={openPageView}
-                            onCreatePage={handleCreateAttachedPage}
-                            onInteract={handleEditorInteract}
-                            onChatSelection={openAiComposer}
-                            onSelectionChange={handleAiSelectionChange}
-                            onSelectionBlur={handleAiSelectionBlur}
-                            persistentSelectionRange={aiSelectionHighlight?.noteDate === date
-                              ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
-                              : null}
-                          />
-                        </div>
-                      ))}
+                    <div
+                      ref={todayRef}
+                      data-note-date={today}
+                      className="min-h-[400px]"
+                      onClick={() => todayEditorRef.current?.focus()}
+                    >
+                      {hasFocusedFutureDate && <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />}
+                      <div className={`px-6 pb-4 ${hasFocusedFutureDate ? "pt-12" : "pt-6"}`}>
+                        <DateHeader
+                          date={today}
+                          city={todayCity}
+                          fallbackCity={fallbackTodayCity}
+                          onCityChange={todayNote ? handleTodayCityChange : undefined}
+                          onTitleContextMenu={(event,) => {
+                            showFinderContextMenu(event, `show-note-in-finder-${today}`, getNotePath(today,),);
+                          }}
+                        />
+                      </div>
+                      {todayNote && (
+                        <EditableNote
+                          ref={todayEditorRef}
+                          note={todayNote}
+                          onOpenDate={scrollToDate}
+                          onOpenPage={openPageView}
+                          onSave={handleTodaySave}
+                          onCreatePage={handleCreateAttachedPage}
+                          onInteract={handleEditorInteract}
+                          onChatSelection={openAiComposer}
+                          onSelectionChange={handleAiSelectionChange}
+                          onSelectionBlur={handleAiSelectionBlur}
+                          persistentSelectionRange={aiSelectionHighlight?.noteDate === todayNote.date
+                            ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                            : null}
+                        />
+                      )}
                     </div>
 
-                    {todayDirection && (
-                      <button
-                        onClick={scrollToToday}
-                        className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-medium uppercase tracking-wide text-white font-sans shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                        style={{
-                          background: "linear-gradient(to bottom, #4b5563, #1f2937)",
-                          ...(todayDirection === "above" ? { top: 16, } : { bottom: 16, }),
-                        }}
-                      >
-                        {todayDirection === "above" ? "↑" : "↓"} today
-                      </button>
-                    )}
-                  </>
-                )}
-            </>
-          )}
-      </div>
+                    {pastDates.map((date,) => (
+                      <div key={`${date}-${storageRevision}-${pagesRevision}`} data-note-date={date}>
+                        <div className="mx-6 border-t border-gray-200 dark:border-gray-700" />
+                        <LazyNote
+                          date={date}
+                          pagesRevision={pagesRevision}
+                          onOpenDate={scrollToDate}
+                          onOpenPage={openPageView}
+                          onCreatePage={handleCreateAttachedPage}
+                          onInteract={handleEditorInteract}
+                          onChatSelection={openAiComposer}
+                          onSelectionChange={handleAiSelectionChange}
+                          onSelectionBlur={handleAiSelectionBlur}
+                          persistentSelectionRange={aiSelectionHighlight?.noteDate === date
+                            ? { from: aiSelectionHighlight.from, to: aiSelectionHighlight.to, }
+                            : null}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {todayDirection && (
+                    <button
+                      onClick={scrollToToday}
+                      className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-medium uppercase tracking-wide text-white font-sans shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                      style={{
+                        background: "linear-gradient(to bottom, #4b5563, #1f2937)",
+                        ...(todayDirection === "above" ? { top: 16, } : { bottom: 16, }),
+                      }}
+                    >
+                      {todayDirection === "above" ? "↑" : "↓"} today
+                    </button>
+                  )}
+                </>
+              )}
+          </>
+        )}
 
       {shouldShowMeetingSummaryFab && (
         <button

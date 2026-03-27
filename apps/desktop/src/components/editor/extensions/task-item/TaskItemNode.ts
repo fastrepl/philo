@@ -224,9 +224,11 @@ export const CustomTaskItem = TaskItem.extend({
 
       listItem.dataset.checked = String(node.attrs.checked,);
       label.contentEditable = "false";
+      label.appendChild(toggle,);
       label.appendChild(checkbox,);
       label.appendChild(checkboxStyler,);
-      listItem.append(toggle, label, content,);
+      listItem.appendChild(label,);
+      listItem.appendChild(content,);
 
       // Add rollover badge if originDate exists
       if (node.attrs.originDate && node.attrs.originDate !== node.attrs.checked) {
