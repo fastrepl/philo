@@ -111,6 +111,8 @@ async function buildSidecar(mode,) {
 
 const tauriArgs = command === "dev"
   ? ["dev", "--config", resolve(appDir, "src-tauri", "tauri.dev.conf.json",), ...rest,]
+  : command === "build" && process.platform === "darwin"
+  ? ["build", "--config", resolve(appDir, "src-tauri", "tauri.macos.conf.json",), ...rest,]
   : args;
 
 try {
