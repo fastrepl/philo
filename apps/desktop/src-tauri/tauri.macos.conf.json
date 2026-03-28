@@ -1,5 +1,11 @@
 {
+  "app": {
+    "macOSPrivateApi": true
+  },
   "bundle": {
+    "macOS": {
+      "entitlements": "./Entitlements.plist"
+    },
     "externalBin": [
       "binaries/philo-cli",
       "binaries/check-permissions"
