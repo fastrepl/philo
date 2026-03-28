@@ -116,6 +116,34 @@ function sortTaskBlocks(taskBlocks: TaskBlock[],): TaskBlock[] {
   return [...withDueDates, ...withoutDueDates,];
 }
 
+function getIndentWidth(indent: string,) {
+  return indent.replace(/\t/g, "  ",).length;
+}
+
+function getNestedLineCount(block: TaskBlock,) {
+  if (block.lines.length <= 1) return 0;
+  const rootIndentWidth = getIndentWidth(block.lines[0]?.indent ?? "",);
+  return block.lines.filter((line, index,) => index > 0 && getIndentWidth(line.indent,) > rootIndentWidth).length;
+}
+
+function shouldReplaceTaskBlock(existing: TaskBlock, candidate: TaskBlock,) {
+  const existingNestedLineCount = getNestedLineCount(existing,);
+  const candidateNestedLineCount = getNestedLineCount(candidate,);
+  if (candidateNestedLineCount !== existingNestedLineCount) {
+    return candidateNestedLineCount > existingNestedLineCount;
+  }
+
+  if (candidate.lines.length !== existing.lines.length) {
+    return candidate.lines.length > existing.lines.length;
+  }
+
+  if (candidate.hasDueDate !== existing.hasDueDate) {
+    return candidate.hasDueDate;
+  }
+
+  return false;
+}
+
 function collectNodeText(node: JSONContent | null | undefined,): string {
   if (!node) return "";
   const text = typeof node.text === "string" ? node.text : "";
@@ -197,7 +225,7 @@ function extractUncheckedTaskBlocks(content: string,): { taskBlocks: TaskBlock[]
     const match = uncheckedMatch ?? checkedMatch;
     if (!match) continue;
 
-    const indentWidth = match[1].replace(/\t/g, "  ",).length;
+    const indentWidth = getIndentWidth(match[1],);
     while (stack.length > 0 && stack[stack.length - 1].indentWidth >= indentWidth) {
       stack.pop();
     }
@@ -303,7 +331,8 @@ export async function rolloverTasks(days: number = 30,): Promise<boolean> {
     const { taskBlocks, cleaned, } = extractUncheckedTaskBlocks(markdown,);
     if (taskBlocks.length > 0) {
       taskBlocks.forEach((block,) => {
-        if (!taskBlockMap.has(block.rootText,)) {
+        const existingBlock = taskBlockMap.get(block.rootText,);
+        if (!existingBlock || shouldReplaceTaskBlock(existingBlock, block,)) {
           taskBlockMap.set(block.rootText, block,);
         }
       },);
