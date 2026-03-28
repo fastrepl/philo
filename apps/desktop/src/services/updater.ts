@@ -21,8 +21,8 @@ function getReleaseUrl(version: string,) {
   return `${RELEASE_URL_PREFIX}/v${version}`;
 }
 
-export function relaunch() {
-  tauriRelaunch();
+export async function relaunch(): Promise<void> {
+  await tauriRelaunch();
 }
 
 export function markPendingPostUpdate(version: string,) {

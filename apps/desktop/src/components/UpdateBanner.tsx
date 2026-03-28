@@ -16,6 +16,7 @@ export function UpdateBanner({
   const [updating, setUpdating,] = useState(false,);
   const [progress, setProgress,] = useState<number | null>(null,);
   const [installed, setInstalled,] = useState(false,);
+  const [restarting, setRestarting,] = useState(false,);
   const isUpdatedMode = mode === "updated";
 
   const handleUpdate = async () => {
@@ -32,6 +33,17 @@ export function UpdateBanner({
       console.error("Update failed:", err,);
       setUpdating(false,);
       setProgress(null,);
+    }
+  };
+
+  const handleRestart = async () => {
+    if (restarting) return;
+    setRestarting(true,);
+    try {
+      await relaunch();
+    } catch (err) {
+      console.error("Restart failed:", err,);
+      setRestarting(false,);
     }
   };
 
@@ -74,11 +86,12 @@ export function UpdateBanner({
         </span>
 
         <button
-          onClick={() => relaunch()}
-          className="text-xs px-2.5 py-0.5 rounded-md text-white transition-all cursor-pointer"
+          onClick={handleRestart}
+          disabled={restarting}
+          className="text-xs px-2.5 py-0.5 rounded-md text-white transition-all cursor-pointer disabled:opacity-60 disabled:cursor-default"
           style={{ background: "linear-gradient(to bottom, #4b5563, #1f2937)", }}
         >
-          Restart
+          {restarting ? "Restarting\u2026" : "Restart"}
         </button>
       </div>
     );
