@@ -123,13 +123,6 @@ function diffDays(start: string, end: string,): number {
   return Math.round((fromIsoDate(end,).getTime() - fromIsoDate(start,).getTime()) / 86_400_000,);
 }
 
-function parseReferenceDate(referenceDate: string | undefined,): Date {
-  if (referenceDate && ISO_DATE_RE.test(referenceDate,)) {
-    return fromIsoDate(referenceDate,);
-  }
-  return new Date();
-}
-
 function getRelativeDateReference(): Date {
   return fromIsoDate(getToday(),);
 }
@@ -525,19 +518,6 @@ function buildDefaultDateSuggestions(reference: Date,): MentionSuggestion[] {
   ].filter((item,): item is MentionSuggestion => item !== null);
 }
 
-function buildRecurringSuggestions(query: string, referenceDate: string,): MentionSuggestion[] {
-  const tokens = [
-    { token: "daily", label: "Daily", },
-    { token: "weekly", label: "Weekly", },
-    { token: "monthly", label: "Monthly", },
-  ];
-  const normalized = normalizeToken(query,);
-
-  return tokens
-    .filter((item,) => !normalized || item.token.startsWith(normalized,))
-    .map((item,) => buildRecurringSuggestion(referenceDate, recurrenceTokenToIntervalDays(item.token,)!, item.label,));
-}
-
 function dedupeSuggestions(items: MentionSuggestion[],): MentionSuggestion[] {
   const seen = new Set<string>();
   return items.filter((item,) => {
@@ -784,9 +764,8 @@ export function renderMentionMarkdown(
 }
 
 export async function getMentionSuggestions(query: string, referenceDate?: string,): Promise<MentionSuggestion[]> {
-  const reference = parseReferenceDate(referenceDate,);
+  void referenceDate;
   const relativeReference = getRelativeDateReference();
-  const today = toIsoDate(reference,);
   const normalized = normalizeToken(query,);
 
   if (!normalized) {
@@ -795,7 +774,6 @@ export async function getMentionSuggestions(query: string, referenceDate?: strin
       buildDatePickerSuggestion(),
       ...pageSuggestions,
       ...buildDefaultDateSuggestions(relativeReference,),
-      ...buildRecurringSuggestions("", today,),
     ];
   }
 
@@ -810,7 +788,6 @@ export async function getMentionSuggestions(query: string, referenceDate?: strin
     }
   }
 
-  items.push(...buildRecurringSuggestions(normalized, today,),);
   return [buildDatePickerSuggestion(), ...pageSuggestions, ...dedupeSuggestions(items,).slice(0, 6,),];
 }
 
