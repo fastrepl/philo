@@ -4,6 +4,7 @@ use crate::settings_paths::{
 use chrono::{Duration, NaiveDate};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
@@ -28,6 +29,7 @@ pub struct PhiloSettings {
 pub struct NoteContext {
     pub settings_path: PathBuf,
     pub journal_dir: PathBuf,
+    pub pages_dir: PathBuf,
     pub filename_pattern: String,
 }
 
@@ -53,6 +55,18 @@ struct SearchEnvelope {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct PageEnvelope {
+    page: PageRecord,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PageSearchEnvelope {
+    hits: Vec<PageSearchHit>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ReadRangeEnvelope {
     notes: Vec<NoteRecord>,
 }
@@ -65,8 +79,20 @@ struct UpdateEnvelope {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct PageUpdateEnvelope {
+    change: PageChange,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct AppliedEnvelope {
     applied: Vec<AppliedNote>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PageAppliedEnvelope {
+    applied: Vec<AppliedPage>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -89,6 +115,44 @@ pub struct SearchHit {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PageRecord {
+    pub title: String,
+    pub path: String,
+    pub markdown: String,
+    #[serde(rename = "type")]
+    pub r#type: String,
+    pub attached_to: Option<String>,
+    pub event_id: Option<String>,
+    pub started_at: Option<String>,
+    pub ended_at: Option<String>,
+    pub participants: Vec<String>,
+    pub location: Option<String>,
+    pub executive_summary: Option<String>,
+    pub session_kind: Option<String>,
+    pub agenda: Vec<String>,
+    pub action_items: Vec<String>,
+    pub source: Option<String>,
+    pub link_title: Option<String>,
+    pub summary_updated_at: Option<String>,
+    pub follow_up_questions: Vec<String>,
+    pub link_kind: Option<String>,
+    pub link_data: Option<JsonValue>,
+    pub frontmatter: JsonValue,
+    pub has_frontmatter: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageSearchHit {
+    pub title: String,
+    pub snippet: String,
+    pub path: String,
+    #[serde(rename = "type")]
+    pub r#type: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NoteChange {
     pub date: String,
     pub before_markdown: String,
@@ -100,8 +164,24 @@ pub struct NoteChange {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PageChange {
+    pub title: String,
+    pub before_markdown: String,
+    pub after_markdown: String,
+    pub unified_diff: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppliedNote {
     pub date: String,
+    pub path: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppliedPage {
+    pub title: String,
     pub path: String,
 }
 
@@ -119,12 +199,17 @@ pub enum ToolCommand {
 
 #[derive(Clone, Debug)]
 enum ParsedCommand {
-    Search { query: String, limit: usize },
-    Read { date: String },
-    ReadRange { from: String, to: String },
-    Create { date: String },
-    Update { date: String, apply: bool },
-    Delete { date: String },
+    NoteSearch { query: String, limit: usize },
+    NoteRead { date: String },
+    NoteReadRange { from: String, to: String },
+    NoteCreate { date: String },
+    NoteUpdate { date: String, apply: bool },
+    NoteDelete { date: String },
+    PageSearch { query: String, limit: usize },
+    PageRead { title: String },
+    PageCreate { title: String },
+    PageUpdate { title: String, apply: bool },
+    PageDelete { title: String },
 }
 
 pub fn resolve_note_context() -> Result<NoteContext, String> {
@@ -139,17 +224,29 @@ pub fn resolve_note_context() -> Result<NoteContext, String> {
     let settings: PhiloSettings =
         serde_json::from_str(&raw).map_err(|e| format!("Could not parse settings: {}", e))?;
 
-    let Some(journal_dir) = resolve_journal_dir(
+    let default_base_dir = settings_path
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."));
+    let journal_dir = resolve_journal_dir(
         &settings.journal_dir,
         &settings.vault_dir,
         &settings.daily_logs_folder,
-    ) else {
-        return Err("Journal is not configured.".to_string());
+    )
+    .unwrap_or_else(|| default_base_dir.join("journal"));
+    let pages_dir = if settings.vault_dir.trim().is_empty() {
+        journal_dir
+            .parent()
+            .map(|parent| parent.join("pages"))
+            .unwrap_or_else(|| default_base_dir.join("pages"))
+    } else {
+        PathBuf::from(settings.vault_dir.trim()).join("pages")
     };
 
     Ok(NoteContext {
         settings_path,
         journal_dir,
+        pages_dir,
         filename_pattern: normalize_filename_pattern(&settings.filename_pattern),
     })
 }
@@ -258,20 +355,60 @@ fn note_path(context: &NoteContext, date: &str) -> Result<PathBuf, String> {
     Ok(context.journal_dir.join(format!("{}.md", relative)))
 }
 
-fn parse_frontmatter(raw: &str) -> (Option<String>, String) {
+struct ParsedMarkdownFrontmatter {
+    frontmatter: JsonMap<String, JsonValue>,
+    body: String,
+    raw_block: Option<String>,
+    has_frontmatter: bool,
+}
+
+fn parse_markdown_frontmatter(raw: &str) -> ParsedMarkdownFrontmatter {
     let frontmatter_re =
         regex::Regex::new(r"(?s)^---\n(.*?)\n---\n?").expect("valid frontmatter regex");
-    let Some(matched) = frontmatter_re.find(raw) else {
-        return (None, raw.to_string());
+    let Some(captures) = frontmatter_re.captures(raw) else {
+        return ParsedMarkdownFrontmatter {
+            frontmatter: JsonMap::new(),
+            body: raw.to_string(),
+            raw_block: None,
+            has_frontmatter: false,
+        };
     };
-    let frontmatter = &raw[matched.start()..matched.end()];
-    let body = raw[matched.end()..].to_string();
-    let city_re = regex::Regex::new(r"(?m)^city:\s*(.+)$").expect("valid city regex");
-    let city = city_re
-        .captures(frontmatter)
-        .and_then(|captures| captures.get(1))
-        .map(|value| value.as_str().trim().to_string());
-    (city, body)
+    let Some(matched) = captures.get(0) else {
+        return ParsedMarkdownFrontmatter {
+            frontmatter: JsonMap::new(),
+            body: raw.to_string(),
+            raw_block: None,
+            has_frontmatter: false,
+        };
+    };
+
+    let frontmatter = captures
+        .get(1)
+        .and_then(|value| serde_yaml::from_str::<serde_yaml::Value>(value.as_str()).ok())
+        .and_then(|value| serde_json::to_value(value).ok())
+        .and_then(|value| match value {
+            JsonValue::Object(map) => Some(map),
+            _ => None,
+        })
+        .unwrap_or_default();
+
+    ParsedMarkdownFrontmatter {
+        frontmatter,
+        body: raw[matched.end()..].to_string(),
+        raw_block: Some(raw[matched.start()..matched.end()].to_string()),
+        has_frontmatter: true,
+    }
+}
+
+fn parse_frontmatter(raw: &str) -> (Option<String>, String) {
+    let parsed = parse_markdown_frontmatter(raw);
+    let city = parsed
+        .frontmatter
+        .get("city")
+        .and_then(|value| value.as_str())
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    (city, parsed.body)
 }
 
 fn build_frontmatter(city: Option<&str>, body: &str) -> String {
@@ -280,6 +417,405 @@ fn build_frontmatter(city: Option<&str>, body: &str) -> String {
             format!("---\ncity: {}\n---\n{}", value.trim(), body)
         }
         _ => body.to_string(),
+    }
+}
+
+fn normalize_page_title_input(title: &str) -> String {
+    let trimmed = title.trim();
+    let trimmed_lower = trimmed.to_ascii_lowercase();
+    let without_extension = if trimmed_lower.ends_with(".md") {
+        &trimmed[..trimmed.len() - 3]
+    } else {
+        trimmed
+    };
+
+    let mut normalized = String::new();
+    let mut previous_was_space = false;
+    for ch in without_extension.chars() {
+        let next = if matches!(ch, '/' | '\\') || ch.is_control() {
+            ' '
+        } else {
+            ch
+        };
+        if next.is_whitespace() {
+            if !previous_was_space {
+                normalized.push(' ');
+                previous_was_space = true;
+            }
+        } else {
+            normalized.push(next);
+            previous_was_space = false;
+        }
+    }
+
+    normalized.trim().trim_matches('.').trim().to_string()
+}
+
+fn page_path(context: &NoteContext, title: &str) -> Result<(String, PathBuf), String> {
+    let normalized_title = normalize_page_title_input(title);
+    if normalized_title.is_empty() {
+        return Err("Page title is required.".to_string());
+    }
+
+    Ok((
+        normalized_title.clone(),
+        context.pages_dir.join(format!("{normalized_title}.md")),
+    ))
+}
+
+fn decode_url_component(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            b'+' => {
+                decoded.push(b' ');
+                index += 1;
+            }
+            b'%' if index + 2 < bytes.len() => {
+                let hi = bytes[index + 1] as char;
+                let lo = bytes[index + 2] as char;
+                if let (Some(hi), Some(lo)) = (hi.to_digit(16), lo.to_digit(16)) {
+                    decoded.push(((hi * 16) + lo) as u8);
+                    index += 3;
+                } else {
+                    decoded.push(bytes[index]);
+                    index += 1;
+                }
+            }
+            value => {
+                decoded.push(value);
+                index += 1;
+            }
+        }
+    }
+
+    String::from_utf8_lossy(&decoded).to_string()
+}
+
+fn parse_page_title_from_link_target(target: &str) -> Option<String> {
+    let trimmed = target.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.contains("://")
+        || regex::Regex::new(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+            .expect("valid page scheme regex")
+            .is_match(trimmed)
+    {
+        return None;
+    }
+
+    let path_only = trimmed.split(['?', '#']).next().unwrap_or(trimmed);
+    let decoded = decode_url_component(path_only);
+    let decoded = decoded
+        .trim_start_matches('/')
+        .trim_start_matches("./")
+        .trim_start_matches('/')
+        .to_string();
+    if decoded.is_empty() {
+        return None;
+    }
+
+    let lower = decoded.to_ascii_lowercase();
+    if lower.ends_with(".excalidraw")
+        || lower.ends_with(".excalidraw.md")
+        || lower.ends_with(".widget.md")
+    {
+        return None;
+    }
+
+    let without_extension = if lower.ends_with(".md") {
+        &decoded[..decoded.len() - 3]
+    } else {
+        decoded.as_str()
+    };
+    let without_prefix =
+        if without_extension.len() >= 6 && without_extension[..6].eq_ignore_ascii_case("pages/") {
+            &without_extension[6..]
+        } else {
+            without_extension
+        };
+    if without_prefix.contains('/') || without_prefix.contains('\\') {
+        return None;
+    }
+
+    let normalized = normalize_page_title_input(without_prefix);
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+fn extract_linked_page_titles(markdown: &str) -> HashSet<String> {
+    let wiki_link_re =
+        regex::Regex::new(r"\[\[([^|\]]+)(?:\|[^\]]+)?\]\]").expect("valid wiki link regex");
+    let markdown_link_re = regex::Regex::new(r#"\[[^\]]+\]\(([^)\s"]+)(?:\s+"[^"]*")?\)"#)
+        .expect("valid markdown link regex");
+    let mut titles = HashSet::new();
+
+    for captures in wiki_link_re.captures_iter(markdown) {
+        let Some(full) = captures.get(0) else {
+            continue;
+        };
+        if full.start() > 0 && markdown.as_bytes()[full.start() - 1] == b'!' {
+            continue;
+        }
+
+        let Some(target) = captures.get(1) else {
+            continue;
+        };
+        if target.as_str().contains("(due date)") {
+            continue;
+        }
+
+        if let Some(title) = parse_page_title_from_link_target(target.as_str()) {
+            titles.insert(title);
+        }
+    }
+
+    for captures in markdown_link_re.captures_iter(markdown) {
+        let Some(full) = captures.get(0) else {
+            continue;
+        };
+        if full.start() > 0 && markdown.as_bytes()[full.start() - 1] == b'!' {
+            continue;
+        }
+
+        let Some(target) = captures.get(1) else {
+            continue;
+        };
+        if let Some(title) = parse_page_title_from_link_target(target.as_str()) {
+            titles.insert(title);
+        }
+    }
+
+    titles
+}
+
+fn collect_markdown_files(root: &Path) -> Vec<PathBuf> {
+    if !root.exists() {
+        return Vec::new();
+    }
+
+    let mut files = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let entries = match fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+
+        for entry in entries {
+            let Ok(entry) = entry else {
+                continue;
+            };
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+
+            if file_type.is_dir() {
+                if should_skip_search_dir(&name) {
+                    continue;
+                }
+                stack.push(path);
+                continue;
+            }
+
+            if file_type.is_file()
+                && path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| ext.eq_ignore_ascii_case("md"))
+                    .unwrap_or(false)
+            {
+                files.push(path);
+            }
+        }
+    }
+
+    files
+}
+
+fn json_string(frontmatter: &JsonMap<String, JsonValue>, key: &str) -> Option<String> {
+    frontmatter
+        .get(key)
+        .and_then(|value| value.as_str())
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn json_string_array(frontmatter: &JsonMap<String, JsonValue>, key: &str) -> Vec<String> {
+    frontmatter
+        .get(key)
+        .and_then(|value| value.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|value| value.as_str())
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+}
+
+fn page_type_from_frontmatter(frontmatter: &JsonMap<String, JsonValue>) -> String {
+    match json_string(frontmatter, "type").as_deref() {
+        Some("meeting") => "meeting".to_string(),
+        _ => "page".to_string(),
+    }
+}
+
+fn page_link_kind_from_frontmatter(frontmatter: &JsonMap<String, JsonValue>) -> Option<String> {
+    match json_string(frontmatter, "link_kind").as_deref() {
+        Some("generic" | "github_pr" | "github_issue" | "github_commit") => {
+            json_string(frontmatter, "link_kind")
+        }
+        _ => {
+            if frontmatter
+                .get("link_title")
+                .and_then(|value| value.as_str())
+                .is_some()
+                || frontmatter
+                    .get("summary_updated_at")
+                    .and_then(|value| value.as_str())
+                    .is_some()
+                || frontmatter
+                    .get("follow_up_questions")
+                    .and_then(|value| value.as_array())
+                    .is_some()
+            {
+                Some("generic".to_string())
+            } else {
+                None
+            }
+        }
+    }
+}
+
+fn find_date_linking_to_page(context: &NoteContext, title: &str) -> Result<Option<String>, String> {
+    let normalized_title = normalize_page_title_input(title);
+    if normalized_title.is_empty() {
+        return Ok(None);
+    }
+
+    let root = match fs::canonicalize(&context.journal_dir) {
+        Ok(path) => path,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(err.to_string()),
+    };
+    let mut latest_date: Option<String> = None;
+
+    for path in collect_markdown_files(&root) {
+        let relative_path = match path.strip_prefix(&root) {
+            Ok(value) => value.to_string_lossy().to_string(),
+            Err(_) => continue,
+        };
+        let Some(date) = parse_date_from_relative_path(&relative_path, &context.filename_pattern)
+        else {
+            continue;
+        };
+
+        let Ok(raw) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let (_, body) = parse_frontmatter(&raw);
+        if !extract_linked_page_titles(&body).contains(&normalized_title) {
+            continue;
+        }
+
+        if latest_date
+            .as_ref()
+            .map(|current| current < &date)
+            .unwrap_or(true)
+        {
+            latest_date = Some(date);
+        }
+    }
+
+    Ok(latest_date)
+}
+
+fn page_frontmatter_to_value(frontmatter: &JsonMap<String, JsonValue>) -> JsonValue {
+    JsonValue::Object(frontmatter.clone())
+}
+
+fn build_page_record(
+    context: &NoteContext,
+    title: &str,
+    path: &Path,
+    raw: &str,
+    infer_attached_to: bool,
+) -> Result<PageRecord, String> {
+    let parsed = parse_markdown_frontmatter(raw);
+    let frontmatter = parsed.frontmatter;
+    let link_kind = page_link_kind_from_frontmatter(&frontmatter);
+    let attached_to = if infer_attached_to {
+        find_date_linking_to_page(context, title)?
+    } else {
+        None
+    }
+    .or_else(|| json_string(&frontmatter, "attached_to"));
+
+    Ok(PageRecord {
+        title: normalize_page_title_input(title),
+        path: path.to_string_lossy().to_string(),
+        markdown: parsed.body,
+        r#type: page_type_from_frontmatter(&frontmatter),
+        attached_to,
+        event_id: json_string(&frontmatter, "event_id"),
+        started_at: json_string(&frontmatter, "started_at"),
+        ended_at: json_string(&frontmatter, "ended_at"),
+        participants: json_string_array(&frontmatter, "participants"),
+        location: json_string(&frontmatter, "location"),
+        executive_summary: json_string(&frontmatter, "executive_summary"),
+        session_kind: json_string(&frontmatter, "session_kind"),
+        agenda: json_string_array(&frontmatter, "agenda"),
+        action_items: json_string_array(&frontmatter, "action_items"),
+        source: json_string(&frontmatter, "source"),
+        link_title: json_string(&frontmatter, "link_title"),
+        summary_updated_at: json_string(&frontmatter, "summary_updated_at"),
+        follow_up_questions: json_string_array(&frontmatter, "follow_up_questions"),
+        link_kind: link_kind.clone(),
+        link_data: match link_kind.as_deref() {
+            Some("github_pr" | "github_issue" | "github_commit") => frontmatter
+                .get("link_data")
+                .filter(|value| value.is_object())
+                .cloned(),
+            _ => None,
+        },
+        frontmatter: page_frontmatter_to_value(&frontmatter),
+        has_frontmatter: parsed.has_frontmatter,
+    })
+}
+
+fn read_page(context: &NoteContext, title: &str) -> Result<Option<PageRecord>, String> {
+    let (normalized_title, path) = page_path(context, title)?;
+    let raw = match fs::read_to_string(&path) {
+        Ok(value) => value,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(err.to_string()),
+    };
+
+    Ok(Some(build_page_record(
+        context,
+        &normalized_title,
+        &path,
+        &raw,
+        true,
+    )?))
+}
+
+fn serialize_page_markdown(raw_block: Option<&str>, body: &str) -> String {
+    match raw_block {
+        Some(block) => format!("{block}{body}"),
+        None => body.to_string(),
     }
 }
 
@@ -404,6 +940,18 @@ fn delete_note(context: &NoteContext, date: &str) -> Result<AppliedNote, String>
     })
 }
 
+fn normalize_search_terms(query: &str) -> Vec<String> {
+    query
+        .split_whitespace()
+        .map(|part| part.trim().to_ascii_lowercase())
+        .filter(|part| !part.is_empty())
+        .collect()
+}
+
+fn condense_whitespace(input: &str) -> String {
+    input.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 fn truncate_chars(input: &str, max: usize) -> String {
     if max == 0 {
         return String::new();
@@ -434,6 +982,144 @@ fn extract_markdown_title(path: &Path, content: &str) -> String {
         .and_then(|stem| stem.to_str())
         .map(|stem| truncate_chars(stem, 80))
         .unwrap_or_else(|| "Untitled".to_string())
+}
+
+fn build_search_snippet(markdown: &str, terms: &[String]) -> String {
+    for line in markdown.lines() {
+        let trimmed = condense_whitespace(line);
+        if trimmed.is_empty() {
+            continue;
+        }
+        let normalized = trimmed.to_ascii_lowercase();
+        if terms.iter().any(|term| normalized.contains(term)) {
+            return truncate_chars(&trimmed, 180);
+        }
+    }
+
+    truncate_chars(&condense_whitespace(markdown), 180)
+}
+
+fn create_page(context: &NoteContext, title: &str) -> Result<PageRecord, String> {
+    let (normalized_title, path) = page_path(context, title)?;
+    if path.exists() {
+        return read_page(context, &normalized_title)?
+            .ok_or_else(|| "Could not load existing page.".to_string());
+    }
+
+    write_note(&path, "---\ntype: \"page\"\n---\n")?;
+    read_page(context, &normalized_title)?.ok_or_else(|| "Could not load created page.".to_string())
+}
+
+fn update_page(
+    context: &NoteContext,
+    title: &str,
+    markdown: &str,
+    apply: bool,
+) -> Result<PageChange, String> {
+    let (normalized_title, path) = page_path(context, title)?;
+    let raw = fs::read_to_string(&path).map_err(|err| {
+        if err.kind() == std::io::ErrorKind::NotFound {
+            format!("Page {} does not exist.", normalized_title)
+        } else {
+            err.to_string()
+        }
+    })?;
+    let parsed = parse_markdown_frontmatter(&raw);
+    let change = PageChange {
+        title: normalized_title.clone(),
+        before_markdown: parsed.body.clone(),
+        after_markdown: markdown.to_string(),
+        unified_diff: build_unified_diff(&parsed.body, markdown),
+    };
+
+    if apply {
+        write_note(
+            &path,
+            &serialize_page_markdown(parsed.raw_block.as_deref(), markdown),
+        )?;
+    }
+
+    Ok(change)
+}
+
+fn delete_page(context: &NoteContext, title: &str) -> Result<AppliedPage, String> {
+    let (normalized_title, path) = page_path(context, title)?;
+    if !path.exists() {
+        return Err(format!("Page {} does not exist.", normalized_title));
+    }
+
+    fs::remove_file(&path).map_err(|e| e.to_string())?;
+    Ok(AppliedPage {
+        title: normalized_title,
+        path: path.to_string_lossy().to_string(),
+    })
+}
+
+fn search_pages(
+    context: &NoteContext,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<PageSearchHit>, String> {
+    let terms = normalize_search_terms(query);
+    if terms.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    struct PageSearchCandidate {
+        title_matches: usize,
+        mtime: i64,
+        hit: PageSearchHit,
+    }
+
+    let mut candidates = Vec::new();
+    for path in collect_markdown_files(&context.pages_dir) {
+        let Ok(raw) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let title = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(normalize_page_title_input)
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| "Untitled".to_string());
+        let parsed = parse_markdown_frontmatter(&raw);
+        let frontmatter_json = serde_json::to_string(&parsed.frontmatter).unwrap_or_default();
+        let haystack = format!("{title}\n{}\n{frontmatter_json}", parsed.body);
+        let normalized_haystack = haystack.to_ascii_lowercase();
+        if !terms.iter().all(|term| normalized_haystack.contains(term)) {
+            continue;
+        }
+
+        let title_lower = title.to_ascii_lowercase();
+        let title_matches = terms
+            .iter()
+            .filter(|term| title_lower.contains(term.as_str()))
+            .count();
+        candidates.push(PageSearchCandidate {
+            title_matches,
+            mtime: normalize_mtime(&path),
+            hit: PageSearchHit {
+                title,
+                snippet: build_search_snippet(&parsed.body, &terms),
+                path: path.to_string_lossy().to_string(),
+                r#type: page_type_from_frontmatter(&parsed.frontmatter),
+            },
+        });
+    }
+
+    candidates.sort_by(|left, right| {
+        right
+            .title_matches
+            .cmp(&left.title_matches)
+            .then_with(|| right.mtime.cmp(&left.mtime))
+            .then_with(|| left.hit.title.cmp(&right.hit.title))
+    });
+
+    Ok(candidates
+        .into_iter()
+        .take(limit.min(20))
+        .map(|candidate| candidate.hit)
+        .collect())
 }
 
 fn should_skip_search_dir(name: &str) -> bool {
@@ -699,23 +1385,16 @@ fn parse_limit(args: &[String], index: usize) -> Result<usize, String> {
         .map_err(|_| "Invalid limit value.".to_string())
 }
 
-fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
+fn parse_note_command(argv: &[String]) -> Result<ParsedCommand, String> {
     if argv.is_empty() {
-        return Err("Missing philo subcommand.".to_string());
-    }
-
-    if argv[0] != "note" {
-        return Err(format!("Unsupported subcommand: {}", argv[0]));
-    }
-    if argv.len() < 2 {
         return Err("Missing note action.".to_string());
     }
 
-    match argv[1].as_str() {
+    match argv[0].as_str() {
         "search" => {
             let mut query = None;
             let mut limit = 8usize;
-            let mut index = 2usize;
+            let mut index = 1usize;
             while index < argv.len() {
                 match argv[index].as_str() {
                     "--query" => {
@@ -730,14 +1409,14 @@ fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
                     other => return Err(format!("Unsupported flag for note search: {}", other)),
                 }
             }
-            Ok(ParsedCommand::Search {
+            Ok(ParsedCommand::NoteSearch {
                 query: query.ok_or_else(|| "Missing --query.".to_string())?,
                 limit,
             })
         }
         "read" => {
             let mut date = None;
-            let mut index = 2usize;
+            let mut index = 1usize;
             while index < argv.len() {
                 match argv[index].as_str() {
                     "--date" => {
@@ -748,14 +1427,14 @@ fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
                     other => return Err(format!("Unsupported flag for note read: {}", other)),
                 }
             }
-            Ok(ParsedCommand::Read {
+            Ok(ParsedCommand::NoteRead {
                 date: date.ok_or_else(|| "Missing --date.".to_string())?,
             })
         }
         "read-range" => {
             let mut from = None;
             let mut to = None;
-            let mut index = 2usize;
+            let mut index = 1usize;
             while index < argv.len() {
                 match argv[index].as_str() {
                     "--from" => {
@@ -772,14 +1451,14 @@ fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
                     }
                 }
             }
-            Ok(ParsedCommand::ReadRange {
+            Ok(ParsedCommand::NoteReadRange {
                 from: from.ok_or_else(|| "Missing --from.".to_string())?,
                 to: to.ok_or_else(|| "Missing --to.".to_string())?,
             })
         }
         "create" => {
             let mut date = None;
-            let mut index = 2usize;
+            let mut index = 1usize;
             while index < argv.len() {
                 match argv[index].as_str() {
                     "--date" => {
@@ -790,7 +1469,7 @@ fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
                     other => return Err(format!("Unsupported flag for note create: {}", other)),
                 }
             }
-            Ok(ParsedCommand::Create {
+            Ok(ParsedCommand::NoteCreate {
                 date: date.ok_or_else(|| "Missing --date.".to_string())?,
             })
         }
@@ -798,7 +1477,7 @@ fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
             let mut date = None;
             let mut apply = false;
             let mut dry_run = false;
-            let mut index = 2usize;
+            let mut index = 1usize;
             while index < argv.len() {
                 match argv[index].as_str() {
                     "--date" => {
@@ -822,14 +1501,14 @@ fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
                 return Err("Use exactly one of --dry-run or --apply.".to_string());
             }
 
-            Ok(ParsedCommand::Update {
+            Ok(ParsedCommand::NoteUpdate {
                 date: date.ok_or_else(|| "Missing --date.".to_string())?,
                 apply,
             })
         }
         "delete" => {
             let mut date = None;
-            let mut index = 2usize;
+            let mut index = 1usize;
             while index < argv.len() {
                 match argv[index].as_str() {
                     "--date" => {
@@ -840,7 +1519,7 @@ fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
                     other => return Err(format!("Unsupported flag for note delete: {}", other)),
                 }
             }
-            Ok(ParsedCommand::Delete {
+            Ok(ParsedCommand::NoteDelete {
                 date: date.ok_or_else(|| "Missing --date.".to_string())?,
             })
         }
@@ -848,25 +1527,154 @@ fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
     }
 }
 
+fn parse_page_command(argv: &[String]) -> Result<ParsedCommand, String> {
+    if argv.is_empty() {
+        return Err("Missing page action.".to_string());
+    }
+
+    match argv[0].as_str() {
+        "search" => {
+            let mut query = None;
+            let mut limit = 8usize;
+            let mut index = 1usize;
+            while index < argv.len() {
+                match argv[index].as_str() {
+                    "--query" => {
+                        query = argv.get(index + 1).cloned();
+                        index += 2;
+                    }
+                    "--limit" => {
+                        limit = parse_limit(argv, index + 1)?;
+                        index += 2;
+                    }
+                    "--json" => index += 1,
+                    other => return Err(format!("Unsupported flag for page search: {}", other)),
+                }
+            }
+            Ok(ParsedCommand::PageSearch {
+                query: query.ok_or_else(|| "Missing --query.".to_string())?,
+                limit,
+            })
+        }
+        "read" => {
+            let mut title = None;
+            let mut index = 1usize;
+            while index < argv.len() {
+                match argv[index].as_str() {
+                    "--title" => {
+                        title = argv.get(index + 1).cloned();
+                        index += 2;
+                    }
+                    "--json" => index += 1,
+                    other => return Err(format!("Unsupported flag for page read: {}", other)),
+                }
+            }
+            Ok(ParsedCommand::PageRead {
+                title: title.ok_or_else(|| "Missing --title.".to_string())?,
+            })
+        }
+        "create" => {
+            let mut title = None;
+            let mut index = 1usize;
+            while index < argv.len() {
+                match argv[index].as_str() {
+                    "--title" => {
+                        title = argv.get(index + 1).cloned();
+                        index += 2;
+                    }
+                    "--json" => index += 1,
+                    other => return Err(format!("Unsupported flag for page create: {}", other)),
+                }
+            }
+            Ok(ParsedCommand::PageCreate {
+                title: title.ok_or_else(|| "Missing --title.".to_string())?,
+            })
+        }
+        "update" => {
+            let mut title = None;
+            let mut apply = false;
+            let mut dry_run = false;
+            let mut index = 1usize;
+            while index < argv.len() {
+                match argv[index].as_str() {
+                    "--title" => {
+                        title = argv.get(index + 1).cloned();
+                        index += 2;
+                    }
+                    "--apply" => {
+                        apply = true;
+                        index += 1;
+                    }
+                    "--dry-run" => {
+                        dry_run = true;
+                        index += 1;
+                    }
+                    "--json" => index += 1,
+                    other => return Err(format!("Unsupported flag for page update: {}", other)),
+                }
+            }
+
+            if apply == dry_run {
+                return Err("Use exactly one of --dry-run or --apply.".to_string());
+            }
+
+            Ok(ParsedCommand::PageUpdate {
+                title: title.ok_or_else(|| "Missing --title.".to_string())?,
+                apply,
+            })
+        }
+        "delete" => {
+            let mut title = None;
+            let mut index = 1usize;
+            while index < argv.len() {
+                match argv[index].as_str() {
+                    "--title" => {
+                        title = argv.get(index + 1).cloned();
+                        index += 2;
+                    }
+                    "--json" => index += 1,
+                    other => return Err(format!("Unsupported flag for page delete: {}", other)),
+                }
+            }
+            Ok(ParsedCommand::PageDelete {
+                title: title.ok_or_else(|| "Missing --title.".to_string())?,
+            })
+        }
+        other => Err(format!("Unsupported page action: {}", other)),
+    }
+}
+
+fn parse_command(argv: &[String]) -> Result<ParsedCommand, String> {
+    if argv.is_empty() {
+        return Err("Missing philo subcommand.".to_string());
+    }
+
+    match argv[0].as_str() {
+        "note" => parse_note_command(&argv[1..]),
+        "page" => parse_page_command(&argv[1..]),
+        other => Err(format!("Unsupported subcommand: {}", other)),
+    }
+}
+
 pub fn run_philo_command(argv: &[String], stdin: Option<String>) -> Result<String, String> {
     let context = resolve_note_context()?;
     let command = parse_command(argv)?;
     let value = match command {
-        ParsedCommand::Search { query, limit } => serde_json::to_string(&SearchEnvelope {
+        ParsedCommand::NoteSearch { query, limit } => serde_json::to_string(&SearchEnvelope {
             hits: search_notes(&context, &query, limit.min(20))?,
         }),
-        ParsedCommand::Read { date } => {
+        ParsedCommand::NoteRead { date } => {
             let note = read_note(&context, &date)?
                 .ok_or_else(|| format!("Note {} does not exist.", date))?;
             serde_json::to_string(&NoteEnvelope { note })
         }
-        ParsedCommand::ReadRange { from, to } => serde_json::to_string(&ReadRangeEnvelope {
+        ParsedCommand::NoteReadRange { from, to } => serde_json::to_string(&ReadRangeEnvelope {
             notes: read_notes_in_range(&context, &from, &to)?,
         }),
-        ParsedCommand::Create { date } => serde_json::to_string(&NoteEnvelope {
+        ParsedCommand::NoteCreate { date } => serde_json::to_string(&NoteEnvelope {
             note: create_note(&context, &date)?,
         }),
-        ParsedCommand::Update { date, apply } => {
+        ParsedCommand::NoteUpdate { date, apply } => {
             let markdown =
                 stdin.ok_or_else(|| "Note update requires stdin markdown.".to_string())?;
             if apply {
@@ -885,8 +1693,44 @@ pub fn run_philo_command(argv: &[String], stdin: Option<String>) -> Result<Strin
                 })
             }
         }
-        ParsedCommand::Delete { date } => serde_json::to_string(&AppliedEnvelope {
+        ParsedCommand::NoteDelete { date } => serde_json::to_string(&AppliedEnvelope {
             applied: vec![delete_note(&context, &date)?],
+        }),
+        ParsedCommand::PageSearch { query, limit } => serde_json::to_string(&PageSearchEnvelope {
+            hits: search_pages(&context, &query, limit.min(20))?,
+        }),
+        ParsedCommand::PageRead { title } => {
+            let page = read_page(&context, &title)?.ok_or_else(|| {
+                format!(
+                    "Page {} does not exist.",
+                    normalize_page_title_input(&title)
+                )
+            })?;
+            serde_json::to_string(&PageEnvelope { page })
+        }
+        ParsedCommand::PageCreate { title } => serde_json::to_string(&PageEnvelope {
+            page: create_page(&context, &title)?,
+        }),
+        ParsedCommand::PageUpdate { title, apply } => {
+            let markdown =
+                stdin.ok_or_else(|| "Page update requires stdin markdown.".to_string())?;
+            if apply {
+                let change = update_page(&context, &title, &markdown, true)?;
+                let (_, path) = page_path(&context, &change.title)?;
+                serde_json::to_string(&PageAppliedEnvelope {
+                    applied: vec![AppliedPage {
+                        title: change.title,
+                        path: path.to_string_lossy().to_string(),
+                    }],
+                })
+            } else {
+                serde_json::to_string(&PageUpdateEnvelope {
+                    change: update_page(&context, &title, &markdown, false)?,
+                })
+            }
+        }
+        ParsedCommand::PageDelete { title } => serde_json::to_string(&PageAppliedEnvelope {
+            applied: vec![delete_page(&context, &title)?],
         }),
     }
     .map_err(|e| e.to_string())?;
@@ -1012,7 +1856,7 @@ pub fn run_sidecar_philo(
 mod tests {
     use super::{
         apply_filename_pattern, build_unified_diff, parse_date_from_relative_path,
-        read_notes_in_range, NoteContext,
+        read_notes_in_range, read_page, search_pages, update_page, NoteContext,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -1028,6 +1872,7 @@ mod tests {
         NoteContext {
             settings_path: base.join("settings.json"),
             journal_dir: base.join("notes"),
+            pages_dir: base.join("pages"),
             filename_pattern: "{YYYY}-{MM}-{DD}".to_string(),
         }
     }
@@ -1035,6 +1880,11 @@ mod tests {
     fn write_test_note(dir: &PathBuf, date: &str, markdown: &str) {
         fs::create_dir_all(dir).unwrap();
         fs::write(dir.join(format!("{date}.md")), markdown).unwrap();
+    }
+
+    fn write_test_page(dir: &PathBuf, title: &str, markdown: &str) {
+        fs::create_dir_all(dir).unwrap();
+        fs::write(dir.join(format!("{title}.md")), markdown).unwrap();
     }
 
     #[test]
@@ -1104,5 +1954,66 @@ mod tests {
         assert_eq!(settings.filename_pattern, "{YYYY}_{MM}_{DD}");
         assert_eq!(settings.vault_dir, "/tmp/vault");
         assert_eq!(settings.daily_logs_folder, "journals");
+    }
+
+    #[test]
+    fn reads_page_metadata_and_infers_attached_date() {
+        let context = make_test_context();
+        write_test_note(
+            &context.journal_dir,
+            "2026-03-16",
+            "See [Launch plan](pages/Launch%20plan.md)\n",
+        );
+        write_test_page(
+            &context.pages_dir,
+            "Launch plan",
+            "---\ntype: meeting\nparticipants:\n  - Alex\nlocation: HQ\n---\n# Launch\nNotes\n",
+        );
+
+        let page = read_page(&context, "Launch plan").unwrap().unwrap();
+
+        assert_eq!(page.title, "Launch plan");
+        assert_eq!(page.r#type, "meeting");
+        assert_eq!(page.attached_to.as_deref(), Some("2026-03-16"));
+        assert_eq!(page.participants, vec!["Alex"]);
+        assert_eq!(page.location.as_deref(), Some("HQ"));
+    }
+
+    #[test]
+    fn updates_page_body_without_dropping_frontmatter() {
+        let context = make_test_context();
+        write_test_page(
+            &context.pages_dir,
+            "Launch plan",
+            "---\ntype: meeting\nlocation: HQ\n---\n# Launch\nOld body\n",
+        );
+
+        let change = update_page(&context, "Launch plan", "# Launch\nNew body\n", true).unwrap();
+        let raw = fs::read_to_string(context.pages_dir.join("Launch plan.md")).unwrap();
+
+        assert_eq!(change.title, "Launch plan");
+        assert!(raw.contains("type: meeting"));
+        assert!(raw.contains("location: HQ"));
+        assert!(raw.ends_with("# Launch\nNew body\n"));
+    }
+
+    #[test]
+    fn searches_pages_by_title_and_body() {
+        let context = make_test_context();
+        write_test_page(
+            &context.pages_dir,
+            "Launch plan",
+            "---\ntype: page\n---\nChecklist for launch review\n",
+        );
+        write_test_page(
+            &context.pages_dir,
+            "Retro",
+            "---\ntype: page\n---\nNotes from the retro\n",
+        );
+
+        let hits = search_pages(&context, "launch review", 10).unwrap();
+
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "Launch plan");
     }
 }

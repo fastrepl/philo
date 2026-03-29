@@ -29,6 +29,7 @@ tauri-plugin-geolocation = "2"
 tauri-plugin-deep-link = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_yaml = "0.9"
 tauri-plugin-dialog = "2.6.0"
 tauri-plugin-settings = { path = "../../../vendor/hyprnote/plugins/settings" }
 tauri-plugin-listener = { path = "../../../vendor/hyprnote/plugins/listener" }
