@@ -1,6 +1,7 @@
 import { generateObject, } from "ai";
 import { z, } from "zod";
 import type { MeetingSessionKind, } from "../types/note";
+import { generateAiText, } from "./ai";
 import { getAiSdkModel, } from "./ai-sdk";
 import { loadSettings, resolveActiveAiConfig, } from "./settings";
 
@@ -57,6 +58,23 @@ Rules:
 - keyTakeaways should capture the main learnings for informative sessions.
 - Keep the output compact and concrete.`;
 
+const JSON_RESPONSE_PROMPT = `${SYSTEM_PROMPT}
+
+Return ONLY a single JSON object with this exact shape:
+{
+  "sessionKind": "decision_making" | "informative",
+  "executiveSummary": "string",
+  "participants": ["string"],
+  "location": "string" | null,
+  "agenda": ["string"],
+  "actionItems": ["string"],
+  "summary": ["string"],
+  "decisions": ["string"],
+  "keyTakeaways": ["string"]
+}
+
+Do not wrap the JSON in markdown fences.`;
+
 function cleanItems(items: string[],): string[] {
   return items.map((item,) => item.trim()).filter(Boolean,);
 }
@@ -67,40 +85,13 @@ function cleanLocation(value: string | null,) {
   return trimmed || null;
 }
 
-export async function summarizeMeeting(input: MeetingSummaryInput,): Promise<MeetingSummaryResult> {
-  const settings = await loadSettings();
-  const config = resolveActiveAiConfig(settings,);
-  if (!config) {
-    throw new Error("AI is not configured.",);
-  }
+function cleanJsonResponse(raw: string,) {
+  return raw.replace(/^```(?:json)?\n?/m, "",).replace(/\n?```$/m, "",).trim();
+}
 
-  if (!input.transcript.trim()) {
-    throw new Error("Cannot summarize an empty meeting transcript.",);
-  }
-
-  const result = await generateObject({
-    model: getAiSdkModel(config, "assistant",),
-    schema: MeetingSummarySchema,
-    system: SYSTEM_PROMPT,
-    prompt: JSON.stringify(
-      {
-        meeting: {
-          title: input.title,
-          startedAt: input.startedAt,
-          endedAt: input.endedAt,
-          attachedTo: input.attachedTo,
-          locationHint: input.locationHint ?? null,
-          participantsHint: input.participantsHint ?? [],
-          notesContext: input.notesContext?.trim() || null,
-        },
-        transcript: input.transcript,
-      },
-      null,
-      2,
-    ),
-  },);
-
-  const object = result.object;
+function normalizeMeetingSummary(
+  object: z.infer<typeof MeetingSummarySchema>,
+): MeetingSummaryResult {
   const sessionKind = object.sessionKind;
 
   return {
@@ -114,4 +105,66 @@ export async function summarizeMeeting(input: MeetingSummaryInput,): Promise<Mee
     decisions: sessionKind === "decision_making" ? cleanItems(object.decisions,) : [],
     keyTakeaways: sessionKind === "informative" ? cleanItems(object.keyTakeaways,) : [],
   };
+}
+
+export async function summarizeMeeting(input: MeetingSummaryInput,): Promise<MeetingSummaryResult> {
+  const settings = await loadSettings();
+  const config = resolveActiveAiConfig(settings,);
+  if (!config) {
+    throw new Error("AI is not configured.",);
+  }
+
+  const transcript = input.transcript.trim();
+  if (!transcript) {
+    throw new Error("Cannot summarize an empty meeting transcript.",);
+  }
+
+  const prompt = JSON.stringify(
+    {
+      meeting: {
+        title: input.title,
+        startedAt: input.startedAt,
+        endedAt: input.endedAt,
+        attachedTo: input.attachedTo,
+        locationHint: input.locationHint ?? null,
+        participantsHint: input.participantsHint ?? [],
+        notesContext: input.notesContext?.trim() || null,
+      },
+      transcript,
+    },
+    null,
+    2,
+  );
+
+  try {
+    const result = await generateObject({
+      model: getAiSdkModel(config, "assistant",),
+      schema: MeetingSummarySchema,
+      system: SYSTEM_PROMPT,
+      prompt,
+    },);
+
+    return normalizeMeetingSummary(result.object,);
+  } catch (structuredError) {
+    try {
+      const fallbackText = await generateAiText(
+        config,
+        JSON_RESPONSE_PROMPT,
+        prompt,
+      );
+      const parsed = JSON.parse(cleanJsonResponse(fallbackText,),) as unknown;
+      return normalizeMeetingSummary(MeetingSummarySchema.parse(parsed,),);
+    } catch (fallbackError) {
+      const structuredMessage = structuredError instanceof Error
+        ? structuredError.message
+        : "Structured output failed.";
+      const fallbackMessage = fallbackError instanceof Error
+        ? fallbackError.message
+        : "Fallback JSON parsing failed.";
+
+      throw new Error(
+        `Could not summarize meeting. ${structuredMessage} ${fallbackMessage}`,
+      );
+    }
+  }
 }
