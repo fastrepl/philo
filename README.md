@@ -14,6 +14,8 @@ Build widgets directly inside your notes. Keep daily planning in one timeline. L
 
 Philo is built for the gap between capture and execution. Instead of writing something down and rebuilding the context later in another tool, you stay inside the note and keep moving.
 
+Philo is also a stepping stone into [char.com](https://char.com). The plan is to integrate this daily-notes workflow and context model there over time.
+
 ## Why Philo exists
 
 Most journaling apps are good at capture and weak at execution. Philo is designed to collapse that gap.
