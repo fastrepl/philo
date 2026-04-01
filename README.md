@@ -8,13 +8,13 @@
 
 ![Philo app screenshot](docs/assets/philo-app-screenshot.png)
 
+> Disclaimer: Philo is an experimental proof-of-concept app. The plan is to integrate this daily-notes workflow into Char in the [fastrepl/char](https://github.com/fastrepl/char) repo over time.
+
 Philo is the IDE for your daily notes.
 
 Build widgets directly inside your notes. Keep daily planning in one timeline. Let unfinished and recurring work come back automatically. Keep everything as plain markdown on disk.
 
 Philo is built for the gap between capture and execution. Instead of writing something down and rebuilding the context later in another tool, you stay inside the note and keep moving.
-
-Philo is also a stepping stone into [char.com](https://char.com). The plan is to integrate this daily-notes workflow and context model there over time.
 
 ## Why Philo exists
 
