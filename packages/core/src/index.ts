@@ -1,1 +1,2 @@
-export const PHILO_CORE_PACKAGE = "@philo/core";
+export * from "./editor-host";
+export * from "./sync";
