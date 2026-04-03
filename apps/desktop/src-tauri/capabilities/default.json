@@ -35,7 +35,9 @@
     {
       "identifier": "fs:allow-mkdir",
       "allow": [
+        { "path": "$APPDATA" },
         { "path": "$APPDATA/**" },
+        { "path": "$HOME/Library/Application Support/com.philo.dev" },
         { "path": "$HOME/Library/Application Support/com.philo.dev/**" }
       ]
     },
