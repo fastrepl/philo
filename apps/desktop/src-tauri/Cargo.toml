@@ -1,6 +1,6 @@
 [package]
 name = "philo"
-version = "0.0.69"
+version = "0.0.70"
 description = "A Tauri App"
 authors = ["John Jeong"]
 license = "GPL-3.0-or-later"
