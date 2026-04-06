@@ -13,7 +13,7 @@ import Mention from "@tiptap/extension-mention";
 import { PluginKey, } from "@tiptap/pm/state";
 import { ReactRenderer, } from "@tiptap/react";
 import type { SuggestionOptions, } from "@tiptap/suggestion";
-import { CalendarDays, ChevronDown, FileText, Repeat2, } from "lucide-react";
+import { CalendarDays, ChevronDown, FilePlus2, FileText, Repeat2, } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, } from "react";
 import {
   createDateMention,
@@ -172,7 +172,9 @@ function MentionMenuBody(
         <div className="mention-menu-items">
           {renderedItems.map((item, index,) => {
             const showDivider = index > 0 && renderedItems[index - 1]?.group !== item.group;
-            const Icon = item.action === "show_more_pages"
+            const Icon = item.action === "create_page"
+              ? FilePlus2
+              : item.action === "show_more_pages"
               ? ChevronDown
               : item.kind === "page"
               ? FileText
@@ -262,10 +264,12 @@ export function buildMentionChipSuggestion(
   referenceDate?: string,
   options?: {
     char?: string;
+    onCreatePage?: (title: string,) => Promise<void> | void;
     pluginKey?: string;
   },
 ): Omit<SuggestionOptions, "editor"> {
   const triggerChar = options?.char ?? "@";
+  const onCreatePage = options?.onCreatePage;
   const pluginKey = options?.pluginKey ?? "mention-chip-suggestion";
 
   const insertMentionItems = (
@@ -273,6 +277,12 @@ export function buildMentionChipSuggestion(
     range: Parameters<NonNullable<SuggestionOptions["command"]>>[0]["range"],
     items: MentionSuggestion[],
   ) => {
+    for (const item of items) {
+      if (item.action === "create_page" && onCreatePage) {
+        void Promise.resolve(onCreatePage(item.label,),).catch(console.error,);
+      }
+    }
+
     const content = items.flatMap((item,) => [
       {
         type: "mentionChip",
@@ -298,7 +308,10 @@ export function buildMentionChipSuggestion(
     allowSpaces: true,
     allowedPrefixes: [" ", "(", "[", "{",],
     pluginKey: new PluginKey(pluginKey,),
-    items: ({ query, },) => getMentionSuggestions(query, referenceDate,),
+    items: ({ query, },) =>
+      getMentionSuggestions(query, referenceDate, {
+        includeCreatePage: Boolean(onCreatePage,),
+      },),
     command: ({ editor, range, props, },) => {
       const item = props as MentionSuggestion;
       insertMentionItems(editor, range, [item,],);

@@ -1,7 +1,14 @@
 import { invoke, } from "@tauri-apps/api/core";
-import { readDir, } from "@tauri-apps/plugin-fs";
+import { exists, readDir, } from "@tauri-apps/plugin-fs";
 import { getToday, } from "../types/note";
-import { buildPageLinkTarget, getPagesDir, isExplicitPageLinkTarget, parsePageTitleFromLinkTarget, } from "./paths";
+import {
+  buildPageLinkTarget,
+  getPagePath,
+  getPagesDir,
+  isExplicitPageLinkTarget,
+  parsePageTitleFromLinkTarget,
+  sanitizePageTitle,
+} from "./paths";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_DAY_RE =
@@ -68,7 +75,7 @@ export interface MentionChipData {
 export interface MentionSuggestion extends MentionChipData {
   group: MentionGroup;
   detail?: string;
-  action?: "open_date_picker" | "show_more_pages";
+  action?: "create_page" | "open_date_picker" | "show_more_pages";
 }
 
 export interface MentionChipExternalPayload {
@@ -400,6 +407,17 @@ function buildDatePickerSuggestion(): MentionSuggestion {
   };
 }
 
+function buildCreatePageSuggestion(title: string,): MentionSuggestion {
+  return {
+    id: buildPageLinkTarget(title,),
+    label: title,
+    detail: "Create page",
+    kind: "page",
+    group: "action",
+    action: "create_page",
+  };
+}
+
 function buildPageSuggestion(title: string,): MentionSuggestion {
   return {
     id: buildPageLinkTarget(title,),
@@ -559,6 +577,12 @@ async function getPageSuggestions(query: string,): Promise<MentionSuggestion[]> 
       .filter((title,): title is string => Boolean(title,))
       .map((title,) => buildPageSuggestion(title,)),
   );
+}
+
+async function getCreatePageTitle(query: string,): Promise<string | null> {
+  const title = sanitizePageTitle(query.replace(/^pages\//i, "",).replace(/\.md$/i, "",),);
+  if (!title) return null;
+  return await exists(await getPagePath(title,),) ? null : title;
 }
 
 function parseMentionTarget(
@@ -776,14 +800,20 @@ export function renderMentionMarkdown(
   return `[[${id}|${label}]]`;
 }
 
-export async function getMentionSuggestions(query: string, referenceDate?: string,): Promise<MentionSuggestion[]> {
+export async function getMentionSuggestions(
+  query: string,
+  referenceDate?: string,
+  options?: { includeCreatePage?: boolean; },
+): Promise<MentionSuggestion[]> {
   void referenceDate;
   const relativeReference = getRelativeDateReference();
   const normalized = normalizeToken(query,);
+  const createPageTitle = options?.includeCreatePage ? await getCreatePageTitle(query,) : null;
 
   if (!normalized) {
     const pageSuggestions = await getDefaultPageSuggestions();
     return [
+      ...(createPageTitle ? [buildCreatePageSuggestion(createPageTitle,),] : []),
       buildDatePickerSuggestion(),
       ...pageSuggestions,
       ...buildDefaultDateSuggestions(relativeReference,),
@@ -801,7 +831,12 @@ export async function getMentionSuggestions(query: string, referenceDate?: strin
     }
   }
 
-  return [buildDatePickerSuggestion(), ...pageSuggestions, ...dedupeSuggestions(items,).slice(0, 6,),];
+  return [
+    ...(createPageTitle ? [buildCreatePageSuggestion(createPageTitle,),] : []),
+    buildDatePickerSuggestion(),
+    ...pageSuggestions,
+    ...dedupeSuggestions(items,).slice(0, 6,),
+  ];
 }
 
 export function createDateMention(date: string, label?: string,): MentionSuggestion {

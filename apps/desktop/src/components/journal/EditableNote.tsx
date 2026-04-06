@@ -92,7 +92,7 @@ interface EditableNoteProps {
   onChatSelection?: (selection: EditableNoteSelection,) => void;
   onSelectionChange?: (selection: EditableNoteSelection | null,) => void;
   onSelectionBlur?: (editor: TiptapEditor,) => void;
-  onCreatePage?: (date: string,) => Promise<string | null> | string | null;
+  onCreatePage?: (input?: { open?: boolean; title?: string; },) => Promise<string | null> | string | null;
   persistentSelectionRange?: PersistentSelectionRange | null;
 }
 
@@ -1111,10 +1111,14 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           suggestions: [
             buildMentionChipSuggestion(getReferenceDate(note,), {
               char: "@",
+              onCreatePage: (title,) =>
+                Promise.resolve(onCreatePageRef.current?.({ open: false, title, },),).then(() => undefined),
               pluginKey: "mention-chip-suggestion-at",
             },),
             buildMentionChipSuggestion(getReferenceDate(note,), {
               char: "[[",
+              onCreatePage: (title,) =>
+                Promise.resolve(onCreatePageRef.current?.({ open: false, title, },),).then(() => undefined),
               pluginKey: "mention-chip-suggestion-wikilink",
             },),
           ],
@@ -1155,11 +1159,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           },
         },),
         SlashCommandExtension.configure({
-          onAttachPage: () => {
-            const currentNote = noteRef.current;
-            if (!("date" in currentNote)) return null;
-            return onCreatePageRef.current?.(currentNote.date,) ?? null;
-          },
+          onCreatePage: (title,) => onCreatePageRef.current?.({ open: true, ...(title ? { title, } : {}), },) ?? null,
           referenceDate: getReferenceDate(note,),
         },),
         PersistentSelectionHighlightExtension,

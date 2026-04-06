@@ -77,6 +77,7 @@ import {
   resolveActiveSttConfig,
 } from "../../services/settings";
 import {
+  createAttachedPage,
   createUntitledAttachedPage,
   getOrCreateDailyNote,
   loadDailyNote,
@@ -1216,7 +1217,7 @@ function LazyNote({
   pagesRevision: number;
   onOpenDate?: (date: string,) => void;
   onOpenPage?: (title: string,) => void;
-  onCreatePage?: (date: string,) => Promise<string | null> | string | null;
+  onCreatePage?: (input?: { open?: boolean; title?: string; },) => Promise<string | null> | string | null;
   onInteract?: () => void;
   onChatSelection?: (selection: EditableNoteSelection,) => void;
   onSelectionChange?: (selection: EditableNoteSelection | null,) => void;
@@ -1291,6 +1292,7 @@ function PageView({
   meetingRecordingError,
   onOpenDate,
   onOpenPage,
+  onCreatePage,
   onAskAiPrompt,
   onSave,
   onRenameTitle,
@@ -1306,6 +1308,7 @@ function PageView({
   meetingRecordingError?: string | null;
   onOpenDate?: (date: string,) => void;
   onOpenPage?: (title: string,) => void;
+  onCreatePage?: (input?: { open?: boolean; title?: string; },) => Promise<string | null> | string | null;
   onAskAiPrompt?: (prompt: string,) => void;
   onSave?: (page: PageNote,) => void;
   onRenameTitle?: (page: PageNote, nextTitle: string,) => Promise<PageNote | null> | PageNote | null;
@@ -1531,6 +1534,7 @@ function PageView({
         onSave={handleSave}
         onOpenDate={onOpenDate}
         onOpenPage={onOpenPage}
+        onCreatePage={onCreatePage}
         onInteract={onInteract}
       />
       {pageIsUrlSummary && resolvedPage.followUpQuestions.length > 0 && onAskAiPrompt && (
@@ -3057,10 +3061,12 @@ export default function AppLayout() {
     saveDailyNote(updated,).catch(console.error,);
   }, [],);
 
-  const handleCreateAttachedPage = useCallback(async () => {
-    const page = await createUntitledAttachedPage();
-    setPagesRevision((value,) => value + 1);
-    openPageView(page.title,);
+  const handleCreateAttachedPage = useCallback(async (input?: { open?: boolean; title?: string; },) => {
+    const page = input?.title ? await createAttachedPage({ title: input.title, },) : await createUntitledAttachedPage();
+    if (input?.open !== false) {
+      setPagesRevision((value,) => value + 1);
+      openPageView(page.title,);
+    }
     return page.title;
   }, [openPageView,],);
 
@@ -3629,6 +3635,7 @@ export default function AppLayout() {
                     meetingRecordingError={meetingRecordingError}
                     onOpenDate={scrollToDate}
                     onOpenPage={openPageView}
+                    onCreatePage={handleCreateAttachedPage}
                     onAskAiPrompt={openAiComposerWithPrompt}
                     onSave={handlePageSave}
                     onRenameTitle={handlePageRename}

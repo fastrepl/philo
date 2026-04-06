@@ -29,6 +29,7 @@ import {
 import { useEffect, useRef, useState, } from "react";
 import { resolveAssetUrl, saveAsset, } from "../../../../services/images";
 import { createDateMention, createRecurringMention, type MentionSuggestion, } from "../../../../services/mentions";
+import { sanitizePageTitle, } from "../../../../services/paths";
 import { getToday, } from "../../../../types/note";
 import {
   DATE_PICKER_RECURRENCE_OPTIONS,
@@ -50,16 +51,22 @@ function getRecurrenceDescription(date: string, recurrence: string,) {
   return `Starting from ${formatRecurrenceDescriptionDate(date,)} this will show up on a ${recurrence} basis.`;
 }
 
+function getCreatePageTitle(query: string,) {
+  const title = sanitizePageTitle(query.replace(/^pages\//i, "",).replace(/\.md$/i, "",),);
+  return title || null;
+}
+
 type SlashCommandSection = "block" | "inline" | "media";
 
 interface SlashCommandItem {
   id: string;
+  pageTitle?: string;
   section: SlashCommandSection;
   title: string;
   subtitle: string;
   keywords: string[];
   action:
-    | "attach_page"
+    | "create_page"
     | "open_date_picker"
     | "set_paragraph"
     | "heading_1"
@@ -190,7 +197,7 @@ function SlashCommandMenuBody({
             const showSection = !previous || previous.section !== item.section;
             const Icon = (() => {
               switch (item.action) {
-                case "attach_page":
+                case "create_page":
                   return FilePlus2;
                 case "open_date_picker":
                   return CalendarDays;
@@ -302,14 +309,14 @@ function SlashCommandMenu(props: SlashCommandMenuProps,) {
 }
 
 export const SlashCommandExtension = Extension.create<{
-  onAttachPage?: () => Promise<string | null> | string | null;
+  onCreatePage?: (title?: string,) => Promise<string | null> | string | null;
   referenceDate?: string;
 }>({
   name: "pageSlashCommand",
 
   addOptions() {
     return {
-      onAttachPage: undefined,
+      onCreatePage: undefined,
       referenceDate: undefined,
     };
   },
@@ -346,9 +353,9 @@ export const SlashCommandExtension = Extension.create<{
       const chain = editor.chain().focus().deleteRange(range,);
 
       switch (item.action) {
-        case "attach_page":
+        case "create_page":
           chain.run();
-          void Promise.resolve(this.options.onAttachPage?.(),).catch(console.error,);
+          void Promise.resolve(this.options.onCreatePage?.(item.pageTitle,),).catch(console.error,);
           break;
         case "set_paragraph":
           chain.clearNodes().run();
@@ -420,6 +427,7 @@ export const SlashCommandExtension = Extension.create<{
     const suggestion: SuggestionOptions<SlashCommandItem> = {
       editor: this.editor,
       char: "/",
+      allowSpaces: true,
       allowedPrefixes: null,
       startOfLine: false,
       pluginKey: new PluginKey("page-slash-command",),
@@ -440,9 +448,10 @@ export const SlashCommandExtension = Extension.create<{
 
         const activeText = textBefore.slice(slashOffset,);
 
-        return /^\/[^\s/]*$/.test(activeText,);
+        return /^\/[^/\n]*$/.test(activeText,);
       },
       items: ({ query, },) => {
+        const createPageTitle = getCreatePageTitle(query,);
         const normalizedQuery = query.trim().toLowerCase();
         const items: SlashCommandItem[] = [
           {
@@ -551,14 +560,17 @@ export const SlashCommandExtension = Extension.create<{
           },
         ];
 
-        if (this.options.onAttachPage) {
+        if (this.options.onCreatePage) {
           items.unshift({
-            id: "attach-page",
+            id: createPageTitle ? `create-page-${createPageTitle}` : "create-page",
             section: "block",
-            title: "Attach page",
-            subtitle: "Create a page attached to this daily note",
-            keywords: ["page", "attach", "meeting", "note",],
-            action: "attach_page",
+            title: createPageTitle ? `Create page "${createPageTitle}"` : "New page",
+            subtitle: createPageTitle
+              ? "Create this page in the pages directory"
+              : "Create an untitled page in the pages directory",
+            keywords: ["page", "create", "new", "note",],
+            action: "create_page",
+            ...(createPageTitle ? { pageTitle: createPageTitle, } : {}),
           },);
         }
 
