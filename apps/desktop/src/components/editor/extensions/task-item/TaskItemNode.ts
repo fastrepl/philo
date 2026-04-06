@@ -147,6 +147,26 @@ export const CustomTaskItem = TaskItem.extend({
       let currentNode = node.toJSON();
       let isCollapsed = false;
 
+      const isNestedTaskItem = () => {
+        if (typeof getPos !== "function") {
+          return false;
+        }
+
+        const pos = getPos();
+        if (typeof pos !== "number") {
+          return false;
+        }
+
+        const resolvedPos = editor.state.doc.resolve(pos,);
+        for (let depth = resolvedPos.depth - 1; depth > 0; depth -= 1) {
+          if (resolvedPos.node(depth,).type.name === "taskItem") {
+            return true;
+          }
+        }
+
+        return false;
+      };
+
       const syncNestedDomState = (hasNestedChildren: boolean,) => {
         queueMicrotask(() => {
           Array.from(content.children,).forEach((child,) => {
@@ -159,19 +179,20 @@ export const CustomTaskItem = TaskItem.extend({
 
       const syncNestedState = (nextNode: JSONContent,) => {
         const hasNestedChildren = hasNestedListChildren(nextNode,);
-        listItem.classList.toggle("task-item--has-children", hasNestedChildren,);
+        const canToggleNestedChildren = hasNestedChildren && !isNestedTaskItem();
+        listItem.classList.toggle("task-item--has-children", canToggleNestedChildren,);
 
-        if (!hasNestedChildren) {
+        if (!canToggleNestedChildren) {
           isCollapsed = false;
         }
 
-        listItem.classList.toggle("task-item--collapsed", hasNestedChildren && isCollapsed,);
-        toggle.disabled = !hasNestedChildren;
+        listItem.classList.toggle("task-item--collapsed", canToggleNestedChildren && isCollapsed,);
+        toggle.disabled = !canToggleNestedChildren;
         toggle.contentEditable = "false";
-        toggle.setAttribute("aria-hidden", hasNestedChildren ? "false" : "true",);
+        toggle.setAttribute("aria-hidden", canToggleNestedChildren ? "false" : "true",);
         toggle.setAttribute("aria-label", isCollapsed ? "Expand nested items" : "Collapse nested items",);
-        toggle.setAttribute("aria-expanded", hasNestedChildren ? (!isCollapsed).toString() : "false",);
-        syncNestedDomState(hasNestedChildren,);
+        toggle.setAttribute("aria-expanded", canToggleNestedChildren ? (!isCollapsed).toString() : "false",);
+        syncNestedDomState(canToggleNestedChildren,);
       };
 
       toggle.type = "button";
