@@ -99,7 +99,11 @@
   border-color: var(--task-checkbox-border-hover);
 }
 
-.tiptap a:hover {
+.tiptap[data-link-open-modifier-cursor="true"] a:hover {
+  cursor: default;
+}
+
+.tiptap[data-link-open-modifier-cursor="true"][data-link-open-modifier-active="true"] a:hover {
   cursor: pointer;
 }
 

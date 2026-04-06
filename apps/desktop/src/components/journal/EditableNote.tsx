@@ -1003,6 +1003,40 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
             return [
               new Plugin({
                 key: new PluginKey("linkCmdClick",),
+                view(view,) {
+                  const editorElement = view.dom as HTMLElement;
+                  const setModifierActive = (active: boolean,) => {
+                    editorElement.dataset.linkOpenModifierCursor = "true";
+                    editorElement.dataset.linkOpenModifierActive = active ? "true" : "false";
+                  };
+                  const updateModifierFromEvent = (event: KeyboardEvent | MouseEvent,) => {
+                    setModifierActive(event.metaKey || event.ctrlKey,);
+                  };
+                  const clearModifier = () => {
+                    setModifierActive(false,);
+                  };
+
+                  setModifierActive(false,);
+                  window.addEventListener("keydown", updateModifierFromEvent, true,);
+                  window.addEventListener("keyup", updateModifierFromEvent, true,);
+                  window.addEventListener("blur", clearModifier,);
+                  editorElement.addEventListener("mouseenter", updateModifierFromEvent, true,);
+                  editorElement.addEventListener("mousemove", updateModifierFromEvent, true,);
+                  editorElement.addEventListener("mouseleave", clearModifier, true,);
+
+                  return {
+                    destroy() {
+                      window.removeEventListener("keydown", updateModifierFromEvent, true,);
+                      window.removeEventListener("keyup", updateModifierFromEvent, true,);
+                      window.removeEventListener("blur", clearModifier,);
+                      editorElement.removeEventListener("mouseenter", updateModifierFromEvent, true,);
+                      editorElement.removeEventListener("mousemove", updateModifierFromEvent, true,);
+                      editorElement.removeEventListener("mouseleave", clearModifier, true,);
+                      delete editorElement.dataset.linkOpenModifierCursor;
+                      delete editorElement.dataset.linkOpenModifierActive;
+                    },
+                  };
+                },
                 props: {
                   handleClick(view, _pos, event,) {
                     const chip = (event.target as HTMLElement).closest("[data-mention-chip]",);
