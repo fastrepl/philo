@@ -287,6 +287,16 @@ function isEmptyParagraphNode(node: ProseMirrorNode,) {
   return node.type.name === "paragraph" && node.content.size === 0;
 }
 
+function findAncestorListItemDepth($pos: import("@tiptap/pm/model").ResolvedPos,) {
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    if (isListItemNode($pos.node(depth,),)) {
+      return depth;
+    }
+  }
+
+  return -1;
+}
+
 function findNestedListChildIndex(node: ProseMirrorNode, listTypeName: string,) {
   for (let index = 0; index < node.childCount; index += 1) {
     if (node.child(index,).type.name === listTypeName) {
@@ -333,6 +343,48 @@ function restoreMovedNodeSelection(
   ),);
 }
 
+function getNestedListOwnerContext(
+  state: import("@tiptap/pm/state").EditorState,
+  context: ReturnType<typeof getMovableNodeContext>,
+) {
+  if (!context) return null;
+
+  const {
+    node,
+    nodePos,
+    parent,
+    parentDepth,
+  } = context;
+
+  if (!isListItemNode(node,) || !isListContainerNode(parent,) || parentDepth < 2) {
+    return null;
+  }
+
+  const $nodePos = state.doc.resolve(nodePos,);
+  const ownerItemDepth = parentDepth - 1;
+  const ownerParentDepth = parentDepth - 2;
+  const ownerItem = $nodePos.node(ownerItemDepth,);
+  const ownerParent = $nodePos.node(ownerParentDepth,);
+
+  if (!isListItemNode(ownerItem,) || !isListContainerNode(ownerParent,) || ownerParent.type !== parent.type) {
+    return null;
+  }
+
+  const nestedListIndex = findNestedListChildIndex(ownerItem, parent.type.name,);
+  if (nestedListIndex < 0) {
+    return null;
+  }
+
+  return {
+    $nodePos,
+    ownerItem,
+    ownerIndex: $nodePos.index(ownerParentDepth,),
+    ownerParent,
+    ownerParentDepth,
+    nestedListIndex,
+  };
+}
+
 function getMovableNodeContext(state: import("@tiptap/pm/state").EditorState,) {
   const { doc, selection, } = state;
 
@@ -340,6 +392,19 @@ function getMovableNodeContext(state: import("@tiptap/pm/state").EditorState,) {
     if (!selection.node.isBlock) return null;
 
     const $nodePos = doc.resolve(selection.from,);
+    const listItemDepth = findAncestorListItemDepth($nodePos,);
+    if (listItemDepth > 0) {
+      const parentDepth = listItemDepth - 1;
+
+      return {
+        node: $nodePos.node(listItemDepth,),
+        nodePos: $nodePos.before(listItemDepth,),
+        parentDepth,
+        parent: $nodePos.node(parentDepth,),
+        index: $nodePos.index(parentDepth,),
+      };
+    }
+
     const parentDepth = $nodePos.depth;
 
     return {
@@ -352,15 +417,8 @@ function getMovableNodeContext(state: import("@tiptap/pm/state").EditorState,) {
   }
 
   const { $from, } = selection;
-  let moveDepth = 1;
-
-  for (let depth = $from.depth; depth > 0; depth -= 1) {
-    const node = $from.node(depth,);
-    if (node.type.name === "listItem" || node.type.name === "taskItem") {
-      moveDepth = depth;
-      break;
-    }
-  }
+  const listItemDepth = findAncestorListItemDepth($from,);
+  const moveDepth = listItemDepth > 0 ? listItemDepth : 1;
 
   const node = $from.node(moveDepth,);
   if (!node.isBlock) return null;
@@ -434,26 +492,198 @@ function tryMoveListItemIntoNextSibling(
   const parentEnd = parentDepth === 0 ? state.doc.content.size : $nodePos.end(parentDepth,);
   tr.replaceWith(parentStart, parentEnd, Fragment.fromArray(parentChildren,),);
 
-  if (parentDepth === 0) {
-    view.dispatch(tr.scrollIntoView(),);
-    return true;
-  }
-
-  const parentNodePos = $nodePos.before(parentDepth,);
-  const updatedParent = tr.doc.nodeAt(parentNodePos,);
+  const parentNodePos = parentDepth === 0 ? 0 : $nodePos.before(parentDepth,);
+  const updatedParent = parentDepth === 0 ? tr.doc : tr.doc.nodeAt(parentNodePos,);
   if (!updatedParent) {
     view.dispatch(tr.scrollIntoView(),);
     return true;
   }
 
   const newNodePos = getDescendantNodePos(parentNodePos, updatedParent, [index, nestedListIndex, 0,],);
+  restoreMovedNodeSelection(tr, selection, nodePos, newNodePos,);
+  view.dispatch(tr.scrollIntoView(),);
+  return true;
+}
 
-  if (selection instanceof NodeSelection) {
-    tr.setSelection(NodeSelection.create(tr.doc, newNodePos,),);
-  } else {
-    tr.setSelection(TextSelection.near(tr.doc.resolve(newNodePos + 1,),),);
+function tryMoveListItemIntoPreviousSibling(
+  view: import("@tiptap/pm/view").EditorView,
+  context: ReturnType<typeof getMovableNodeContext>,
+): boolean {
+  if (!context) return false;
+
+  const { state, } = view;
+  const { selection, } = state;
+  const {
+    index,
+    node,
+    nodePos,
+    parent,
+    parentDepth,
+  } = context;
+
+  if (!isListItemNode(node,) || !isListContainerNode(parent,) || index <= 0) {
+    return false;
   }
 
+  const previousSibling = parent.child(index - 1,);
+  if (!isListItemNode(previousSibling,)) {
+    return false;
+  }
+
+  const nestedListIndex = findNestedListChildIndex(previousSibling, parent.type.name,);
+  if (nestedListIndex < 0) {
+    return false;
+  }
+
+  const nestedList = previousSibling.child(nestedListIndex,);
+  const nestedListChildren = Array.from(
+    { length: nestedList.childCount, },
+    (_, childIndex,) => nestedList.child(childIndex,),
+  );
+  nestedListChildren.push(node,);
+
+  const previousSiblingChildren = Array.from(
+    { length: previousSibling.childCount, },
+    (_, childIndex,) => previousSibling.child(childIndex,),
+  );
+  previousSiblingChildren[nestedListIndex] = nestedList.copy(Fragment.fromArray(nestedListChildren,),);
+
+  const parentChildren = Array.from({ length: parent.childCount, }, (_, childIndex,) => parent.child(childIndex,),);
+  parentChildren.splice(index, 1,);
+  parentChildren[index - 1] = previousSibling.copy(Fragment.fromArray(previousSiblingChildren,),);
+
+  const tr = state.tr;
+  const $nodePos = state.doc.resolve(nodePos,);
+  const parentStart = parentDepth === 0 ? 0 : $nodePos.start(parentDepth,);
+  const parentEnd = parentDepth === 0 ? state.doc.content.size : $nodePos.end(parentDepth,);
+  tr.replaceWith(parentStart, parentEnd, Fragment.fromArray(parentChildren,),);
+
+  const parentNodePos = parentDepth === 0 ? 0 : $nodePos.before(parentDepth,);
+  const updatedParent = parentDepth === 0 ? tr.doc : tr.doc.nodeAt(parentNodePos,);
+  if (!updatedParent) {
+    view.dispatch(tr.scrollIntoView(),);
+    return true;
+  }
+
+  const newNodePos = getDescendantNodePos(
+    parentNodePos,
+    updatedParent,
+    [index - 1, nestedListIndex, nestedList.childCount,],
+  );
+  restoreMovedNodeSelection(tr, selection, nodePos, newNodePos,);
+  view.dispatch(tr.scrollIntoView(),);
+  return true;
+}
+
+function tryMoveNestedListItemAcrossAncestor(
+  view: import("@tiptap/pm/view").EditorView,
+  context: ReturnType<typeof getMovableNodeContext>,
+  direction: "up" | "down",
+): boolean {
+  if (!context) return false;
+
+  const { state, } = view;
+  const { selection, } = state;
+  const {
+    index,
+    node,
+    nodePos,
+    parent,
+  } = context;
+
+  if (!isListItemNode(node,) || !isListContainerNode(parent,)) {
+    return false;
+  }
+
+  if (direction === "up" && index > 0) {
+    return false;
+  }
+
+  if (direction === "down" && index < parent.childCount - 1) {
+    return false;
+  }
+
+  const nestedOwnerContext = getNestedListOwnerContext(state, context,);
+  if (!nestedOwnerContext) {
+    return false;
+  }
+
+  const {
+    $nodePos,
+    ownerItem,
+    ownerIndex,
+    ownerParent,
+    ownerParentDepth,
+    nestedListIndex,
+  } = nestedOwnerContext;
+
+  if (direction === "down" && ownerIndex >= ownerParent.childCount - 1) {
+    return false;
+  }
+
+  const parentChildren = Array.from({ length: parent.childCount, }, (_, childIndex,) => parent.child(childIndex,),);
+  parentChildren.splice(index, 1,);
+
+  const ownerItemChildren = Array.from(
+    { length: ownerItem.childCount, },
+    (_, childIndex,) => ownerItem.child(childIndex,),
+  );
+  if (parentChildren.length === 0) {
+    ownerItemChildren.splice(nestedListIndex, 1,);
+  } else {
+    ownerItemChildren[nestedListIndex] = parent.copy(Fragment.fromArray(parentChildren,),);
+  }
+
+  const ownerParentChildren = Array.from(
+    { length: ownerParent.childCount, },
+    (_, childIndex,) => ownerParent.child(childIndex,),
+  );
+  ownerParentChildren[ownerIndex] = ownerItem.copy(Fragment.fromArray(ownerItemChildren,),);
+
+  let newNodePath: number[];
+
+  if (direction === "up") {
+    ownerParentChildren.splice(ownerIndex, 0, node,);
+    newNodePath = [ownerIndex,];
+  } else {
+    const nextOwnerSibling = ownerParent.child(ownerIndex + 1,);
+    const nextNestedListIndex = findNestedListChildIndex(nextOwnerSibling, ownerParent.type.name,);
+
+    if (nextNestedListIndex >= 0) {
+      const nextNestedList = nextOwnerSibling.child(nextNestedListIndex,);
+      const nextNestedListChildren = Array.from(
+        { length: nextNestedList.childCount, },
+        (_, childIndex,) => nextNestedList.child(childIndex,),
+      );
+      nextNestedListChildren.unshift(node,);
+
+      const nextOwnerSiblingChildren = Array.from(
+        { length: nextOwnerSibling.childCount, },
+        (_, childIndex,) => nextOwnerSibling.child(childIndex,),
+      );
+      nextOwnerSiblingChildren[nextNestedListIndex] = nextNestedList.copy(Fragment.fromArray(nextNestedListChildren,),);
+      ownerParentChildren[ownerIndex + 1] = nextOwnerSibling.copy(Fragment.fromArray(nextOwnerSiblingChildren,),);
+      newNodePath = [ownerIndex + 1, nextNestedListIndex, 0,];
+    } else {
+      ownerParentChildren.splice(ownerIndex + 2, 0, node,);
+      newNodePath = [ownerIndex + 2,];
+    }
+  }
+
+  const tr = state.tr;
+  const ownerParentPos = ownerParentDepth === 0 ? 0 : $nodePos.before(ownerParentDepth,);
+  const ownerParentStart = ownerParentDepth === 0 ? 0 : $nodePos.start(ownerParentDepth,);
+  const ownerParentEnd = ownerParentDepth === 0 ? state.doc.content.size : $nodePos.end(ownerParentDepth,);
+  tr.replaceWith(ownerParentStart, ownerParentEnd, Fragment.fromArray(ownerParentChildren,),);
+
+  const updatedOwnerParent = ownerParentDepth === 0 ? tr.doc : tr.doc.nodeAt(ownerParentPos,);
+  if (!updatedOwnerParent) {
+    view.dispatch(tr.scrollIntoView(),);
+    return true;
+  }
+
+  const newNodePos = getDescendantNodePos(ownerParentPos, updatedOwnerParent, newNodePath,);
+  restoreMovedNodeSelection(tr, selection, nodePos, newNodePos,);
   view.dispatch(tr.scrollIntoView(),);
   return true;
 }
@@ -539,7 +769,15 @@ function moveSelectedNode(view: import("@tiptap/pm/view").EditorView, direction:
     parentDepth,
   } = context;
 
+  if (direction === "up" && tryMoveListItemIntoPreviousSibling(view, context,)) {
+    return true;
+  }
+
   if (direction === "down" && tryMoveListItemIntoNextSibling(view, context,)) {
+    return true;
+  }
+
+  if (tryMoveNestedListItemAcrossAncestor(view, context, direction,)) {
     return true;
   }
 
