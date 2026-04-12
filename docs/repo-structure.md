@@ -6,6 +6,7 @@ This repo is a small pnpm workspace with three app targets plus shared packages:
 - `apps/mobile` is the Expo iPhone shell.
 - `apps/landing` is the marketing site.
 - `packages/core` holds shared sync and bridge contracts.
+- `packages/awesome-tiptap` holds the shared TipTap base styles Philo owns locally.
 - `packages/web-editor-host` is the standalone browser host used by the mobile WebView flow.
 
 If you are making product changes, most of the time you will be working inside `apps/desktop`.
@@ -96,11 +97,14 @@ Important pieces:
 ```text
 packages/
 ├── core/
+├── awesome-tiptap/
 └── web-editor-host/
 ```
 
 - `packages/core`
   - Shared sync kinds, conflict helpers, and editor-host bridge message parsing.
+- `packages/awesome-tiptap`
+  - Shared TipTap base stylesheet bundle used by the desktop editor.
 - `packages/web-editor-host`
   - Standalone browser editor shell used by the mobile WebView path and local Vite development.
 

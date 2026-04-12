@@ -44,6 +44,9 @@ importers:
       '@ibm/plex-sans':
         specifier: ^1.1.0
         version: 1.1.0
+      '@philo/awesome-tiptap':
+        specifier: workspace:*
+        version: link:../../packages/awesome-tiptap
       '@philo/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -281,6 +284,8 @@ importers:
       typescript:
         specifier: ~5.9.2
         version: 5.9.3
+
+  packages/awesome-tiptap: {}
 
   packages/core:
     devDependencies:
