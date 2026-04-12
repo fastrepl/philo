@@ -1,0 +1,68 @@
+.tiptap {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: #374151;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+    min-height: 1.5rem;
+    position: relative;
+  }
+
+  :not(:first-child) {
+    &:is(h1, h2, h3, h4, h5, h6) {
+      margin-top: 1rem;
+    }
+  }
+}
+
+.blog-editor .tiptap {
+  h1 {
+    font-size: 1.875rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  h3 {
+    color: #374151;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h4 {
+    color: #374151;
+    font-weight: 600;
+    font-size: 1.125rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h5 {
+    color: #374151;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-top: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  h6 {
+    color: #374151;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+    margin-bottom: 0.25rem;
+  }
+}

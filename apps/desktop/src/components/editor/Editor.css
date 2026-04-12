@@ -1,4 +1,4 @@
-/* Philo-specific editor styles. Tiptap base styles come from vendor/hyprnote/packages/tiptap/styles.css */
+/* Philo-specific editor styles layered on top of the local TipTap base bundle. */
 
 .tiptap > p {
   margin: 0;

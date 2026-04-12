@@ -46,7 +46,7 @@ If you are making product changes, most of the time you will be working inside `
 - `scripts/`
   - Repo-level utility scripts, including release verification.
 - `vendor/`
-  - Vendored upstream code. In this repo that is mostly `vendor/hyprnote`.
+  - Vendored upstream code. In this repo that is mostly `vendor/hyprnote` native plugin code.
   - It is shared reference code, not the main place for Philo-specific product work.
 - `dist/`
   - Generated build output.
@@ -254,7 +254,7 @@ These are not the main places to make hand edits.
 
 ## Vendored Code
 
-`vendor/hyprnote` is a vendored upstream codebase that Philo borrows from for editor styling and some file-saving behavior.
+`vendor/hyprnote` is a vendored upstream codebase that Philo still uses for some native Tauri plugins.
 
 In practice:
 
