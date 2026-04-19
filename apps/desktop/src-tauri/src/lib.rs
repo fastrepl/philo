@@ -438,7 +438,13 @@ fn write_google_oauth_response(
         .map_err(|e| e.to_string())
 }
 
-fn focus_main_window<R: tauri::Runtime>(app: &AppHandle<R>) {
+fn focus_main_window<R: tauri::Runtime>(app: &AppHandle<R>, source: &'static str) {
+    app.analytics().event_fire_and_forget(
+        tauri_plugin_analytics::AnalyticsPayload::builder("show_main_window")
+            .with("source", source)
+            .build(),
+    );
+
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
         let _ = window.show();
@@ -780,7 +786,7 @@ fn start_google_oauth_callback(
     std::thread::spawn(move || {
         let payload = receive_google_oauth_callback(listener);
         let _ = sender.send(payload);
-        focus_main_window(&app);
+        focus_main_window(&app, "google_oauth");
     });
 
     Ok(GoogleOAuthSession {
@@ -3728,7 +3734,7 @@ pub fn run() {
         .plugin(tauri_plugin_settings::init())
         .plugin(tauri_plugin_listener::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            focus_main_window(app);
+            focus_main_window(app, "single_instance");
         }))
         .manage(GoogleOAuthState::default())
         .manage(HttpStreamState::default())
@@ -3790,7 +3796,7 @@ pub fn run() {
                     .map(|url| url.to_string())
                     .collect();
                 let _ = app_handle.emit("philo:deep-link-opened", payload);
-                focus_main_window(&app_handle);
+                focus_main_window(&app_handle, "deep_link");
             });
 
             #[cfg(target_os = "macos")]

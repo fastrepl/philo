@@ -11,7 +11,7 @@ import { Table, TableCell, TableHeader, TableRow, } from "@tiptap/extension-tabl
 import TaskList from "@tiptap/extension-task-list";
 import Typography from "@tiptap/extension-typography";
 import { Fragment, type Node as ProseMirrorNode, } from "@tiptap/pm/model";
-import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, } from "@tiptap/pm/state";
+import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, type Transaction, } from "@tiptap/pm/state";
 import { EditorContent, useEditor, } from "@tiptap/react";
 import type { JSONContent, } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -20,6 +20,7 @@ import { useDebounceCallback, } from "usehooks-ts";
 import "../editor/Editor.css";
 import { showNativeContextMenu, } from "../../hooks/useNativeContextMenu";
 import { md2json, parseJsonContent, } from "../../lib/markdown";
+import { trackEvent, } from "../../services/analytics";
 import { openGoogleMentionChip, } from "../../services/google-open";
 import { resolveAssetUrl, saveImage, } from "../../services/images";
 import {
@@ -142,6 +143,36 @@ async function showPathInFinder(path: string,) {
 function getReferenceDate(note: DailyNote | PageNote,) {
   if ("date" in note) return note.date;
   return note.attachedTo ?? getToday();
+}
+
+function getNoteKind(note: DailyNote | PageNote,) {
+  return "date" in note ? "daily" : note.type;
+}
+
+function countCharacters(text: string,) {
+  return Array.from(text,).length;
+}
+
+function countTransactionTextChanges(transaction: Transaction,) {
+  let charactersAdded = 0;
+  let charactersDeleted = 0;
+
+  transaction.steps.forEach((step, index,) => {
+    const beforeDoc = transaction.docs[index];
+    const afterDoc = transaction.docs[index + 1] ?? transaction.doc;
+    if (!beforeDoc || !afterDoc) return;
+
+    step.getMap().forEach((oldStart, oldEnd, newStart, newEnd,) => {
+      const oldText = beforeDoc.textBetween(oldStart, oldEnd, "", "",);
+      const newText = afterDoc.textBetween(newStart, newEnd, "", "",);
+      if (oldText === newText) return;
+
+      charactersDeleted += countCharacters(oldText,);
+      charactersAdded += countCharacters(newText,);
+    },);
+  },);
+
+  return { charactersAdded, charactersDeleted, };
 }
 
 function getEditorNoteContent(
@@ -841,6 +872,15 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
     const onCreatePageRef = useRef(onCreatePage,);
     onCreatePageRef.current = onCreatePage;
 
+    const pendingEditStatsRef = useRef<
+      {
+        charactersAdded: number;
+        charactersDeleted: number;
+        editDate: string;
+        noteDate: string;
+        noteKind: string;
+      } | null
+    >(null,);
     const selfUpdateRef = useRef(false,);
     const lastIncomingContentRef = useRef<string | null>(null,);
     const meetingDecorationKey = getMeetingDecorationKey(note, transcriptReadOnly, transcriptHidden,);
@@ -860,6 +900,55 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
       [],
     );
 
+    const flushNoteEditStats = useCallback(() => {
+      const stats = pendingEditStatsRef.current;
+      if (!stats) return;
+      pendingEditStatsRef.current = null;
+
+      trackEvent("note_edited", {
+        character_activity: stats.charactersAdded + stats.charactersDeleted,
+        character_delta: stats.charactersAdded - stats.charactersDeleted,
+        characters_added: stats.charactersAdded,
+        characters_deleted: stats.charactersDeleted,
+        edit_date: stats.editDate,
+        note_date: stats.noteDate,
+        note_kind: stats.noteKind,
+      },);
+    }, [],);
+
+    const recordNoteEdit = useCallback((transaction: Transaction,) => {
+      if (!transaction.docChanged) return;
+
+      const { charactersAdded, charactersDeleted, } = countTransactionTextChanges(transaction,);
+      if (charactersAdded === 0 && charactersDeleted === 0) return;
+
+      const activeNote = noteRef.current;
+      const editDate = getToday();
+      const noteDate = getReferenceDate(activeNote,);
+      const noteKind = getNoteKind(activeNote,);
+      const current = pendingEditStatsRef.current;
+
+      if (
+        current
+        && current.editDate === editDate
+        && current.noteDate === noteDate
+        && current.noteKind === noteKind
+      ) {
+        current.charactersAdded += charactersAdded;
+        current.charactersDeleted += charactersDeleted;
+        return;
+      }
+
+      flushNoteEditStats();
+      pendingEditStatsRef.current = {
+        charactersAdded,
+        charactersDeleted,
+        editDate,
+        noteDate,
+        noteKind,
+      };
+    }, [flushNoteEditStats,],);
+
     const saveDebounced = useDebounceCallback((jsonStr: string,) => {
       const updated = { ...noteRef.current, content: jsonStr, };
       selfUpdateRef.current = true;
@@ -868,6 +957,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
       } else if ("date" in updated) {
         saveDailyNote(updated,).catch(console.error,);
       }
+      flushNoteEditStats();
     }, 500,);
 
     const openDateChipEditorRef = useRef<
@@ -1309,12 +1399,13 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           },
         },
       },
-      onUpdate: ({ editor, },) => {
+      onUpdate: ({ editor, transaction, },) => {
         const nextContent = "date" in noteRef.current
           ? editor.getJSON()
           : stripMeetingPageDoc(noteRef.current, editor.getJSON() as JSONContent, {
             preserveTranscript: transcriptHidden ? parseJsonContent(noteRef.current.content,) : undefined,
           },);
+        recordNoteEdit(transaction,);
         saveDebounced(JSON.stringify(nextContent,),);
       },
     },);
