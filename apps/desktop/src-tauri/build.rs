@@ -40,13 +40,15 @@ fn build_check_permissions() {
         .join("../../../vendor/hyprnote/plugins/permissions/swift/check-permissions.swift");
     let binaries_dir = manifest_dir.join("binaries");
     let dst = binaries_dir.join(format!("check-permissions-{triple}"));
+    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let tmp = out_dir.join(format!("check-permissions-{triple}"));
 
     println!("cargo:rerun-if-changed={}", swift_src.display());
     std::fs::create_dir_all(&binaries_dir).expect("create binaries/");
 
     let status = std::process::Command::new("swiftc")
         .args(["-O", "-o"])
-        .arg(&dst)
+        .arg(&tmp)
         .arg(&swift_src)
         .status()
         .expect("failed to run swiftc");
@@ -55,4 +57,13 @@ fn build_check_permissions() {
         status.success(),
         "swiftc failed to compile check-permissions"
     );
+
+    let compiled = std::fs::read(&tmp).expect("read compiled check-permissions");
+    let should_update = std::fs::read(&dst)
+        .map(|existing| existing != compiled)
+        .unwrap_or(true);
+
+    if should_update {
+        std::fs::copy(&tmp, &dst).expect("copy check-permissions binary");
+    }
 }
