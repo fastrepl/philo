@@ -78,6 +78,19 @@ const jsonLd = Array.isArray(schema,) ? schema : [schema,];
       ))
     }
     <slot name="head" />
+    <script>
+      import posthog from "posthog-js";
+
+      const posthogKey = import.meta.env.PUBLIC_POSTHOG_KEY?.trim();
+      const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST?.trim() || "https://us.i.posthog.com";
+
+      if (posthogKey) {
+        posthog.init(posthogKey, {
+          api_host: posthogHost,
+          defaults: "2026-01-30",
+        },);
+      }
+    </script>
   </head>
   <body>
     <div class="site-ambient"></div>
