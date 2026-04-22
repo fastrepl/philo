@@ -655,9 +655,8 @@ function parseMentionTarget(
     };
   }
 
-  if (isExplicitPageLinkTarget(target,)) {
-    const pageTitle = parsePageTitleFromLinkTarget(target,);
-    if (!pageTitle) return null;
+  const pageTitle = parsePageTitleFromLinkTarget(target,);
+  if (pageTitle) {
     return {
       id: buildPageLinkTarget(pageTitle,),
       kind: "page",
