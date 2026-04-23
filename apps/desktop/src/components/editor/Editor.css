@@ -123,6 +123,17 @@
   margin: 1rem 0;
   border: 0;
   border-top: 1px dashed #a3a3a3;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.tiptap hr.ProseMirror-selectednode {
+  border-top-color: #2563eb;
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.16),
+    0 4px 14px rgba(37, 99, 235, 0.28);
 }
 
 .tiptap .mention-chip {
