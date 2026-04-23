@@ -6,7 +6,7 @@ import { exists, watch, } from "@tauri-apps/plugin-fs";
 import { openPath, openUrl, } from "@tauri-apps/plugin-opener";
 import type { Editor as TiptapEditor, } from "@tiptap/core";
 import type { JSONContent, } from "@tiptap/react";
-import { ArrowLeft, ArrowRight, ArrowUpDown, House, LoaderCircle, MapPin, X, } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpDown, House, LoaderCircle, MapPin, Trash2, X, } from "lucide-react";
 import {
   Fragment,
   type MouseEvent as ReactMouseEvent,
@@ -1679,7 +1679,8 @@ export default function AppLayout() {
   const currentViewKey = currentView.kind === "page" ? `page:${currentView.title}` : "home";
   const canGoBack = viewState.index > 0;
   const canGoForward = viewState.index < viewState.history.length - 1;
-  const canTriageTasks = currentView.kind === "page" ? Boolean(activePage,) : Boolean(todayNote,);
+  const canDeleteCurrentPage = currentView.kind === "page" && Boolean(activePage,);
+  const canTriageTasks = currentView.kind === "home" && Boolean(todayNote,);
   const showMeetingRecordingErrorBanner = Boolean(meetingRecordingError,) && activePage?.type !== "meeting";
   const focusedFutureDate = focusedDate && focusedDate !== today && !pastDates.includes(focusedDate,)
     ? focusedDate
@@ -3174,7 +3175,7 @@ export default function AppLayout() {
     return renamedPage;
   }, [],);
 
-  const handleDeletePage = useCallback(async (title: string,) => {
+  const handleDeletePage = useCallback(async (title: string, source: "context_menu" | "toolbar" = "context_menu",) => {
     const normalizedTitle = sanitizePageTitle(title,);
     if (!normalizedTitle) return;
     const displayTitle = getPageDisplayTitle(normalizedTitle,);
@@ -3207,7 +3208,7 @@ export default function AppLayout() {
     },);
     scheduleDesktopSync();
     trackEvent("page_deleted", {
-      source: "context_menu",
+      source,
     },);
   }, [],);
 
@@ -3645,17 +3646,32 @@ export default function AppLayout() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleTriageTasks}
-            disabled={!canTriageTasks || isTaskTriaging}
+            onClick={() => {
+              if (currentView.kind === "page") {
+                if (currentPageTitle) {
+                  void handleDeletePage(currentPageTitle, "toolbar",);
+                }
+                return;
+              }
+
+              handleTriageTasks();
+            }}
+            disabled={currentView.kind === "page" ? !canDeleteCurrentPage : !canTriageTasks || isTaskTriaging}
             className={`flex h-5 w-5 items-center justify-center rounded-md transition-colors ${
-              canTriageTasks
+              currentView.kind === "page"
+                ? canDeleteCurrentPage
+                  ? "text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  : "text-gray-200"
+                : canTriageTasks
                 ? "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
                 : "text-gray-200"
             }`}
-            title="Triage and sort tasks"
-            aria-label="Triage and sort tasks"
+            title={currentView.kind === "page" ? "Delete note" : "Triage and sort tasks"}
+            aria-label={currentView.kind === "page" ? "Delete note" : "Triage and sort tasks"}
           >
-            {isTaskTriaging
+            {currentView.kind === "page"
+              ? <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+              : isTaskTriaging
               ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
               : <ArrowUpDown className="h-3.5 w-3.5" strokeWidth={2} />}
           </button>
