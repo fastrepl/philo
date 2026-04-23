@@ -90,6 +90,7 @@ interface EditableNoteProps {
   onSave?: (note: DailyNote | PageNote,) => void;
   onOpenDate?: (date: string,) => void;
   onOpenPage?: (title: string,) => void;
+  onDeletePage?: (title: string,) => Promise<void> | void;
   onInteract?: () => void;
   onChatSelection?: (selection: EditableNoteSelection,) => void;
   onSelectionChange?: (selection: EditableNoteSelection | null,) => void;
@@ -849,6 +850,7 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
       onSave,
       onOpenDate,
       onOpenPage,
+      onDeletePage,
       onInteract,
       onChatSelection,
       onSelectionChange,
@@ -865,6 +867,8 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
     onOpenDateRef.current = onOpenDate;
     const onOpenPageRef = useRef(onOpenPage,);
     onOpenPageRef.current = onOpenPage;
+    const onDeletePageRef = useRef(onDeletePage,);
+    onDeletePageRef.current = onDeletePage;
 
     const onSaveRef = useRef(onSave,);
     onSaveRef.current = onSave;
@@ -1010,6 +1014,15 @@ const EditableNote = forwardRef<EditableNoteHandle, EditableNoteProps>(
           text: `Open ${label}`,
           action: () => onOpenPageRef.current?.(pageTitle,),
           disabled: !onOpenPageRef.current,
+        },
+        { separator: true, },
+        {
+          id: `delete-page-${pageTitle}`,
+          text: "Delete Note",
+          action: () => {
+            void Promise.resolve(onDeletePageRef.current?.(pageTitle,),).catch(console.error,);
+          },
+          disabled: !onDeletePageRef.current,
         },
       ], event,);
       return true;

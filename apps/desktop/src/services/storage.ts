@@ -1,6 +1,6 @@
 import { invoke, } from "@tauri-apps/api/core";
 import { dirname, join, } from "@tauri-apps/api/path";
-import { exists, mkdir, readDir, rename, } from "@tauri-apps/plugin-fs";
+import { exists, mkdir, readDir, remove, rename, } from "@tauri-apps/plugin-fs";
 import { EMPTY_DOC, json2md, md2json, parseJsonContent, } from "../lib/markdown";
 import {
   AttachedPage,
@@ -804,6 +804,13 @@ export async function savePage(page: PageNote,): Promise<void> {
     path: filepath,
     content: buildMarkdownFrontmatter(buildPageFrontmatter(page,), await serializePageBody(page,),),
   },);
+}
+
+export async function deletePage(title: string,): Promise<void> {
+  const path = await getPagePath(title,);
+  if (await exists(path,)) {
+    await remove(path,);
+  }
 }
 
 export async function renamePage(page: PageNote, nextTitle: string,): Promise<PageNote> {

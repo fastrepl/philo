@@ -19,7 +19,7 @@ import {
 } from "react";
 import { useCurrentDate, } from "../../hooks/useCurrentDate";
 import { useMountEffect, } from "../../hooks/useMountEffect";
-import { showNativeContextMenu, } from "../../hooks/useNativeContextMenu";
+import { type MenuItemDef, showNativeContextMenu, } from "../../hooks/useNativeContextMenu";
 import { useCurrentCity, } from "../../hooks/useTimezoneCity";
 import { EMPTY_DOC, parseJsonContent, } from "../../lib/markdown";
 import { getAiConfigurationMessage, } from "../../services/ai";
@@ -82,6 +82,7 @@ import {
 import {
   createAttachedPage,
   createUntitledAttachedPage,
+  deletePage,
   getOrCreateDailyNote,
   loadDailyNote,
   loadPage,
@@ -135,8 +136,9 @@ function showFinderContextMenu(
   event: ReactMouseEvent<HTMLElement>,
   id: string,
   pathPromise: Promise<string>,
+  deleteAction?: Extract<MenuItemDef, { id: string; }>,
 ) {
-  void showNativeContextMenu([
+  const items: MenuItemDef[] = [
     {
       id,
       text: "Show in Finder",
@@ -146,7 +148,16 @@ function showFinderContextMenu(
           .catch(console.error,);
       },
     },
-  ], event,);
+  ];
+
+  if (deleteAction) {
+    items.push(
+      { separator: true, },
+      deleteAction,
+    );
+  }
+
+  void showNativeContextMenu(items, event,);
 }
 
 function noteChanged(current: DailyNote | null, incoming: DailyNote,): boolean {
@@ -1209,6 +1220,7 @@ function LazyNote({
   pagesRevision,
   onOpenDate,
   onOpenPage,
+  onDeletePage,
   onCreatePage,
   onInteract,
   onChatSelection,
@@ -1220,6 +1232,7 @@ function LazyNote({
   pagesRevision: number;
   onOpenDate?: (date: string,) => void;
   onOpenPage?: (title: string,) => void;
+  onDeletePage?: (title: string,) => Promise<void> | void;
   onCreatePage?: (input?: { open?: boolean; title?: string; },) => Promise<string | null> | string | null;
   onInteract?: () => void;
   onChatSelection?: (selection: EditableNoteSelection,) => void;
@@ -1273,6 +1286,7 @@ function LazyNote({
             note={note}
             onOpenDate={onOpenDate}
             onOpenPage={onOpenPage}
+            onDeletePage={onDeletePage}
             onCreatePage={onCreatePage}
             onInteract={onInteract}
             onChatSelection={onChatSelection}
@@ -1299,6 +1313,7 @@ function PageView({
   onAskAiPrompt,
   onSave,
   onRenameTitle,
+  onDeletePage,
   onInteract,
   editorRef,
   onPageChange,
@@ -1315,6 +1330,7 @@ function PageView({
   onAskAiPrompt?: (prompt: string,) => void;
   onSave?: (page: PageNote,) => void;
   onRenameTitle?: (page: PageNote, nextTitle: string,) => Promise<PageNote | null> | PageNote | null;
+  onDeletePage?: (title: string,) => Promise<void> | void;
   onInteract?: () => void;
   editorRef?: RefObject<EditableNoteHandle | null>;
   onPageChange?: (page: PageNote | null,) => void;
@@ -1469,6 +1485,15 @@ function PageView({
                     event,
                     `show-page-in-finder-${resolvedPage.title}`,
                     resolvedPage.path ? Promise.resolve(resolvedPage.path,) : getPagePath(resolvedPage.title,),
+                    onDeletePage
+                      ? {
+                        id: `delete-page-${resolvedPage.title}`,
+                        text: "Delete Note",
+                        action: () => {
+                          void Promise.resolve(onDeletePage(resolvedPage.title,),).catch(console.error,);
+                        },
+                      }
+                      : undefined,
                   );
                 }}
               >
@@ -1540,6 +1565,7 @@ function PageView({
         onSave={handleSave}
         onOpenDate={onOpenDate}
         onOpenPage={onOpenPage}
+        onDeletePage={onDeletePage}
         onCreatePage={onCreatePage}
         onInteract={onInteract}
       />
@@ -3148,6 +3174,43 @@ export default function AppLayout() {
     return renamedPage;
   }, [],);
 
+  const handleDeletePage = useCallback(async (title: string,) => {
+    const normalizedTitle = sanitizePageTitle(title,);
+    if (!normalizedTitle) return;
+    const displayTitle = getPageDisplayTitle(normalizedTitle,);
+    if (!window.confirm(`Delete "${displayTitle}"?`,)) return;
+
+    suppressWatcherUntilRef.current = Date.now() + LOCAL_SAVE_WATCH_SUPPRESSION_MS;
+    await deletePage(normalizedTitle,);
+    currentPageRef.current = currentPageRef.current?.title === normalizedTitle ? null : currentPageRef.current;
+    setActivePage((page,) => page?.title === normalizedTitle ? null : page);
+    setPagesRevision((value,) => value + 1);
+    setMeetingSummaryTargetTitle((value,) => value === normalizedTitle ? null : value);
+    setViewState((current,) => {
+      let nextIndex = current.index;
+      const history = current.history.filter((view, index,) => {
+        const shouldRemove = view.kind === "page" && view.title === normalizedTitle;
+        if (shouldRemove && index <= current.index) {
+          nextIndex -= 1;
+        }
+        return !shouldRemove;
+      },);
+
+      if (history.length === 0) {
+        return { history: [{ kind: "home", },], index: 0, };
+      }
+
+      return {
+        history,
+        index: Math.min(Math.max(nextIndex, 0,), history.length - 1,),
+      };
+    },);
+    scheduleDesktopSync();
+    trackEvent("page_deleted", {
+      source: "context_menu",
+    },);
+  }, [],);
+
   const handleTodayCityChange = useCallback((city: string | null,) => {
     const note = todayNoteRef.current;
     if (!note || note.city === city) return;
@@ -3774,6 +3837,7 @@ export default function AppLayout() {
                     onAskAiPrompt={openAiComposerWithPrompt}
                     onSave={handlePageSave}
                     onRenameTitle={handlePageRename}
+                    onDeletePage={handleDeletePage}
                     onInteract={handleEditorInteract}
                     editorRef={pageEditorRef}
                     onPageChange={handleCurrentPageChange}
@@ -3796,6 +3860,7 @@ export default function AppLayout() {
                           pagesRevision={pagesRevision}
                           onOpenDate={scrollToDate}
                           onOpenPage={openPageView}
+                          onDeletePage={handleDeletePage}
                           onCreatePage={handleCreateAttachedPage}
                           onInteract={handleEditorInteract}
                           onChatSelection={openAiComposer}
@@ -3832,6 +3897,7 @@ export default function AppLayout() {
                           note={todayNote}
                           onOpenDate={scrollToDate}
                           onOpenPage={openPageView}
+                          onDeletePage={handleDeletePage}
                           onSave={handleTodaySave}
                           onCreatePage={handleCreateAttachedPage}
                           onInteract={handleEditorInteract}
@@ -3853,6 +3919,7 @@ export default function AppLayout() {
                           pagesRevision={pagesRevision}
                           onOpenDate={scrollToDate}
                           onOpenPage={openPageView}
+                          onDeletePage={handleDeletePage}
                           onCreatePage={handleCreateAttachedPage}
                           onInteract={handleEditorInteract}
                           onChatSelection={openAiComposer}
