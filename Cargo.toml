@@ -16,6 +16,12 @@ members = [
 ]
 
 [workspace.dependencies]
+hypr-pyannote-local = { path = "crates/pyannote-local", package = "pyannote-local" }
+hypr-whisper-local = { path = "crates/whisper-local", package = "whisper-local" }
+hypr-transcribe-whisper-local = { path = "crates/transcribe-whisper-local", package = "transcribe-whisper-local" }
+hypr-docs = { path = "crates/docs", package = "docs" }
+hypr-s3 = { path = "crates/s3", package = "s3" }
+hypr-data = { path = "crates/data", package = "data" }
 hypr-aec = { path = "crates/aec", package = "aec" }
 hypr-afconvert = { path = "crates/afconvert", package = "afconvert" }
 hypr-am = { path = "crates/am", package = "am" }
