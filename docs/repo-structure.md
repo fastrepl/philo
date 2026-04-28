@@ -16,11 +16,13 @@ If you are making product changes, most of the time you will be working inside `
 ```text
 .
 ├── apps/
+├── crates/
+├── plugins/
 ├── docs/
 ├── scripts/
-├── vendor/
 ├── package.json
 ├── pnpm-workspace.yaml
+├── Cargo.toml
 ├── turbo.json
 ├── dprint.json
 └── README.md
@@ -44,11 +46,12 @@ If you are making product changes, most of the time you will be working inside `
     - `mobile-sync.md`
     - `markdown-sync.md`
     - `widget-persistence-and-lifecycle.md`
+- `crates/`
+  - Rust library crates owned by Philo (originally vendored from hyprnote, now first-class).
+- `plugins/`
+  - Tauri plugins owned by Philo (originally vendored from hyprnote, now first-class).
 - `scripts/`
   - Repo-level utility scripts, including release verification.
-- `vendor/`
-  - Vendored upstream code. In this repo that is mostly `vendor/hyprnote` native plugin code.
-  - It is shared reference code, not the main place for Philo-specific product work.
 - `dist/`
   - Generated build output.
 - `node_modules/`, `.turbo/`
@@ -256,14 +259,14 @@ These are not the main places to make hand edits.
 - `public/`
   - Static files.
 
-## Vendored Code
+## Native Crates And Plugins
 
-`vendor/hyprnote` is a vendored upstream codebase that Philo still uses for some native Tauri plugins.
+`crates/` and `plugins/` hold Philo-owned Rust libraries and Tauri plugins. These were originally vendored from hyprnote but are now maintained directly in this repo.
 
 In practice:
 
 - Philo-specific app work should usually start in `apps/desktop`.
-- Only touch `vendor/hyprnote` if the change genuinely belongs in the vendored upstream layer.
+- Touch `crates/` or `plugins/` when the change belongs in the native/plugin layer.
 
 ## Rule Of Thumb For New Code
 

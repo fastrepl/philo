@@ -37,7 +37,7 @@ fn build_check_permissions() {
     let triple = std::env::var("TARGET").unwrap();
     let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let swift_src = manifest_dir
-        .join("../../../vendor/hyprnote/plugins/permissions/swift/check-permissions.swift");
+        .join("../../../plugins/permissions/swift/check-permissions.swift");
     let binaries_dir = manifest_dir.join("binaries");
     let dst = binaries_dir.join(format!("check-permissions-{triple}"));
     let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());

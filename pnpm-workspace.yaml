@@ -3,4 +3,3 @@ packages:
   - "apps/*"
   - "packages/*"
   - "apps/*"
-  - "!vendor/**"

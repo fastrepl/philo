@@ -1,3 +1,0 @@
-[submodule "vendor/hyprnote"]
-	path = vendor/hyprnote
-	url = https://github.com/fastrepl/hyprnote.git
