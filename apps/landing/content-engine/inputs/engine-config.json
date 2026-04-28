@@ -1,9 +1,0 @@
-{
-  "maxGeneratedDrafts": 4,
-  "auditQueueSize": 4,
-  "auditDefaults": {
-    "platform": "blog",
-    "tone": "technical",
-    "lowercaseMode": false
-  }
-}
