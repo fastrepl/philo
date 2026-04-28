@@ -1,0 +1,9 @@
+[default]
+description = "Default permissions for the plugin"
+permissions = [
+    "allow-window-show",
+    "allow-window-destroy",
+    "allow-window-navigate",
+    "allow-window-emit-navigate",
+    "allow-window-is-exists",
+]
