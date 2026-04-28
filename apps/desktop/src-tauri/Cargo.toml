@@ -31,13 +31,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 tauri-plugin-dialog = "2.6.0"
-tauri-plugin-analytics = { path = "../../../vendor/hyprnote/plugins/analytics" }
-tauri-plugin-settings = { path = "../../../vendor/hyprnote/plugins/settings" }
-tauri-plugin-listener = { path = "../../../vendor/hyprnote/plugins/listener" }
-tauri-plugin-misc = { path = "../../../vendor/hyprnote/plugins/misc" }
-tauri-plugin-permissions = { path = "../../../vendor/hyprnote/plugins/permissions" }
+tauri-plugin-analytics = { path = "../../../plugins/analytics" }
+tauri-plugin-settings = { path = "../../../plugins/settings" }
+tauri-plugin-listener = { path = "../../../plugins/listener" }
+tauri-plugin-misc = { path = "../../../plugins/misc" }
+tauri-plugin-permissions = { path = "../../../plugins/permissions" }
 tauri-plugin-store = "2.4.2"
-tauri-plugin-store2 = { path = "../../../vendor/hyprnote/plugins/store2" }
+tauri-plugin-store2 = { path = "../../../plugins/store2" }
 rusqlite = { version = "0.37.0", features = ["bundled"] }
 regex = "1"
 similar = "2"
