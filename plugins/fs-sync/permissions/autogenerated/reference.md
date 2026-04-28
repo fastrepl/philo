@@ -36,6 +36,7 @@ Default permissions for the fs-sync plugin
 <th>Description</th>
 </tr>
 
+
 <tr>
 <td>
 
