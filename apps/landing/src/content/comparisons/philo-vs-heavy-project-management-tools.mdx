@@ -1,0 +1,63 @@
+---
+title: "Philo vs heavy project management tools"
+summary: "Why Philo fits lightweight personal execution loops better than heavyweight structured systems."
+publishedAt: 2026-05-03
+updatedAt: 2026-05-03
+pageType: comparison
+canonicalPath: /comparisons/philo-vs-heavy-project-management-tools
+primaryQuery: "philo vs heavy project management tools"
+evidenceIds:
+  - "5c003e16fdef"
+  - "4337412202be"
+  - "c30c4e88e712"
+  - "aeb2e6ea1588"
+  - "48c3fe78614e"
+  - "5e26b3917870"
+status: draft
+ownership: generated
+bestFor:
+  - "People who do not want a giant workspace just to run daily work"
+  - "Users who want a local markdown-centered execution loop"
+notFor:
+  - "Teams needing strict project process and enterprise workflow control"
+  - "Organizations choosing a shared system of record"
+faqs:
+  - question: "Is Philo meant to be a big workspace replacement?"
+    answer: "No. The product direction is explicitly about keeping the planning loop short, not building another giant workspace."
+  - question: "When do heavyweight tools still win?"
+    answer: "They win when the problem is a shared project system, not a personal note-driven execution loop."
+relatedLinks:
+  - label: "Write, decide, and run in one place"
+    href: "/use-cases/write-decide-and-run-in-one-place"
+  - label: "Disposable widgets in notes"
+    href: "/guides/disposable-widgets-in-notes"
+image: /philo-hero-screenshot.svg
+---
+Daily notes do not inline the full widget payload.
+
+## Quick take
+
+Choose Philo when the center of gravity is the note itself. Choose heavy project management tools when the center of gravity is somewhere else.
+
+## Comparison table
+
+| Decide this way if... | Philo | Heavy project management tools |
+| --- | --- | --- |
+| You want a calm personal planning loop | Strong fit because the note itself stays central. | Can feel heavy if you only need personal daily execution. |
+| You want structured shared workflows and fields everywhere | Less ideal. That is not the core bet. | Often the better fit. |
+| You want one-off tools created inline | Fits the disposable widget model well. | Usually requires more setup and permanence. |
+
+## What Philo is actually optimizing for
+
+The scope refresh covers the current journal root, vault root, assets directory, Excalidraw directory, and widgets directory.
+
+widget files: widgets/ under the vault root, or under the resolved journal root in default mode
+
+## Evidence trail
+
+- `5c003e16fdef` Daily notes do not inline the full widget payload. (docs/data-storage-and-configuration.md)
+- `4337412202be` The scope refresh covers the current journal root, vault root, assets directory, Excalidraw directory, and widgets directory. (docs/data-storage-and-configuration.md)
+- `c30c4e88e712` widget files: widgets/ under the vault root, or under the resolved journal root in default mode (docs/data-storage-and-configuration.md)
+- `aeb2e6ea1588` widget library: library/ under the vault root or resolved journal root (docs/data-storage-and-configuration.md)
+- `48c3fe78614e` Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON. (docs/markdown-sync.md)
+- `5e26b3917870` The markdown file remains the canonical source of truth for widget identity, prompt, runtime payload, and storage metadata. (docs/data-storage-and-configuration.md)

@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-05-03T14:18:08.742Z",
+  "maxGeneratedDrafts": 4,
+  "instruction": "Run the local audit skill on queued drafts before changing status from draft to published.",
+  "auditDefaults": {
+    "platform": "blog",
+    "tone": "technical",
+    "lowercaseMode": false
+  },
+  "items": [
+    {
+      "slug": "widget-library",
+      "section": "glossary",
+      "title": "Widget library",
+      "filePath": "apps/landing/src/content/glossary/widget-library.mdx",
+      "score": 492,
+      "change": "tracked",
+      "audit": {
+        "skill": "audit",
+        "platform": "blog",
+        "tone": "technical",
+        "lowercaseMode": false
+      }
+    },
+    {
+      "slug": "philo-vs-heavy-project-management-tools",
+      "section": "comparisons",
+      "title": "Philo vs heavy project management tools",
+      "filePath": "apps/landing/src/content/comparisons/philo-vs-heavy-project-management-tools.mdx",
+      "score": 421,
+      "change": "tracked",
+      "audit": {
+        "skill": "audit",
+        "platform": "blog",
+        "tone": "technical",
+        "lowercaseMode": false
+      }
+    },
+    {
+      "slug": "use-philo-beside-an-obsidian-vault",
+      "section": "use-cases",
+      "title": "Use Philo beside an Obsidian vault",
+      "filePath": "apps/landing/src/content/use-cases/use-philo-beside-an-obsidian-vault.mdx",
+      "score": 401,
+      "change": "tracked",
+      "audit": {
+        "skill": "audit",
+        "platform": "blog",
+        "tone": "technical",
+        "lowercaseMode": false
+      }
+    },
+    {
+      "slug": "using-philo-with-an-obsidian-vault",
+      "section": "guides",
+      "title": "Using Philo with an Obsidian vault",
+      "filePath": "apps/landing/src/content/guides/using-philo-with-an-obsidian-vault.mdx",
+      "score": 400,
+      "change": "tracked",
+      "audit": {
+        "skill": "audit",
+        "platform": "blog",
+        "tone": "technical",
+        "lowercaseMode": false
+      }
+    }
+  ]
+}

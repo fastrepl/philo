@@ -1,0 +1,1280 @@
+{
+  "generatedAt": "2026-05-03T14:18:08.726Z",
+  "opportunities": [
+    {
+      "id": "glossary-widget-library",
+      "slug": "widget-library",
+      "section": "glossary",
+      "pageType": "glossary",
+      "template": "glossary",
+      "title": "Widget library",
+      "summary": "The small reusable collection where Philo keeps widgets that earned a permanent place.",
+      "canonicalPath": "/glossary/widget-library",
+      "audience": "people learning Philo's planning vocabulary",
+      "primaryQuery": "widget library definition",
+      "intent": "informational",
+      "score": 492,
+      "requiredFactIds": [
+        "1a7a539136c1",
+        "060a53771959",
+        "c477841a53e2",
+        "e9209907266b",
+        "d6c0f3b947a9",
+        "9634b851c23e"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want a fast definition of the reusable widget layer"
+      ],
+      "notFor": [
+        "People who need a comparison or setup guide"
+      ],
+      "faqs": [
+        {
+          "question": "Why keep the library small?",
+          "answer": "Because Philo treats permanence as something a widget earns after proving useful."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Quick tools inside notes",
+          "href": "/use-cases/quick-tools-inside-notes"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "comparison-heavy-project-tools",
+      "slug": "philo-vs-heavy-project-management-tools",
+      "section": "comparisons",
+      "pageType": "comparison",
+      "template": "comparison",
+      "title": "Philo vs heavy project management tools",
+      "summary": "Why Philo fits lightweight personal execution loops better than heavyweight structured systems.",
+      "canonicalPath": "/comparisons/philo-vs-heavy-project-management-tools",
+      "audience": "people deciding between a planner and a large work-management tool",
+      "primaryQuery": "philo vs heavy project management tools",
+      "intent": "commercial",
+      "score": 421,
+      "requiredFactIds": [
+        "5c003e16fdef",
+        "4337412202be",
+        "c30c4e88e712",
+        "aeb2e6ea1588",
+        "48c3fe78614e",
+        "5e26b3917870"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who do not want a giant workspace just to run daily work",
+        "Users who want a local markdown-centered execution loop"
+      ],
+      "notFor": [
+        "Teams needing strict project process and enterprise workflow control",
+        "Organizations choosing a shared system of record"
+      ],
+      "faqs": [
+        {
+          "question": "Is Philo meant to be a big workspace replacement?",
+          "answer": "No. The product direction is explicitly about keeping the planning loop short, not building another giant workspace."
+        },
+        {
+          "question": "When do heavyweight tools still win?",
+          "answer": "They win when the problem is a shared project system, not a personal note-driven execution loop."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Write, decide, and run in one place",
+          "href": "/use-cases/write-decide-and-run-in-one-place"
+        },
+        {
+          "label": "Disposable widgets in notes",
+          "href": "/guides/disposable-widgets-in-notes"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": "Heavy project management tools",
+      "comparisonRows": [
+        {
+          "question": "You want a calm personal planning loop",
+          "philo": "Strong fit because the note itself stays central.",
+          "alternative": "Can feel heavy if you only need personal daily execution."
+        },
+        {
+          "question": "You want structured shared workflows and fields everywhere",
+          "philo": "Less ideal. That is not the core bet.",
+          "alternative": "Often the better fit."
+        },
+        {
+          "question": "You want one-off tools created inline",
+          "philo": "Fits the disposable widget model well.",
+          "alternative": "Usually requires more setup and permanence."
+        }
+      ]
+    },
+    {
+      "id": "use-case-obsidian",
+      "slug": "use-philo-beside-an-obsidian-vault",
+      "section": "use-cases",
+      "pageType": "use-case",
+      "template": "use-case",
+      "title": "Use Philo beside an Obsidian vault",
+      "summary": "When an existing vault is still the source of truth, but you want a tighter planning loop.",
+      "canonicalPath": "/use-cases/use-philo-beside-an-obsidian-vault",
+      "audience": "people already invested in Obsidian",
+      "primaryQuery": "use philo beside an obsidian vault",
+      "intent": "commercial",
+      "score": 401,
+      "requiredFactIds": [
+        "a2c1db37e865",
+        "0a6aa4c0458d",
+        "4337412202be",
+        "c30c4e88e712",
+        "aeb2e6ea1588",
+        "4a649afaab2e"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who already store notes in an Obsidian vault",
+        "Users who want execution features without abandoning markdown ownership"
+      ],
+      "notFor": [
+        "People looking for a cloud migration path",
+        "Workflows that are not built around a vault"
+      ],
+      "faqs": [
+        {
+          "question": "Does Philo force an Obsidian user to migrate?",
+          "answer": "No. Philo is meant to sit beside your vault, not replace it."
+        },
+        {
+          "question": "What does Philo add on top?",
+          "answer": "It focuses on keeping planning, unfinished work, recurrence, and lightweight tools closer to the note itself."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Using Philo with an Obsidian vault",
+          "href": "/guides/using-philo-with-an-obsidian-vault"
+        },
+        {
+          "label": "Philo vs static markdown daily notes",
+          "href": "/comparisons/philo-vs-static-markdown-daily-notes"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "guide-obsidian-vaults",
+      "slug": "using-philo-with-an-obsidian-vault",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "how-to",
+      "title": "Using Philo with an Obsidian vault",
+      "summary": "How Philo works beside an existing vault instead of forcing a content migration.",
+      "canonicalPath": "/guides/using-philo-with-an-obsidian-vault",
+      "audience": "Obsidian users exploring a better daily planning loop",
+      "primaryQuery": "using philo with an obsidian vault",
+      "intent": "informational",
+      "score": 400,
+      "requiredFactIds": [
+        "a2c1db37e865",
+        "0a6aa4c0458d",
+        "4337412202be",
+        "c30c4e88e712",
+        "aeb2e6ea1588",
+        "4a649afaab2e"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "Obsidian users who want execution-oriented daily planning without moving files",
+        "People who already have a vault and want Philo to augment it"
+      ],
+      "notFor": [
+        "People who want Philo to become their only note app immediately",
+        "Workflows that do not rely on markdown vaults"
+      ],
+      "faqs": [
+        {
+          "question": "Can Philo work with an existing vault?",
+          "answer": "Yes. Philo stores notes as markdown on disk and is meant to sit beside an existing Obsidian vault rather than replace it."
+        },
+        {
+          "question": "Why would an Obsidian user add Philo?",
+          "answer": "Philo focuses on the gap between capture and execution, especially around task rollover, recurrence, and inline widgets."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Markdown notes on disk",
+          "href": "/guides/markdown-notes-on-disk"
+        },
+        {
+          "label": "Use Philo beside an Obsidian vault",
+          "href": "/use-cases/use-philo-beside-an-obsidian-vault"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "guide-disposable-widgets",
+      "slug": "disposable-widgets-in-notes",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "how-to",
+      "title": "Disposable widgets in notes",
+      "summary": "How Philo treats one-off tools as cheap, inline widgets instead of heavyweight software projects.",
+      "canonicalPath": "/guides/disposable-widgets-in-notes",
+      "audience": "people who need temporary tools while planning",
+      "primaryQuery": "disposable widgets in notes",
+      "intent": "informational",
+      "score": 316,
+      "requiredFactIds": [
+        "aeb2e6ea1588",
+        "c30c4e88e712",
+        "0f6076bcdab8",
+        "5c003e16fdef",
+        "060a53771959",
+        "4337412202be"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want calculators, trackers, or small tools inline in a note",
+        "Anyone who wants creation to be cheap and deletion to be safe"
+      ],
+      "notFor": [
+        "People who only need static text and checklists",
+        "Teams looking for a permanent low-code platform"
+      ],
+      "faqs": [
+        {
+          "question": "Why make widgets disposable by default?",
+          "answer": "Because many note-adjacent tools are only useful for a day or a week and should not carry a permanent setup tax."
+        },
+        {
+          "question": "Can useful widgets be saved?",
+          "answer": "Yes. Widgets that earn their place can be saved into a small reusable library."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "The case for disposable widgets",
+          "href": "/blog/the-case-for-disposable-widgets"
+        },
+        {
+          "label": "Glossary: disposable widgets",
+          "href": "/glossary/disposable-widgets"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "use-case-disposable-tools",
+      "slug": "quick-tools-inside-notes",
+      "section": "use-cases",
+      "pageType": "use-case",
+      "template": "use-case",
+      "title": "Quick tools inside notes",
+      "summary": "When inline widgets are better than opening or building a separate tool.",
+      "canonicalPath": "/use-cases/quick-tools-inside-notes",
+      "audience": "people solving temporary problems while planning",
+      "primaryQuery": "quick tools inside notes",
+      "intent": "commercial",
+      "score": 312,
+      "requiredFactIds": [
+        "aeb2e6ea1588",
+        "5c003e16fdef",
+        "060a53771959",
+        "0f6076bcdab8",
+        "1a7a539136c1",
+        "e44287b63bee"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who need a one-off tracker, calculator, or checklist while planning",
+        "Users who want a widget to live in the same note as the decision it supports"
+      ],
+      "notFor": [
+        "People who only want reusable permanent tools",
+        "Teams that need a broad internal tooling platform"
+      ],
+      "faqs": [
+        {
+          "question": "What kinds of tools fit this model?",
+          "answer": "Temporary trackers, calculators, experiments, and small planning utilities fit the disposable widget model well."
+        },
+        {
+          "question": "What happens when a quick tool becomes useful long term?",
+          "answer": "Philo lets you save the winners into a small reusable library instead of committing every experiment up front."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Disposable widgets in notes",
+          "href": "/guides/disposable-widgets-in-notes"
+        },
+        {
+          "label": "Glossary: widget library",
+          "href": "/glossary/widget-library"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "use-case-daily-planning",
+      "slug": "daily-planning-in-markdown-notes",
+      "section": "use-cases",
+      "pageType": "use-case",
+      "template": "use-case",
+      "title": "Daily planning in markdown notes",
+      "summary": "When Philo is a better fit than a plain daily note file for running the day.",
+      "canonicalPath": "/use-cases/daily-planning-in-markdown-notes",
+      "audience": "people who already plan in markdown",
+      "primaryQuery": "daily planning in markdown notes",
+      "intent": "commercial",
+      "score": 305,
+      "requiredFactIds": [
+        "48c3fe78614e",
+        "3207bae257b9",
+        "e89a4a341a65",
+        "b849b1bfb0c7",
+        "1fc1734f4379",
+        "5c003e16fdef"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who already use daily notes as their planning surface",
+        "Markdown users who want execution features without changing file ownership"
+      ],
+      "notFor": [
+        "People who never plan from notes",
+        "Teams that need a shared project tracker instead of a personal execution loop"
+      ],
+      "faqs": [
+        {
+          "question": "Why not just use a plain markdown file?",
+          "answer": "A plain file captures ideas well, but it usually makes you manually rebuild rollover, recurrence, and context every day."
+        },
+        {
+          "question": "What changes with Philo?",
+          "answer": "Philo keeps the markdown file model while adding a calmer planning loop around it."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Markdown notes on disk",
+          "href": "/guides/markdown-notes-on-disk"
+        },
+        {
+          "label": "Daily note timeline in Philo",
+          "href": "/guides/daily-note-timeline"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "comparison-static-notes",
+      "slug": "philo-vs-static-markdown-daily-notes",
+      "section": "comparisons",
+      "pageType": "comparison",
+      "template": "comparison",
+      "title": "Philo vs static markdown daily notes",
+      "summary": "When a plain daily note file is enough and when Philo earns the extra layer.",
+      "canonicalPath": "/comparisons/philo-vs-static-markdown-daily-notes",
+      "audience": "people deciding whether plain markdown is enough",
+      "primaryQuery": "philo vs static markdown daily notes",
+      "intent": "commercial",
+      "score": 305,
+      "requiredFactIds": [
+        "48c3fe78614e",
+        "3207bae257b9",
+        "b849b1bfb0c7",
+        "1fc1734f4379",
+        "e89a4a341a65",
+        "5c003e16fdef"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who already like markdown but want a stronger execution loop",
+        "Users who are tired of manually rebuilding context every morning"
+      ],
+      "notFor": [
+        "People who only need text capture and nothing else",
+        "Workflows where manual carry-forward is not a problem"
+      ],
+      "faqs": [
+        {
+          "question": "Why not stay with plain markdown files only?",
+          "answer": "You can, but plain files typically push rollover, recurrence, and tool building back onto the user every day."
+        },
+        {
+          "question": "Does Philo stop being markdown-native?",
+          "answer": "No. The file on disk remains markdown; Philo changes the planning behavior around it."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Markdown notes on disk",
+          "href": "/guides/markdown-notes-on-disk"
+        },
+        {
+          "label": "Daily planning in markdown notes",
+          "href": "/use-cases/daily-planning-in-markdown-notes"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": "Static markdown daily notes",
+      "comparisonRows": [
+        {
+          "question": "You want planning context to persist across days",
+          "philo": "Built for it with timeline context and automatic carry-forward behavior.",
+          "alternative": "Possible, but usually requires manual reconstruction and copying."
+        },
+        {
+          "question": "You want notes to stay as markdown on disk",
+          "philo": "Yes. Markdown remains the source of truth.",
+          "alternative": "Yes. This is the baseline strength."
+        },
+        {
+          "question": "You want one-off tools inline in the note",
+          "philo": "Built for inline widgets and a reusable library.",
+          "alternative": "Usually requires separate tools or custom setup."
+        }
+      ]
+    },
+    {
+      "id": "glossary-disposable-widgets",
+      "slug": "disposable-widgets",
+      "section": "glossary",
+      "pageType": "glossary",
+      "template": "glossary",
+      "title": "Disposable widgets",
+      "summary": "Temporary inline tools that are cheap to create and safe to delete when the note no longer needs them.",
+      "canonicalPath": "/glossary/disposable-widgets",
+      "audience": "people learning Philo's planning vocabulary",
+      "primaryQuery": "disposable widgets definition",
+      "intent": "informational",
+      "score": 304,
+      "requiredFactIds": [
+        "0f6076bcdab8",
+        "845c6970faff",
+        "baeb8c956840",
+        "249b8b61ca69",
+        "1a7a539136c1",
+        "060a53771959"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want the shortest definition of Philo's widget model"
+      ],
+      "notFor": [
+        "People who need a product walkthrough instead of a concept definition"
+      ],
+      "faqs": [
+        {
+          "question": "What happens when a disposable widget becomes useful long term?",
+          "answer": "Philo lets you keep the winners in a small reusable library."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Disposable widgets in notes",
+          "href": "/guides/disposable-widgets-in-notes"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "guide-daily-note-timeline",
+      "slug": "daily-note-timeline",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "how-to",
+      "title": "Daily note timeline in Philo",
+      "summary": "How Philo keeps past, current, and next notes in one planning surface.",
+      "canonicalPath": "/guides/daily-note-timeline",
+      "audience": "people who plan from daily notes",
+      "primaryQuery": "daily note timeline",
+      "intent": "informational",
+      "score": 300,
+      "requiredFactIds": [
+        "3207bae257b9",
+        "48c3fe78614e",
+        "e387b0adc942",
+        "7aa7f12f8dba",
+        "c67365d6a7f4",
+        "e89a4a341a65"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want older note context visible while planning today",
+        "Markdown users who dislike hopping between separate daily files"
+      ],
+      "notFor": [
+        "People who want each day fully isolated from prior work",
+        "Workflows that never use daily notes as the planning surface"
+      ],
+      "faqs": [
+        {
+          "question": "Does Philo replace the daily note file model?",
+          "answer": "No. Philo keeps daily notes as markdown files on disk while changing how they are surfaced in the app."
+        },
+        {
+          "question": "Why does a timeline matter?",
+          "answer": "It reduces the morning reconstruction work of finding what was already in flight before you start planning."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Task rollover in daily notes",
+          "href": "/guides/task-rollover-in-daily-notes"
+        },
+        {
+          "label": "Glossary: daily note timeline",
+          "href": "/glossary/daily-note-timeline"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "use-case-execution-loop",
+      "slug": "write-decide-and-run-in-one-place",
+      "section": "use-cases",
+      "pageType": "use-case",
+      "template": "use-case",
+      "title": "Write, decide, and run in one place",
+      "summary": "How Philo shortens the loop between note capture and actual execution.",
+      "canonicalPath": "/use-cases/write-decide-and-run-in-one-place",
+      "audience": "people who lose momentum between writing and doing",
+      "primaryQuery": "write decide and run in one place",
+      "intent": "commercial",
+      "score": 294,
+      "requiredFactIds": [
+        "4337412202be",
+        "c30c4e88e712",
+        "bb9f06e3cf0f",
+        "5c003e16fdef",
+        "aeb2e6ea1588",
+        "3207bae257b9"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who think in fragments, checklists, and half-built plans",
+        "Users who want fewer handoffs between capture, planning, and execution"
+      ],
+      "notFor": [
+        "People who prefer a strict ticket-first workflow for everything",
+        "Teams that need deeply structured multi-user workflow software"
+      ],
+      "faqs": [
+        {
+          "question": "What is Philo optimizing for?",
+          "answer": "Philo is optimizing for a shorter loop: write, decide, and run without rebuilding context somewhere else."
+        },
+        {
+          "question": "Why does this matter?",
+          "answer": "Because momentum often dies at the handoff from raw note to another separate execution tool."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Why we built a journal that can execute ideas",
+          "href": "/blog/why-we-built-a-journal-that-can-execute-ideas"
+        },
+        {
+          "label": "Note chat in Philo",
+          "href": "/guides/note-chat-in-philo"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "comparison-task-manager",
+      "slug": "philo-vs-a-separate-task-manager",
+      "section": "comparisons",
+      "pageType": "comparison",
+      "template": "comparison",
+      "title": "Philo vs a separate task manager",
+      "summary": "When the task list should live with the note and when it should stay separate.",
+      "canonicalPath": "/comparisons/philo-vs-a-separate-task-manager",
+      "audience": "people splitting work between notes and task apps",
+      "primaryQuery": "philo vs a separate task manager",
+      "intent": "commercial",
+      "score": 293,
+      "requiredFactIds": [
+        "48c3fe78614e",
+        "5c003e16fdef",
+        "4337412202be",
+        "c30c4e88e712",
+        "aeb2e6ea1588",
+        "99933fb9121d"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People whose task list only makes sense next to the note that produced it",
+        "Users who want fewer handoffs between note capture and execution"
+      ],
+      "notFor": [
+        "Teams that need a centralized task workflow",
+        "People who prefer tasks fully detached from notes"
+      ],
+      "faqs": [
+        {
+          "question": "Is Philo trying to replace every task manager?",
+          "answer": "No. It is trying to make the daily note itself better at execution for people who already plan there."
+        },
+        {
+          "question": "When is a separate task manager still the better fit?",
+          "answer": "When the center of gravity is a shared task system rather than a personal note-driven workflow."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Task rollover in daily notes",
+          "href": "/guides/task-rollover-in-daily-notes"
+        },
+        {
+          "label": "Running recurring systems from daily notes",
+          "href": "/use-cases/running-recurring-systems-from-daily-notes"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": "A separate task manager",
+      "comparisonRows": [
+        {
+          "question": "You want task context to stay attached to the note",
+          "philo": "Strong fit because planning happens in the note itself.",
+          "alternative": "Often requires jumping between capture and execution surfaces."
+        },
+        {
+          "question": "You want recurring work to rebuild your note automatically",
+          "philo": "Built around bringing recurring tasks back on schedule inside daily notes.",
+          "alternative": "Possible, but usually outside the note and detached from writing context."
+        },
+        {
+          "question": "You want a dedicated shared task system for a team",
+          "philo": "Less ideal. Philo is centered on a personal daily planning loop.",
+          "alternative": "Often the better fit."
+        }
+      ]
+    },
+    {
+      "id": "glossary-daily-note-timeline",
+      "slug": "daily-note-timeline",
+      "section": "glossary",
+      "pageType": "glossary",
+      "template": "glossary",
+      "title": "Daily note timeline",
+      "summary": "The Philo idea that yesterday, today, and tomorrow should stay close together while you plan.",
+      "canonicalPath": "/glossary/daily-note-timeline",
+      "audience": "people learning Philo's planning vocabulary",
+      "primaryQuery": "daily note timeline definition",
+      "intent": "informational",
+      "score": 290,
+      "requiredFactIds": [
+        "3207bae257b9",
+        "e387b0adc942",
+        "7aa7f12f8dba",
+        "c67365d6a7f4",
+        "e89a4a341a65",
+        "b849b1bfb0c7"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want a quick definition of a core Philo concept"
+      ],
+      "notFor": [
+        "People who need a product comparison instead of a definition"
+      ],
+      "faqs": [
+        {
+          "question": "Why does Philo use a timeline instead of isolated daily pages?",
+          "answer": "Because the page should already know what was in flight when you open it."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Daily note timeline in Philo",
+          "href": "/guides/daily-note-timeline"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "guide-markdown-on-disk",
+      "slug": "markdown-notes-on-disk",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "how-to",
+      "title": "Markdown notes on disk with Philo",
+      "summary": "How Philo keeps markdown as the source of truth while adding planning behavior on top.",
+      "canonicalPath": "/guides/markdown-notes-on-disk",
+      "audience": "people who care about portable notes",
+      "primaryQuery": "markdown notes on disk",
+      "intent": "informational",
+      "score": 285,
+      "requiredFactIds": [
+        "48c3fe78614e",
+        "a2c1db37e865",
+        "0a6aa4c0458d",
+        "8c2d949687d4",
+        "f70bf62d7141",
+        "eeb3d8d7be95"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want their notes to stay as local markdown files",
+        "Users who want planning features without moving into a hosted silo"
+      ],
+      "notFor": [
+        "People who prefer a cloud-only note database",
+        "Teams that need a centralized workspace instead of local files"
+      ],
+      "faqs": [
+        {
+          "question": "What is the source of truth for notes in Philo?",
+          "answer": "The markdown file on disk remains the source of truth for note bodies; Philo edits TipTap JSON in memory and saves back to markdown."
+        },
+        {
+          "question": "Does Philo lock you into a proprietary format?",
+          "answer": "No. Philo is designed to sit beside your vault and keep notes as markdown files you control."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Markdown, not lock-in",
+          "href": "/blog/why-we-built-a-journal-that-can-execute-ideas"
+        },
+        {
+          "label": "Use Philo beside an Obsidian vault",
+          "href": "/use-cases/use-philo-beside-an-obsidian-vault"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "guide-note-chat",
+      "slug": "note-chat-in-philo",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "how-to",
+      "title": "Note chat in Philo",
+      "summary": "Where note chat fits in Philo's markdown-native daily note workflow.",
+      "canonicalPath": "/guides/note-chat-in-philo",
+      "audience": "people who want AI help inside the note instead of another app",
+      "primaryQuery": "note chat in philo",
+      "intent": "informational",
+      "score": 268,
+      "requiredFactIds": [
+        "30c6d0aebd42",
+        "bb9f06e3cf0f",
+        "da495889d53d",
+        "cc84c7177a7d",
+        "1a7a539136c1",
+        "0837c039135f"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want AI assistance inside the same note they are planning from",
+        "Users who want dry-run edits and note-aware help without context switching"
+      ],
+      "notFor": [
+        "People who never use AI in their note workflow",
+        "Teams that need a separate collaborative assistant product"
+      ],
+      "faqs": [
+        {
+          "question": "What does note chat do in Philo?",
+          "answer": "Philo includes optional AI features for note chat, search, and dry-run edits inside the app."
+        },
+        {
+          "question": "Why keep chat inside the note?",
+          "answer": "It keeps context attached to the planning surface instead of forcing another handoff to a separate tool."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Note search in Philo",
+          "href": "/guides/note-search-in-philo"
+        },
+        {
+          "label": "One place to write, decide, and run",
+          "href": "/use-cases/write-decide-and-run-in-one-place"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "guide-task-rollover",
+      "slug": "task-rollover-in-daily-notes",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "how-to",
+      "title": "Task rollover in daily notes",
+      "summary": "What task rollover means in Philo and why it keeps daily planning lighter.",
+      "canonicalPath": "/guides/task-rollover-in-daily-notes",
+      "audience": "people who lose unfinished work between days",
+      "primaryQuery": "task rollover in daily notes",
+      "intent": "informational",
+      "score": 263,
+      "requiredFactIds": [
+        "3207bae257b9",
+        "48c3fe78614e",
+        "e89a4a341a65",
+        "b849b1bfb0c7",
+        "1fc1734f4379",
+        "5c003e16fdef"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "Anyone who wants unfinished tasks to reappear automatically",
+        "Daily note users who want less manual carry-forward work"
+      ],
+      "notFor": [
+        "People who intentionally rebuild their task list from scratch every day",
+        "Workflows that already enforce carry-forward elsewhere"
+      ],
+      "faqs": [
+        {
+          "question": "Is rollover the same as recurrence?",
+          "answer": "No. Rollover keeps unfinished work alive, while recurrence recreates scheduled work on a cadence."
+        },
+        {
+          "question": "Why is rollover useful in markdown notes?",
+          "answer": "It removes the manual copy-paste step that usually breaks momentum in plain daily note systems."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Recurring task tags",
+          "href": "/guides/recurring-task-tags"
+        },
+        {
+          "label": "Glossary: task rollover",
+          "href": "/glossary/task-rollover"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "use-case-recurring-systems",
+      "slug": "running-recurring-systems-from-daily-notes",
+      "section": "use-cases",
+      "pageType": "use-case",
+      "template": "use-case",
+      "title": "Running recurring systems from daily notes",
+      "summary": "Why Philo fits people whose routines should rebuild themselves automatically.",
+      "canonicalPath": "/use-cases/running-recurring-systems-from-daily-notes",
+      "audience": "people with recurring obligations",
+      "primaryQuery": "recurring systems in daily notes",
+      "intent": "commercial",
+      "score": 263,
+      "requiredFactIds": [
+        "48c3fe78614e",
+        "e89a4a341a65",
+        "3207bae257b9",
+        "b849b1bfb0c7",
+        "1fc1734f4379",
+        "5c003e16fdef"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who run daily, weekly, or every-few-days routines from notes",
+        "Users who want recurrence logic to stay visible in plain text"
+      ],
+      "notFor": [
+        "People who only track one-off tasks",
+        "Calendar-heavy workflows that need complex scheduling rules"
+      ],
+      "faqs": [
+        {
+          "question": "What makes recurring work feel lighter in Philo?",
+          "answer": "Philo brings recurring tasks back on schedule so the planning surface rebuilds itself without manual setup every morning."
+        },
+        {
+          "question": "Why call this a system instead of a reminder?",
+          "answer": "Because the value is in reducing repeat decisions, not just pinging you at a certain time."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Recurring task tags in Philo",
+          "href": "/guides/recurring-task-tags"
+        },
+        {
+          "label": "From recurring tasks to recurring systems",
+          "href": "/blog/from-recurring-tasks-to-recurring-systems"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "comparison-manual-recurring",
+      "slug": "philo-vs-manual-recurring-checklists",
+      "section": "comparisons",
+      "pageType": "comparison",
+      "template": "comparison",
+      "title": "Philo vs manual recurring checklists",
+      "summary": "Why automatic recurrence changes the planning burden in a markdown workflow.",
+      "canonicalPath": "/comparisons/philo-vs-manual-recurring-checklists",
+      "audience": "people manually rewriting the same routine",
+      "primaryQuery": "philo vs manual recurring checklists",
+      "intent": "commercial",
+      "score": 256,
+      "requiredFactIds": [
+        "48c3fe78614e",
+        "e022bdb7e8df",
+        "b849b1bfb0c7",
+        "1fc1734f4379",
+        "a3bb8dca7bc5",
+        "5a22705ac926"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People whose checklists should rebuild themselves",
+        "Users who want recurrence visible in plain text"
+      ],
+      "notFor": [
+        "People who deliberately rewrite routines from scratch",
+        "Workflows that do not repeat often enough to justify automation"
+      ],
+      "faqs": [
+        {
+          "question": "What is the real benefit of recurrence?",
+          "answer": "It reduces decisions you never needed to make again, which makes the planning surface calmer."
+        },
+        {
+          "question": "Why keep recurrence inline?",
+          "answer": "Because the rule stays editable where the task already lives instead of hiding in a separate settings surface."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Recurring task tags in Philo",
+          "href": "/guides/recurring-task-tags"
+        },
+        {
+          "label": "From recurring tasks to recurring systems",
+          "href": "/blog/from-recurring-tasks-to-recurring-systems"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": "Manual recurring checklists",
+      "comparisonRows": [
+        {
+          "question": "You are rewriting the same routine every day",
+          "philo": "Removes that step by bringing recurring tasks back on schedule.",
+          "alternative": "Keeps the burden on you every time."
+        },
+        {
+          "question": "You want recurrence logic visible in the task text",
+          "philo": "Uses inline tags inside the markdown.",
+          "alternative": "Usually relies on memory or copy-forward rituals."
+        },
+        {
+          "question": "You prefer explicit manual control over every recurrence step",
+          "philo": "Less ideal if you do not want automation.",
+          "alternative": "Better fit."
+        }
+      ]
+    },
+    {
+      "id": "guide-recurring-tags",
+      "slug": "recurring-task-tags",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "how-to",
+      "title": "Recurring task tags in Philo",
+      "summary": "How inline recurrence tags make recurring work obvious and editable in plain text.",
+      "canonicalPath": "/guides/recurring-task-tags",
+      "audience": "people who run routines from daily notes",
+      "primaryQuery": "recurring task tags",
+      "intent": "informational",
+      "score": 254,
+      "requiredFactIds": [
+        "48c3fe78614e",
+        "fe97052850b1",
+        "e022bdb7e8df",
+        "a3bb8dca7bc5",
+        "e89a4a341a65",
+        "3207bae257b9"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want daily or weekly routines to manage themselves",
+        "Markdown users who want recurrence logic next to the task text"
+      ],
+      "notFor": [
+        "People who need a complex calendar-first recurrence system",
+        "Teams trying to model company-wide scheduling rules"
+      ],
+      "faqs": [
+        {
+          "question": "What tags does Philo use?",
+          "answer": "Philo uses inline recurrence tags such as #daily, #weekly, and #3days so the task carries its own recurrence rules."
+        },
+        {
+          "question": "Why use tags instead of a separate form?",
+          "answer": "Tags keep the rule visible in the markdown itself, which makes the behavior easier to trust and edit."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "From recurring tasks to recurring systems",
+          "href": "/blog/from-recurring-tasks-to-recurring-systems"
+        },
+        {
+          "label": "Glossary: recurring tags",
+          "href": "/glossary/recurring-tags"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "guide-note-search",
+      "slug": "note-search-in-philo",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "how-to",
+      "title": "Note search in Philo",
+      "summary": "How Philo keeps note search close to the daily planning loop.",
+      "canonicalPath": "/guides/note-search-in-philo",
+      "audience": "people who want note search in the same app they plan from",
+      "primaryQuery": "note search in philo",
+      "intent": "informational",
+      "score": 207,
+      "requiredFactIds": [
+        "30c6d0aebd42",
+        "ca74ce123d5e",
+        "02647941cc95",
+        "92b9651ca16e",
+        "bb9f06e3cf0f",
+        "48c3fe78614e"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want search without leaving their note workflow",
+        "Users who need to recover context quickly while planning"
+      ],
+      "notFor": [
+        "People who already centralize search in another app",
+        "Workflows that do not care about fast historical note recall"
+      ],
+      "faqs": [
+        {
+          "question": "Does Philo include search?",
+          "answer": "Yes. Search is one of the optional AI-adjacent features available inside the app."
+        },
+        {
+          "question": "Why pair search with daily notes?",
+          "answer": "It shortens the loop between finding context and deciding what to do next."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Note chat in Philo",
+          "href": "/guides/note-chat-in-philo"
+        },
+        {
+          "label": "A calmer daily planning loop",
+          "href": "/blog/a-calmer-daily-planning-loop"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "glossary-recurring-tags",
+      "slug": "recurring-tags",
+      "section": "glossary",
+      "pageType": "glossary",
+      "template": "glossary",
+      "title": "Recurring tags",
+      "summary": "Inline tags like #daily and #weekly that make task recurrence explicit in the note itself.",
+      "canonicalPath": "/glossary/recurring-tags",
+      "audience": "people learning Philo's planning vocabulary",
+      "primaryQuery": "recurring tags definition",
+      "intent": "informational",
+      "score": 164,
+      "requiredFactIds": [
+        "e022bdb7e8df",
+        "a3bb8dca7bc5",
+        "fe97052850b1",
+        "48c3fe78614e",
+        "3530a8f13a3b",
+        "e89a4a341a65"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want a precise definition of inline recurrence"
+      ],
+      "notFor": [
+        "People who need setup steps instead of terminology"
+      ],
+      "faqs": [
+        {
+          "question": "Why use recurring tags instead of hidden rules?",
+          "answer": "The tag keeps the recurrence behavior visible and editable in plain text."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Recurring task tags in Philo",
+          "href": "/guides/recurring-task-tags"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "release-latest-roundup",
+      "slug": "latest-philo-release-roundup",
+      "section": "guides",
+      "pageType": "guide",
+      "template": "release",
+      "title": "Latest Philo release roundup",
+      "summary": "A fact-backed release page that turns first-party release notes into update-focused landing content.",
+      "canonicalPath": "/guides/latest-philo-release-roundup",
+      "audience": "people evaluating what changed recently in Philo",
+      "primaryQuery": "latest philo release",
+      "intent": "informational",
+      "score": 120,
+      "requiredFactIds": [
+        "5e26b3917870",
+        "8dadeb5ca2e2",
+        "f7eadb3a521f",
+        "dba19a8a849e",
+        "7c3e262c6983",
+        "e41e23d6b137"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want a concise view of recent Philo changes",
+        "Users tracking whether new releases affect their workflow"
+      ],
+      "notFor": [
+        "People who need a timeless product overview instead of recent updates",
+        "Readers looking for speculative roadmap plans"
+      ],
+      "faqs": [
+        {
+          "question": "What should belong on a release roundup page?",
+          "answer": "Only first-party shipped changes with clear release-note evidence and no speculative roadmap claims."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Philo guides",
+          "href": "/guides"
+        },
+        {
+          "label": "Notes from the team",
+          "href": "/blog"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    },
+    {
+      "id": "glossary-task-rollover",
+      "slug": "task-rollover",
+      "section": "glossary",
+      "pageType": "glossary",
+      "template": "glossary",
+      "title": "Task rollover",
+      "summary": "The behavior where unfinished work carries into today automatically.",
+      "canonicalPath": "/glossary/task-rollover",
+      "audience": "people learning Philo's planning vocabulary",
+      "primaryQuery": "task rollover definition",
+      "intent": "informational",
+      "score": 92,
+      "requiredFactIds": [
+        "cf9b1e3dce3a",
+        "fe97052850b1",
+        "e89a4a341a65",
+        "3207bae257b9",
+        "e022bdb7e8df",
+        "5fef0a19878d"
+      ],
+      "status": "draft",
+      "ownership": "generated",
+      "bestFor": [
+        "People who want the shortest explanation of rollover behavior"
+      ],
+      "notFor": [
+        "People who need a full workflow guide instead of a definition"
+      ],
+      "faqs": [
+        {
+          "question": "How is rollover different from recurrence?",
+          "answer": "Rollover preserves unfinished work, while recurrence recreates work on a schedule."
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Task rollover in daily notes",
+          "href": "/guides/task-rollover-in-daily-notes"
+        }
+      ],
+      "image": "/philo-hero-screenshot.svg",
+      "comparisonTarget": null,
+      "comparisonRows": []
+    }
+  ]
+}

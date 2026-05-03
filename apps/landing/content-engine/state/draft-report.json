@@ -1,0 +1,119 @@
+{
+  "generatedAt": "2026-05-03T14:18:08.733Z",
+  "created": [
+    {
+      "slug": "widget-library",
+      "filePath": "apps/landing/src/content/glossary/widget-library.mdx"
+    },
+    {
+      "slug": "philo-vs-heavy-project-management-tools",
+      "filePath": "apps/landing/src/content/comparisons/philo-vs-heavy-project-management-tools.mdx"
+    },
+    {
+      "slug": "use-philo-beside-an-obsidian-vault",
+      "filePath": "apps/landing/src/content/use-cases/use-philo-beside-an-obsidian-vault.mdx"
+    },
+    {
+      "slug": "using-philo-with-an-obsidian-vault",
+      "filePath": "apps/landing/src/content/guides/using-philo-with-an-obsidian-vault.mdx"
+    }
+  ],
+  "pruned": [],
+  "skipped": [
+    {
+      "slug": "disposable-widgets-in-notes",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/guides/disposable-widgets-in-notes.mdx"
+    },
+    {
+      "slug": "quick-tools-inside-notes",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/use-cases/quick-tools-inside-notes.mdx"
+    },
+    {
+      "slug": "daily-planning-in-markdown-notes",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/use-cases/daily-planning-in-markdown-notes.mdx"
+    },
+    {
+      "slug": "philo-vs-static-markdown-daily-notes",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/comparisons/philo-vs-static-markdown-daily-notes.mdx"
+    },
+    {
+      "slug": "disposable-widgets",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/glossary/disposable-widgets.mdx"
+    },
+    {
+      "slug": "daily-note-timeline",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/guides/daily-note-timeline.mdx"
+    },
+    {
+      "slug": "write-decide-and-run-in-one-place",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/use-cases/write-decide-and-run-in-one-place.mdx"
+    },
+    {
+      "slug": "philo-vs-a-separate-task-manager",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/comparisons/philo-vs-a-separate-task-manager.mdx"
+    },
+    {
+      "slug": "daily-note-timeline",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/glossary/daily-note-timeline.mdx"
+    },
+    {
+      "slug": "markdown-notes-on-disk",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/guides/markdown-notes-on-disk.mdx"
+    },
+    {
+      "slug": "note-chat-in-philo",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/guides/note-chat-in-philo.mdx"
+    },
+    {
+      "slug": "task-rollover-in-daily-notes",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/guides/task-rollover-in-daily-notes.mdx"
+    },
+    {
+      "slug": "running-recurring-systems-from-daily-notes",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/use-cases/running-recurring-systems-from-daily-notes.mdx"
+    },
+    {
+      "slug": "philo-vs-manual-recurring-checklists",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/comparisons/philo-vs-manual-recurring-checklists.mdx"
+    },
+    {
+      "slug": "recurring-task-tags",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/guides/recurring-task-tags.mdx"
+    },
+    {
+      "slug": "note-search-in-philo",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/guides/note-search-in-philo.mdx"
+    },
+    {
+      "slug": "recurring-tags",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/glossary/recurring-tags.mdx"
+    },
+    {
+      "slug": "latest-philo-release-roundup",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/guides/latest-philo-release-roundup.mdx"
+    },
+    {
+      "slug": "task-rollover",
+      "reason": "batch-limit",
+      "filePath": "apps/landing/src/content/glossary/task-rollover.mdx"
+    }
+  ]
+}

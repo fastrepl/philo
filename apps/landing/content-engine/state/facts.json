@@ -1,0 +1,4768 @@
+{
+  "generatedAt": "2026-05-03T14:18:08.678Z",
+  "facts": [
+    {
+      "id": "5e546ae6fe4f",
+      "statement": "A small app-owned config area under the app data directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "cc84c7177a7d",
+      "statement": "AI chat history is stored as individual JSON files under the resolved chats directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "chat"
+      ]
+    },
+    {
+      "id": "bb9f06e3cf0f",
+      "statement": "AI chat history: chats/ under the vault root or resolved journal root",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian",
+        "chat"
+      ]
+    },
+    {
+      "id": "642ef0f264a3",
+      "statement": "all meeting-specific frontmatter fields are optional",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "85f27b1ad40a",
+      "statement": "API key used by the AI/widget generation features.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "2834a6e0ce56",
+      "statement": "app settings and API key: /settings.json",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "8548cf121ffb",
+      "statement": "App-managed widget Git history also lives under the app data directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "a6885bad78d8",
+      "statement": "assets live under / / unless assetsFolder is absolute",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "2b2e2b31f771",
+      "statement": "attached_to may be inferred from daily-note links instead of frontmatter",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "54000496c66f",
+      "statement": "Bundled Google OAuth desktop client ID used by the Continue with Google flow in settings.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "google"
+      ]
+    },
+    {
+      "id": "9f607206a55b",
+      "statement": "Cached Supabase access token for the current desktop sync session.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c498810a2f47",
+      "statement": "Cached Supabase refresh token for the current desktop sync session.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "31458b563e83",
+      "statement": "changing assetsFolder does not move old images",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "a06786cf195f",
+      "statement": "Changing configuration updates future reads and writes, but it does not automatically move existing files.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "42cd44e6a0cf",
+      "statement": "changing excalidrawFolder does not relocate drawings",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "800b657a214b",
+      "statement": "changing filenamePattern does not rename existing note files",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "1a7a539136c1",
+      "statement": "changing vaultDir does not migrate existing widget files, library items, or chat-history files into the new root",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library",
+        "chat"
+      ]
+    },
+    {
+      "id": "7005fe5cf805",
+      "statement": "changing vaultDir or dailyLogsFolder does not move old notes",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "0837c039135f",
+      "statement": "chat history lives under /chats/",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "chat"
+      ]
+    },
+    {
+      "id": "ed7cadba5045",
+      "statement": "Configuration always lives under the app data directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "7f48ccbb128e",
+      "statement": "Configuration: settings.json",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "2d558d819aab",
+      "statement": "configured absolute Excalidraw paths are used directly",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d82c3a7648f7",
+      "statement": "Connected Google accounts tracked by the app.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "google"
+      ]
+    },
+    {
+      "id": "66ab7b5a9ccb",
+      "statement": "Controls whether desktop local-cloud sync is allowed to run.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "5c003e16fdef",
+      "statement": "Daily notes do not inline the full widget payload.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "widgets"
+      ]
+    },
+    {
+      "id": "66cdf21b80ef",
+      "statement": "daily notes: resolved journalDir plus filenamePattern",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "2b89be4dd11f",
+      "statement": "default mode: sibling pages/ folder next to the resolved journal root",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "122b02a7be11",
+      "statement": "Desktop sync keeps one more app-owned file beside settings.json:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "27915b6ddfd3",
+      "statement": "Desktop sync uses these environment variables:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f20c1a28ed01",
+      "statement": "Each entry stores the email address, granted scopes, and cached access-token expiry summary.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6d6ac4a64b54",
+      "statement": "each resolved widgets/ directory gets its own app-managed Git repo",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "9c1f0262b8aa",
+      "statement": "Email address used for Supabase magic-link sign-in.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "28568db0fc71",
+      "statement": "Enables the app-managed Git mirror used for widget snapshot history.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "c5347b9f7bbf",
+      "statement": "Excalidraw content: wherever the configured Excalidraw path points, or the vault/journal fallback locations",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "4fe2f4dd4e05",
+      "statement": "Excalidraw embeds resolve from / / unless excalidrawFolder is absolute",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "a10582e3aea4",
+      "statement": "existing generic URL summary pages remain valid even if they do not have link_kind",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "1f6dd92dc6c1",
+      "statement": "explicit relative paths inside the note are honored",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6250859ac154",
+      "statement": "Files under pages/ are plain markdown, but they do not all share one exact schema.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "e5fb66b9879e",
+      "statement": "Folder inside the vault where daily notes are written.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "2c10582c4a3e",
+      "statement": "Folder used for pasted/dropped image files.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b5eebd8b9481",
+      "statement": "Folder used to resolve ![[*.excalidraw]] embeds.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "04430696c7a7",
+      "statement": "For the current code-widget path:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "618d224ae7ff",
+      "statement": "For the full file schema and update lifecycle, see Widget persistence and lifecycle.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "89a10ca30129",
+      "statement": "Google AI Studio / Gemini API key used when Google is the active provider.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "google"
+      ]
+    },
+    {
+      "id": "312f8d078193",
+      "statement": "Google OAuth access and refresh tokens: OS credential store (Keychain on macOS, equivalent secure store on other platforms)",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "google"
+      ]
+    },
+    {
+      "id": "b4f34909fea8",
+      "statement": "Google OAuth secrets and tokens live in the OS credential store for new sessions.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "google"
+      ]
+    },
+    {
+      "id": "57cb37c40f70",
+      "statement": "If assetsFolder is absolute, Philo writes there directly.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "8313a98a3264",
+      "statement": "If the widget has generated persistent storage, it also gets a sidecar SQLite database next to the widget file:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "9b310402a478",
+      "statement": "If you want to know where something is stored:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "2b3cbc30d200",
+      "statement": "In development it uses ~/Library/Application Support/com.philo.dev/.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "488fbd98c0cf",
+      "statement": "In production it uses Tauri's appDataDir().",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "9c6f637e5671",
+      "statement": "It does not migrate Excalidraw files.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d8a1aa1634ba",
+      "statement": "It resolves them from the configured vault/journal paths.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "3443f4758aa8",
+      "statement": "Last sync error surfaced in settings.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e2ada6c2fd09",
+      "statement": "Legacy entries without canonical widget file metadata still fall back to creating a new widget file.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "81ab2af4a7c5",
+      "statement": "Legacy migration field from the old single-account model.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "eeb3d8d7be95",
+      "statement": "link_data is structured app-generated metadata for the recognized source and is optional on disk",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "5a9f563390df",
+      "statement": "link_kind identifies the specialized renderer; current app-generated values are generic, github_pr, github_issue, and github_commit",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b57c13e52b2a",
+      "statement": "link_title, summary_updated_at, and follow_up_questions are app-generated and optional",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "919d86f20c9d",
+      "statement": "markdown stores a relative asset path, not the temporary editor URL",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "58baf8392fcf",
+      "statement": "Meeting pages use frontmatter for structured metadata and then keep the meeting notes in the body.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "65d97b8fd80d",
+      "statement": "mirrored markdown and blobs live under philo-sync/documents/",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "8aff85ea9c93",
+      "statement": "Mode 1: Default app-managed storage",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "66e3bef18ecb",
+      "statement": "Mode 2: Obsidian-backed storage",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "fcac5f11447c",
+      "statement": "New Google sessions keep the access token in the OS credential store instead of settings.json.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "google"
+      ]
+    },
+    {
+      "id": "db96fa1a16f5",
+      "statement": "New Google sessions keep the refresh token in the OS credential store instead of settings.json.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "google"
+      ]
+    },
+    {
+      "id": "ca09d6185f08",
+      "statement": "note links that follow the active filename pattern",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "060a53771959",
+      "statement": "Notes, images, Excalidraw files, widget files, widget-library files, and chat-history files live under the resolved content directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library",
+        "chat"
+      ]
+    },
+    {
+      "id": "0ef4e3a70e89",
+      "statement": "Obsidian-style Excalidraw embeds",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "99fa6e6adbd9",
+      "statement": "On first setup Philo can also create minimal vault config files through bootstrap_obsidian_vault().",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "24ea9f14db41",
+      "statement": "Ongoing configuration edits.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "4a51fcfb4f07",
+      "statement": "OpenAI API key used when OpenAI is the active provider.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "88c886947e8e",
+      "statement": "OpenRouter API key used when OpenRouter is the active provider.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6966a2c195e3",
+      "statement": "optional frontmatter, currently used for city",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "4e9824140cb2",
+      "statement": "Optional root of an Obsidian vault.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "5a22705ac926",
+      "statement": "otherwise Philo searches the configured Excalidraw folder, vault root, and journal root",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "addadb838388",
+      "statement": "otherwise settings.vaultDir + settings.dailyLogsFolder",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "233fe526315e",
+      "statement": "pasted images: resolved assets folder",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "37a64b9083d2",
+      "statement": "Pattern used to map dates to note file paths.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6710f914f9c4",
+      "statement": "Philo currently reads and writes four page-shaped markdown variants.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "3276fa7bb205",
+      "statement": "Philo does not own Excalidraw scene files by itself.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "690327fb4394",
+      "statement": "Philo may append transcript and summary sections into the body over time",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6f7efddf75df",
+      "statement": "Philo persists data in two places:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "17526aba8d1b",
+      "statement": "re-extends Tauri filesystem scope with initJournalScope()",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e44287b63bee",
+      "statement": "Repeated inserts therefore share the archived widget's file-backed state.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "e3b439704a86",
+      "statement": "resets the cached journal path with resetJournalDir()",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "e016dbaaa2d5",
+      "statement": "Settings are stored as JSON at:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c5ae9f62df15",
+      "statement": "Settings still remain in /settings.json even when content is stored in the vault.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "cb5d2f76efdf",
+      "statement": "settings.journalDir if present",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "01963836e44b",
+      "statement": "settings.json tells Philo where to read and write content",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "3250f10f56c3",
+      "statement": "So there are two common operating modes.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "7c66add4f208",
+      "statement": "source stores the canonical normalized URL",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f1c4f62d5934",
+      "statement": "Stable device identifier attached to sync writes and conflict copies.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "8b1d1a5c9441",
+      "statement": "Stored locally as plain JSON in settings.json.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "99933fb9121d",
+      "statement": "switching vaults or journal roots creates a different history repo lazily; Philo does not migrate history between roots",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "284ab012f7e5",
+      "statement": "sync settings live in AsyncStorage",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "1abc5f698460",
+      "statement": "That file tracks the last mirrored revision and content hash for every synced path so the desktop app can detect pulls, pushes, deletions, and conflicts without changing the local markdown file model.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "3b83265c6aab",
+      "statement": "That makes path changes take effect immediately without a restart.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b5e0fada523f",
+      "statement": "That setup writes config into the vault's .obsidian/ directory, but Philo's own runtime settings still stay in settings.json.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "79e8597632dc",
+      "statement": "the actual user data stays as normal files on disk",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "3aa3b23df694",
+      "statement": "the body is still the source of truth for the editable meeting note itself",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ddba78190381",
+      "statement": "the body is the canonical editable content",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e9769433ef22",
+      "statement": "the body remains editable markdown; it is not a hidden structured payload",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "94f2c0ce7b63",
+      "statement": "The code applies the new paths immediately, but it treats migration as a manual task.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d47086a12a09",
+      "statement": "The currently resolved root directory for daily notes.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "b80dec4af00e",
+      "statement": "The currently selected AI provider in settings.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "892ef3c1a90c",
+      "statement": "The Expo app keeps its own mirrored sandbox under the iPhone app documents directory:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ac979611b768",
+      "statement": "the file is written into the resolved assets directory",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "7a573c4430e3",
+      "statement": "the filename is generated as image_ _ .",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e6f0f37cfbca",
+      "statement": "The Git mirror is an app-owned developer-history layer.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "1efe92014d47",
+      "statement": "The important distinction is:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c477841a53e2",
+      "statement": "the library drawer is built from saved widget files first, with shared component metadata layered on top",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "7cac64300a49",
+      "statement": "The live widget file under widgets/ remains the canonical source of truth.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "850c3c48aef5",
+      "statement": "the markdown body is still the canonical editable summary content",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "5e26b3917870",
+      "statement": "The markdown file remains the canonical source of truth for widget identity, prompt, runtime payload, and storage metadata.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "widgets"
+      ]
+    },
+    {
+      "id": "255f520d9220",
+      "statement": "the resolved library directory stores shared component manifests and any shared-component runtime assets",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "4337412202be",
+      "statement": "The scope refresh covers the current journal root, vault root, assets directory, Excalidraw directory, and widgets directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian",
+        "widgets"
+      ]
+    },
+    {
+      "id": "50b264907ee3",
+      "statement": "The setting only changes where Philo looks.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f9e577818065",
+      "statement": "The settings UI already warns about the filename and folder cases.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "bba645eded74",
+      "statement": "The SQLite sidecar stores the widget instance's queryable/mutable data rows.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "e9209907266b",
+      "statement": "The widget library is a merged view of archived widget files plus shared component manifests under the resolved library directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "0283dc9c5be6",
+      "statement": "There are two UI flows that write settings.json:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "124a9e85dfd5",
+      "statement": "There is also legacy support for:",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d7014c5d74c4",
+      "statement": "These are the default attached pages.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "da495889d53d",
+      "statement": "These files back the recent chat history shown in the app.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "chat"
+      ]
+    },
+    {
+      "id": "f39c3544ebc8",
+      "statement": "these pages are created when Philo converts a stale bare URL into a page chip",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d6c0f3b947a9",
+      "statement": "They are separate from widget files and separate from the widget library.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "76a190a54358",
+      "statement": "They may have no frontmatter at all.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "809da042a7dc",
+      "statement": "They store widget embeds that point back to the widget file.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "a604294fd8b4",
+      "statement": "This base directory is where Philo stores app-managed files like settings.json and widget-history repos.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "badb756c3d41",
+      "statement": "This document describes where Philo stores its data, which settings control those locations, and how configuration changes affect the filesystem layout.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "642fc2ffb25f",
+      "statement": "Timestamp of the last completed desktop sync pass.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "2b513f4c06e6",
+      "statement": "type defaults to page when omitted",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "000efd1aa373",
+      "statement": "Typed GitHub pages are still normal page notes, but they add link_kind and link_data so Philo can render a structured header for known GitHub resources.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "a14782799293",
+      "statement": "URL summary pages are normal page notes with URL-specific frontmatter and an AI-generated summary body.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "eb5eafc97b42",
+      "statement": "Used to decide whether first-run setup should appear.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "4a649afaab2e",
+      "statement": "User-facing content files under either a journal folder or an Obsidian vault.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "12978ed6a47a",
+      "statement": "When a vault is configured, this is usually / .",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "a307e9878608",
+      "statement": "When widgetGitHistoryEnabled is on, Philo also stores widget Git history under the app data directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "43d257ff9378",
+      "statement": "widget files live under /widgets/",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "c30c4e88e712",
+      "statement": "widget files: widgets/ under the vault root, or under the resolved journal root in default mode",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian",
+        "widgets"
+      ]
+    },
+    {
+      "id": "8dadeb5ca2e2",
+      "statement": "Widget instances are stored as individual markdown files under the resolved widgets directory.",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "widgets"
+      ]
+    },
+    {
+      "id": "9634b851c23e",
+      "statement": "widget library lives under /library/",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "aeb2e6ea1588",
+      "statement": "widget library: library/ under the vault root or resolved journal root",
+      "sourcePath": "docs/data-storage-and-configuration.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian",
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "ad70890b19b2",
+      "statement": "A note might look like this on disk:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "91d752a3d9bb",
+      "statement": "a task item with a rendered mention chip",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "a20936e528d6",
+      "statement": "an embedded Excalidraw block",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "07ac071892f0",
+      "statement": "an interactive widget node view",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "c345a2fc2cdd",
+      "statement": "AppLayout loads today's note with getOrCreateDailyNote().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "95a9088d29c7",
+      "statement": "Autosave is still editor-driven, so local editor changes are usually written back within 500 ms.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "49c34a98b4c2",
+      "statement": "Blank lines are reintroduced as explicit empty TipTap paragraph nodes.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "876d48c10678",
+      "statement": "blank lines in the editor are represented as actual empty paragraph nodes, not newline characters embedded in the previous paragraph",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "968131efaf77",
+      "statement": "bootstrap_obsidian_vault() can create a minimal .obsidian setup for a fresh vault.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "87a9bdbd778c",
+      "statement": "Call the Tauri command write_markdown_file.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f5e0e7ef4730",
+      "statement": "Changes are debounced for 500 ms.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "660b37068915",
+      "statement": "Consecutive top-level paragraphs are still merged into one markdown paragraph with embedded newline text.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "35f7cc79a4e2",
+      "statement": "Convert TipTap JSON to markdown with json2md().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "90ed0dd6d2de",
+      "statement": "CustomParagraph preserves intentionally blank paragraphs.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "631425be084b",
+      "statement": "detectObsidianFolders() reads .obsidian config to detect the daily-notes folder, attachments folder, excalidraw folder, and filename format.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "9c8d0216527e",
+      "statement": "EditableNote listens to TipTap onUpdate.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f4beaef28e20",
+      "statement": "EditableNote receives that JSON string and calls setContent().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d75c2c1b6163",
+      "statement": "Empty bullet items are normalized from - to -, because TipTap's default serializer emits - but its parser reparses that as plain paragraph text instead of an empty bullet item.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "206f08be91af",
+      "statement": "ExcalidrawExtension renders an embedded preview in the editor, but serializes back to ![[file.excalidraw]].",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d2d1c2da142d",
+      "statement": "generic URL summary page: link_title as heading, source URL link, summary timestamp, editable summary body, follow-up AI chips",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "1d979e3cadac",
+      "statement": "getNotePath(date) is the final source of truth for note file paths.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b54752f70bce",
+      "statement": "If journalDir is configured, Philo writes directly there.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "db6a09e7236b",
+      "statement": "If the editor shape is wrong, the markdown file will be wrong too.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "527e5510acf0",
+      "statement": "If the note is in a vault, leading tabs are expanded to parser-friendly spaces for parsing only.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "9b4fcf406a4f",
+      "statement": "In memory: DailyNote.content is a JSON string containing a TipTap document.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "4077dc0d602c",
+      "statement": "It reads a TipTap document that was derived from markdown when the note was loaded.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "c693f91172ac",
+      "statement": "leading \\n on the next token",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ea7e9c308af0",
+      "statement": "Line endings are normalized to \\n.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "7b958fa46caf",
+      "statement": "Load Path: Raw Markdown Back Into The Editor",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "2a0d0e8b1ec9",
+      "statement": "loadDailyNote() reads the markdown file from disk.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "351814cf15ae",
+      "statement": "Local writes suppress the watcher briefly so Philo does not immediately reload the file it just saved and reset the editor selection.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "50479fa27964",
+      "statement": "MarkdownManager.instance.lexer() is used directly so Philo can preserve blank lines that marked sometimes reports as:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b841c52baa8d",
+      "statement": "md2json() converts that markdown into TipTap JSON.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "30410baae318",
+      "statement": "md2json() parses the final markdown/HTML mix into a TipTap document.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "18161cdc494a",
+      "statement": "meeting page: title, meeting badge, attached-date link when relevant, then editable body",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "0a6aa4c0458d",
+      "statement": "Mention links and Excalidraw embeds intentionally use Obsidian-friendly syntax so the markdown stays portable.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "5e0ecbdc7085",
+      "statement": "MentionChipExtension renders chips in the editor, but serializes them as wiki links like [[2026-03-08]] or [[tag_work|work]].",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "0e5b9d5c62e5",
+      "statement": "Mixed top-level list tokens are split manually when marked merges bullet items and task items into one list token.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d8b3ac472a8c",
+      "statement": "Obsidian / Vault Integration",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "c9d86458ff60",
+      "statement": "Obsidian-style nested bare task lines like \\t [ ] child are rewritten to a parser-safe form like \\t- [ ] child before lexing.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "12985a8592a5",
+      "statement": "On load, resolveWidgetEmbeds() turns those embeds into data-widget HTML placeholders for TipTap.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "e6969800a150",
+      "statement": "On startup it loads from disk.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6cf569dea40f",
+      "statement": "Otherwise it falls back to the app data directory under journal/.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "13f1575ec355",
+      "statement": "Otherwise, if vaultDir is configured, Philo writes into the vault's daily-notes folder.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "354585f51c77",
+      "statement": "page chips are the common display form for attached pages, shared pages, and URL-created pages",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c4231cf43eeb",
+      "statement": "PageView currently has several display modes layered on top of the same underlying markdown page model:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "1b9811fe0762",
+      "statement": "Parse the JSON string with parseJsonContent().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "52cf71901804",
+      "statement": "parseFrontmatter() strips frontmatter and extracts city.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ff12eb6bac5d",
+      "statement": "Past notes lazy-load when they scroll near the viewport.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "timeline"
+      ]
+    },
+    {
+      "id": "f5d62db0af94",
+      "statement": "Philo already does a limited form of filesystem sync with the raw markdown file:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "51f4c117d67f",
+      "statement": "Philo currently renders six mention-chip kinds in the editor:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f32b9ad34905",
+      "statement": "Philo has to compensate for parser edge cases around blank lines, mixed lists, empty bullet items, and Obsidian-style indentation.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "9473a2359fc0",
+      "statement": "Philo post-normalizes the markdown so the next load can reconstruct the same structure.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "48c3fe78614e",
+      "statement": "Philo stores daily notes as markdown files on disk, but edits them in memory as TipTap JSON.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "markdown"
+      ]
+    },
+    {
+      "id": "89987852d712",
+      "statement": "plain page: page title plus editable body",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "adb4af87f8d9",
+      "statement": "pressing cmd+l on a blank block should turn that block into a task item",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "8f6529417798",
+      "statement": "Re-attach frontmatter with buildFrontmatter().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "19cf45b88510",
+      "statement": "replaceMentionWikiLinksWithChips() turns [[...]] links into mention-chip HTML nodes.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e1fdcf803669",
+      "statement": "resolveExcalidrawEmbeds() turns ![[drawing.excalidraw]] into a placeholder HTML node.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "28cf2113a8b1",
+      "statement": "resolveMarkdownImages() converts relative markdown image paths into Tauri asset-protocol URLs the editor can display.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "0ba6cd9532ef",
+      "statement": "Rewrite @mentions into Obsidian-style wiki links with convertAtMentionsToWikiLinks().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "a7274a5694ca",
+      "statement": "Rewrite asset URLs back to relative markdown paths with unresolveMarkdownImages().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "fd9dd9b3c0a7",
+      "statement": "Rewrite canonical date-mention links back into note links with rewriteDateMentionLinksToNoteLinks().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "a44db2adda61",
+      "statement": "rewriteNoteLinksToDateMentionLinks() converts daily-note wiki links into canonical date mentions.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "cf7441098697",
+      "statement": "Save Path: Editor To Raw Markdown",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "9d3b332273ff",
+      "statement": "saveDailyNote() converts that JSON into markdown and writes the file through a Tauri command.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "7bc26d8fcd4f",
+      "statement": "Standard markdown nodes come from StarterKit, TaskList, Image, Link, Table, UnderlineExtension, and Highlight.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "5797ee30b7a0",
+      "statement": "Sync is file-level reload, not operational merge.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f453c581eb37",
+      "statement": "That matters because list creation depends on real paragraph boundaries:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "0484748e887d",
+      "statement": "That means the md -> TipTap path is intentionally more opinionated than a raw markdown parse.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "ab88d2cf9703",
+      "statement": "That means two pages can both be stored as normal markdown files under pages/ while rendering very differently in the app because their frontmatter carries different metadata.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "ebb9d0a6362d",
+      "statement": "That pairing is what makes the round-trip work:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "3d2633bf31b5",
+      "statement": "That same note appears in the editor as:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "51629d4138f4",
+      "statement": "The current load path does several markdown-specific repairs before the content ever reaches the editor:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "a633a9935ded",
+      "statement": "The current write-side logic does a few important normalizations so the saved markdown stays stable and reparses correctly:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "365242fabb53",
+      "statement": "The editor is therefore not reading the markdown file directly on every keystroke.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "142582b094bd",
+      "statement": "the in-memory editor placeholder is only a runtime transport shape, not the canonical saved note format",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6792d644b1a4",
+      "statement": "The latest disk read replaces the in-memory note state.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "253a7fba2a0c",
+      "statement": "The live editor now uses normal block splitting for Enter at the top level.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "5b02fd18cc0f",
+      "statement": "The markdown file is the source of truth.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "b108139b019f",
+      "statement": "The markdown file stays plain and portable, while the editor gets richer UI from the custom TipTap extensions.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "9f8fbdc7d848",
+      "statement": "The markdown is normalized into editor-friendly markup.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "c43bb012bbb2",
+      "statement": "The markdown serializer assumes the TipTap document is already structurally correct before it writes to disk.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "93981d9dfdfc",
+      "statement": "The normalization inside loadDailyNote() is important:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c871beac65b5",
+      "statement": "the note on disk stores the embed target",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "94d1c27ae29a",
+      "statement": "The page markdown under pages/ is not the same as the page presentation in the app.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "10aa3bb2dfbe",
+      "statement": "The practical consequence is that the file on disk is not just \"whatever TipTap emitted\".",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "395bcde66e8d",
+      "statement": "The read flow is the inverse:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6a2caa2c71cc",
+      "statement": "The storage boundary is intentionally opinionated: the app normalizes markdown on the way in, normalizes it again on the way out, and treats the markdown file as the long-term source of truth.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "75a43928895e",
+      "statement": "The Tauri command read_markdown_file(path) just returns the raw file contents or null if the file does not exist.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "66e1f6e9458e",
+      "statement": "The updated TipTap document is serialized with editor.getJSON().",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c7e5d9f66064",
+      "statement": "The watcher only re-syncs today's note, not every already-mounted past note.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "98715c1beab3",
+      "statement": "Then it writes the raw string to disk.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e7360b46bd11",
+      "statement": "There is no separate database for note bodies.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "039543ac105b",
+      "statement": "This does not rewrite the file on disk.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "78b65b6378f8",
+      "statement": "This is how Philo preserves empty paragraphs without inheriting TipTap's default double block spacing around lists.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d5b66d6ab212",
+      "statement": "This is what preserves a blank line between a bullet list and a task list across reloads.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "14e516335cee",
+      "statement": "This means external edits to today's markdown file can show up in the editor without restarting the app.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "341ef56dbb69",
+      "statement": "This preserves blank lines between paragraphs without writing placeholder text like &nbsp;.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f70bf62d7141",
+      "statement": "those page chips still serialize as wiki links on disk, so the markdown round-trip stays uniform even when the in-editor display is richer",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "26add16633ae",
+      "statement": "Those placeholders carry the per-node editor id plus the stable widget file/storage id.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "44afbf5da40c",
+      "statement": "Top-level blocks are serialized one at a time and stitched together with explicit newline counts.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "bd164ae4d3af",
+      "statement": "trailing \\n\\n on the previous token",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "9153b44eab98",
+      "statement": "typed GitHub page: link_title as heading, source URL link, structured GitHub metadata header, editable summary body, follow-up AI chips",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "34e12481aa3b",
+      "statement": "typing plain text, pressing Enter, and then typing - should create a real bullet list item",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "9dfe57a9cd37",
+      "statement": "URL chips are not a separate markdown primitive; when a stale bare URL is converted, Philo creates or reuses a shared page and inserts a normal page chip",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "6d203125237e",
+      "statement": "Vault-backed notes load with tab indentation assumptions and save back with tab indentation as well.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "91adaa138f04",
+      "statement": "What json2md() Actually Does",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f22f20c9b264",
+      "statement": "What md2json() Actually Does",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "a2c1db37e865",
+      "statement": "When Philo is pointed at a vault, serialization uses tab indentation ({ style: \"tab\", size: 1 }) so the file on disk matches Obsidian's layout more closely.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "09f2917f5dd9",
+      "statement": "When Philo is pointed at an Obsidian vault, it tries to honor the vault layout instead of inventing its own:",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "a7980cc0f48a",
+      "statement": "While the app is open, today's note is re-read when the window regains focus.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ae6444b0f351",
+      "statement": "write_markdown_file(path, content) creates parent directories if needed.",
+      "sourcePath": "docs/markdown-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "dfcbb8d8f6a7",
+      "statement": "Apply the Supabase migration to the project you want to use for sync.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "32d95d1bf843",
+      "statement": "AsyncStorage stores sync settings such as syncEnabled, syncEmail, syncLastSyncedAt, and syncError.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6353addf4872",
+      "statement": "Blob keys now follow this shape:",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "3c64efc52150",
+      "statement": "bucket policies that require object keys to be prefixed with auth.uid()",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "4e328b527538",
+      "statement": "Expo's document directory stores the mirrored file cache under philo-sync/.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "4ad0dd1edc4e",
+      "statement": "Export the desktop and mobile env vars listed above.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "2b8f6764a54d",
+      "statement": "If EXPO_PUBLIC_WEB_EDITOR_HOST_URL is set, the Expo app loads the standalone Vite host from that URL.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c82356e28e0e",
+      "statement": "If it is not set, the app falls back to an inline editor host bundled through the native shell.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "cf9c0cf5c2b8",
+      "statement": "If you want the standalone browser host instead of the inline fallback, start pnpm dev:web-editor-host and point EXPO_PUBLIC_WEB_EDITOR_HOST_URL at a host the iPhone can reach on your LAN.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f7eadb3a521f",
+      "statement": "It edits raw markdown through the shared bridge contract and leaves the full desktop TipTap/widget runtime extraction for follow-up work.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "widgets"
+      ]
+    },
+    {
+      "id": "d392242d14b5",
+      "statement": "On mobile, sync state is split across three stores:",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ba5e48b30387",
+      "statement": "Optional mobile host override:",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "87288d91df59",
+      "statement": "packages/core holds the shared sync model and the WebView bridge contract.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "fb4aa2670976",
+      "statement": "packages/web-editor-host is the browser surface rendered inside the mobile WebView.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "9abdc8bbfa73",
+      "statement": "Philo now has a third runtime target:",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "4974cecee981",
+      "statement": "row-level policies for the table",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "40431a3ada8a",
+      "statement": "SecureStore stores the Supabase access token and refresh token.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "0ef12d98659f",
+      "statement": "Start the desktop app with pnpm dev.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b57c6a60855e",
+      "statement": "Start the Expo app with pnpm dev:mobile.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "3e89af85de16",
+      "statement": "Sync mirrors local markdown and asset files into Supabase so the mobile app can keep a sandboxed local mirror on the device.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "71e3f76a4c37",
+      "statement": "synced blobs such as images, Excalidraw files, and widget storage sidecars",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "7f8cbefded95",
+      "statement": "That prefix is required for storage RLS to enforce per-user access.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e7f40f548fc7",
+      "statement": "The current mobile editor host is intentionally thin.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d9fbaa3a88cc",
+      "statement": "The desktop app stays local-first.",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "7e9359ea5d90",
+      "statement": "The mirrored cache currently contains:",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "823f8217f28e",
+      "statement": "the private sync-blobs storage bucket",
+      "sourcePath": "docs/mobile-sync.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "9bc555f6a0be",
+      "statement": "App icons for different platforms.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ca74ce123d5e",
+      "statement": "App shell, top-level timeline layout, global search, modal wiring.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "timeline",
+        "search"
+      ]
+    },
+    {
+      "id": "b63a3ecca512",
+      "statement": "Asset saving and asset URL resolution.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "162a01d38f98",
+      "statement": "core contains sync and WebView bridge types/helpers.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "a3322d1f2184",
+      "statement": "crates/ and plugins/ hold Philo-owned Rust libraries and Tauri plugins.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e387b0adc942",
+      "statement": "Daily note editing and note-specific UI.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "7aa7f12f8dba",
+      "statement": "Daily note read/write logic.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "c67365d6a7f4",
+      "statement": "Daily note shape and date helpers.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "ae0bbb72cd7a",
+      "statement": "Desktop app packaging/runtime config.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "fb629756afa9",
+      "statement": "Desktop bridge for app-managed Git widget snapshots, diffs, and restore.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "e565e5f85115",
+      "statement": "Excalidraw embed resolution/render helpers.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "e1c31e1e9bdd",
+      "statement": "File-backed AI chat history persistence.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "chat"
+      ]
+    },
+    {
+      "id": "dba19a8a849e",
+      "statement": "File-backed widget persistence, widget markdown parsing, widget embed resolution, and widget revision history.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "widgets"
+      ]
+    },
+    {
+      "id": "02647941cc95",
+      "statement": "Filesystem commands, search indexing, Obsidian detection, window behavior, menu wiring.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian",
+        "search"
+      ]
+    },
+    {
+      "id": "4a33a288fbff",
+      "statement": "First-run vault/journal configuration flow.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "25e5de1fc019",
+      "statement": "Generated / build output inside src-tauri",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "2e9cb4efbdc9",
+      "statement": "Generated dependency/cache folders.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "3d0e697998d9",
+      "statement": "If you are changing widgets, these are the highest-signal files:",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "707e5e976515",
+      "statement": "Inline Git history browser and diff/restore controls for widgets.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "a650fe12d13e",
+      "statement": "Instance-scoped widget SQLite storage and runtime query/mutation plumbing.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "858006816e25",
+      "statement": "Internal documentation like architecture notes.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ed97c48d5c26",
+      "statement": "Library drawer item loading, archived widget reuse, and shared component persistence.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "9dbbdf4e2464",
+      "statement": "Library item persistence and shared component storage.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "cbe737892751",
+      "statement": "Low-level shared utilities used across features.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "69f012a913e6",
+      "statement": "Main Tauri command handlers and desktop-native logic.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ae4e6e8c829e",
+      "statement": "Mention parsing and markdown conversions.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "9470be420ea8",
+      "statement": "Mobile mirrored-cache persistence, Supabase auth/session handling, and sync pull/push logic.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "8a7617a456ef",
+      "statement": "Mount-only React escape hatch used for linking and app-state listeners.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f3ef4a9979ff",
+      "statement": "Native bridge that renders the shared browser host inside react-native-webview.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "92b9651ca16e",
+      "statement": "Native shell with Today, Search, and Settings surfaces.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "search"
+      ]
+    },
+    {
+      "id": "a9ce2b804b98",
+      "statement": "New widgets are generated as TSX code widgets plus storage schema.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "816714f90b77",
+      "statement": "Normalized widget snapshot serialization and Tauri bridge for Git-backed widget history.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "00e809faa4a6",
+      "statement": "Obsidian vault detection and bootstrap helpers.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "0d99cdb020e4",
+      "statement": "packages/awesome-tiptap holds the shared TipTap base styles Philo owns locally.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "9fc1685d91ab",
+      "statement": "packages/core holds shared sync and bridge contracts.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "52598f975001",
+      "statement": "packages/web-editor-host is the standalone browser host used by the mobile WebView flow.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "9e1e713d1b99",
+      "statement": "React hooks for app-level state derived from the environment.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "694105ff216d",
+      "statement": "Repo-level utility scripts, including release verification.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "release"
+      ]
+    },
+    {
+      "id": "d93c79b12670",
+      "statement": "Resolves journal/vault paths and note filenames.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "obsidian"
+      ]
+    },
+    {
+      "id": "fe97052850b1",
+      "statement": "Rollover and recurring-task behavior.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "recurring"
+      ]
+    },
+    {
+      "id": "f3cf31a39d00",
+      "statement": "Rust dependencies and package metadata.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ea413db837aa",
+      "statement": "Rust library crates owned by Philo (originally vendored from hyprnote, now first-class).",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "94f6b34f5d99",
+      "statement": "Settings modal and setup UI.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "60acf6ba2e78",
+      "statement": "Shared editor UI and custom TipTap extensions.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "1293f8ba33c2",
+      "statement": "Shared packages reused across app targets.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "fed56045fd54",
+      "statement": "Shared sync kinds, conflict helpers, and editor-host bridge message parsing.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "db82c2ceeabe",
+      "statement": "Shared TipTap base stylesheet bundle used by the desktop editor.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "03cca1a41eab",
+      "statement": "Small shared type definitions.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6d83752c93f0",
+      "statement": "Standalone browser editor shell used by the mobile WebView path and local Vite development.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "0291bf6ee0d5",
+      "statement": "Static frontend assets imported by the desktop app.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "8ef66b84d134",
+      "statement": "Tauri capability configuration.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "768c9ee5957e",
+      "statement": "Tauri plugins owned by Philo (originally vendored from hyprnote, now first-class).",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "81d9559157f0",
+      "statement": "The desktop app is split into a web frontend and a Rust/Tauri backend:",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d6a8af310cbc",
+      "statement": "The implementation reference for widget schema and lifecycle behavior.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "d36cd0c51eff",
+      "statement": "The TipTap JSON markdown conversion layer.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "028c3730453a",
+      "statement": "These are not the main places to make hand edits.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b0171325f44e",
+      "statement": "These were originally vendored from hyprnote but are now maintained directly in this repo.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "241640c5bed4",
+      "statement": "This is the native shell and backend side of the desktop app.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "0ec112e54ee6",
+      "statement": "This is the React/TypeScript side of the desktop app.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c00791fa5d4e",
+      "statement": "This is where most filesystem and domain behavior lives.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "1e028d5ee498",
+      "statement": "This repo is a small pnpm workspace with three app targets plus shared packages:",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "acd405c4ad90",
+      "statement": "Those are generated outputs, caches, or installed dependencies rather than source-of-truth code.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "3530a8f13a3b",
+      "statement": "TipTap node definition and markdown/HTML serialization entrypoint.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "b663b4ef27fa",
+      "statement": "Touch crates/ or plugins/ when the change belongs in the native/plugin layer.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "672490f69f37",
+      "statement": "UI components, grouped by feature area.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "5ad71220eb09",
+      "statement": "web-editor-host contains the standalone editor host loaded by mobile.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "bdeb641a0fbe",
+      "statement": "What Each Top-Level Folder Is For",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b81cde6b229a",
+      "statement": "Widget toolbar behavior, rebuild flow, save-to-library flow, Git history/restore UI wiring, library reuse behavior, and runtime rendering.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "188506c2e38f",
+      "statement": "Widget-instance storage helpers, schema normalization, and Tauri bridge for per-widget SQLite queries/mutations.",
+      "sourcePath": "docs/repo-structure.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "f55dcaf8358a",
+      "statement": "\"createdAt\": \"2026-03-17T08:00:00.000Z\",",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "47a72221dabe",
+      "statement": "\"createdAt\": \"2026-03-17T08:05:00.000Z\",",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "3db555bdd435",
+      "statement": "\"currentRevisionId\": \"revision-uuid-2\",",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "bc37ffb5e8d6",
+      "statement": "\"prompt\": \"Build a raffle widget with a winner area\",",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "b16558c1cb02",
+      "statement": "\"prompt\": \"Build a raffle widget\",",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "a1d2eced9744",
+      "statement": "\"spec\": \"export default function Widget() { return ; }\"",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "68ebcfe986f3",
+      "statement": "\"spec\": \"export default function Widget() { return Winner area ; }\"",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "1bf15c0eeb1b",
+      "statement": "{ \"name\": \"id\", \"type\": \"integer\", \"primaryKey\": true },",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "799476b4627f",
+      "statement": "{ \"name\": \"title\", \"type\": \"text\", \"notNull\": true }",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "efb2753add6c",
+      "statement": "{entries.map((entry,) => {entry.label} )}",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "656db54e8abb",
+      "statement": "A Git snapshot with reason archive is recorded when the normalized widget snapshot changed.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "5fa5b7b52557",
+      "statement": "A Git snapshot with reason edit is recorded when the normalized widget snapshot changed.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "2667000f51a6",
+      "statement": "A Git snapshot with reason rebuild is recorded when the normalized widget snapshot changed.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "24c0b8fcf01c",
+      "statement": "A new revision is appended if the prompt/source changed.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ef57fd0f19a9",
+      "statement": "addToLibrary() creates the shared component manifest entry for the library drawer.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "3d10f0b28e60",
+      "statement": "Append-only revision snapshots for checkpoint/rollback support.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d67574e1c481",
+      "statement": "AppLayout opens the AI composer with [Edit widget] .",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "845c6970faff",
+      "statement": "Archived library widgets reuse the archived widget file when that canonical file is known, so repeated library inserts share that file's state.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "4fb6ee549104",
+      "statement": "componentId identifies the reusable template, while storageId identifies the concrete widget file used for file-backed state.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "f5ffab6a1239",
+      "statement": "componentId: null when it matched the removed shared component",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "fcfd95506d94",
+      "statement": "const [entries, setEntries,] = Philo.useWidgetState(\"entries\", [],);",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "ea08604aa612",
+      "statement": "data-id is the per-node editor identity.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "058fe2cd7e95",
+      "statement": "data-source for code widgets",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "d64ca936a71d",
+      "statement": "data-spec only for legacy JSON widgets",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "e98dd098c744",
+      "statement": "data-storage-id is the stable widget file identity used for widget storage and file rewrites.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "25a3a3aa94a4",
+      "statement": "Deleted-widget recovery is still out of scope.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "9edd5032a98d",
+      "statement": "Display title derived from the prompt.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "7c3e262c6983",
+      "statement": "Each widget file is plain markdown with frontmatter-style metadata, the current runtime payload, optional storage metadata, and an internal history block.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "widgets"
+      ]
+    },
+    {
+      "id": "1d00404a23c0",
+      "statement": "Editor node ids and widget storage ids are intentionally different.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "6a6d103baa8a",
+      "statement": "Every new widget starts with one internal revision.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "742de470e039",
+      "statement": "Every rebuild or chat edit that changes prompt/source appends one new internal revision.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "chat"
+      ]
+    },
+    {
+      "id": "6c7defdb2dd4",
+      "statement": "Existing widgets are lazily baselined into Git history with reason import the first time the history panel is opened or the first time a tracked material save runs.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "1e373825d051",
+      "statement": "Existing widgets with a storage schema must keep that schema unchanged.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "a858082fe630",
+      "statement": "export default function Widget() {",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "68d8a94d8590",
+      "statement": "Favorite state mirrored into the library drawer.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "2bddac5089b7",
+      "statement": "Favorite toggles, internal-history-only rewrites, and library-reference cleanup do not create Git commits.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "226701571e14",
+      "statement": "For a new AI-generated widget:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "40c17be85965",
+      "statement": "Generate TSX widget source and storage schema together.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "36cbfcda1a3b",
+      "statement": "Generated storage contract for this widget instance.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "4bedbdb9ac92",
+      "statement": "Git commits are only recorded for material widget flows: create, rebuild, edit, insert, archive, and restore.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "f01988df380c",
+      "statement": "Git snapshots are append-only snapshots of normalized widget state.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "af2dcc2c8e91",
+      "statement": "history panel can load a baseline for pre-Git widgets",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "1a6e231cf929",
+      "statement": "If a rewrite does not materially change the prompt/source pair, no duplicate internal revision is appended.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "d6201939539f",
+      "statement": "If the chosen library item already has canonical widget file metadata (file, path, storageId), AppLayout inserts a new widget node that points at that existing widget file.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "684bbc36c6c1",
+      "statement": "If the library item does not have canonical widget file metadata, AppLayout falls back to creating a new widget file from the library item.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "963bb3247f05",
+      "statement": "If the selected snapshot points at a missing library item or missing shared component, Philo clears saved, libraryItemId, and componentId before rewriting the live widget file.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "986d53a54833",
+      "statement": "If the storage schema is non-empty, create the widget's sidecar SQLite file.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "5d2cb59f782c",
+      "statement": "If the widget has generated persistent storage, it also gets a sidecar SQLite database next to the widget file.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "4f649be51c0c",
+      "statement": "If the widget is archived to the library, it also gets a stable library entry and may get a shared component record.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "ede5c6b0dcf2",
+      "statement": "If widget Git history is enabled, Philo also writes normalized widget snapshots into an app-owned Git repo under the app data directory.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "a56c7178c6bf",
+      "statement": "If you are changing widget behavior, start here before editing the code.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "89306beca4de",
+      "statement": "If you touch widget persistence, verify:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "dd5a6e521eee",
+      "statement": "Insert a temporary widget node in the editor with loading: true.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "2d0b5674a1ce",
+      "statement": "Legacy JSON payload for old widgets.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "8c47558590d5",
+      "statement": "Legacy non-shared library filename format:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "213d22f74ca5",
+      "statement": "Legacy widgets may still carry a plain json block until rebuilt.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "59ec9733048a",
+      "statement": "library delete still clears matching widget files",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "30ffe3ddfdf0",
+      "statement": "library insert reuses the canonical widget file when present",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "ace4573ddd98",
+      "statement": "Lists revisions newest-first with reason, title, and timestamp.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "fb7fc7810599",
+      "statement": "loadLibrary() returns library items backed by saved widget files, plus shared component metadata and legacy fallbacks when needed.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "e49a13533dc7",
+      "statement": "Loads Git history lazily for the current widget file.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "0c56ac0b0c69",
+      "statement": "markWidgetLibraryReferenceRemoved() scans widget files.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "bbb89c91ea51",
+      "statement": "Matching widget files have their library link cleared:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "e118eeeaf21e",
+      "statement": "Multiple embeds can therefore share one widget file without sharing editor event state.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "3015119993ba",
+      "statement": "New widgets store their runtime payload in a tsx widget block.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "e41e23d6b137",
+      "statement": "Note markdown should keep storing widget embeds, not inline giant payloads.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "widgets"
+      ]
+    },
+    {
+      "id": "789b145d4fd2",
+      "statement": "note save/load still round-trips widget embeds",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "c80e4034434d",
+      "statement": "old widget files without history still load and rewrite correctly",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "46160aac9d4b",
+      "statement": "Older widget files without a history block are migrated lazily when rewritten.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "afb75ab0a327",
+      "statement": "onClick={() => setEntries((current,) => [...current, { id: crypto.randomUUID(), label: \"New entry\", },])}",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "f63fc7c831b5",
+      "statement": "Optional Git-backed widget snapshots in an app-owned mirror repo",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "1de513a2703f",
+      "statement": "Persist the first revision automatically.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "917ae7860e3a",
+      "statement": "persistWidgetRecord() rewrites the widget file.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "4e9b8852e65d",
+      "statement": "Philo now tracks widget history in two parallel ways:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "ffa34fea6302",
+      "statement": "Philo widgets exist in five related layers:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "d3d05718a0cd",
+      "statement": "Pointer to the active revision in revisions.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "5a9dfb82c923",
+      "statement": "rebuild/edit still append revisions",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "65eef0dd458b",
+      "statement": "Record a Git snapshot with reason create when widget Git history is enabled.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "eef7ce7f3a02",
+      "statement": "removeFromLibrary() removes the library entry.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "852b1b933a16",
+      "statement": "Removing a library entry must clear saved/library references from widget files.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "184d5cbc70bb",
+      "statement": "Replace the temporary node attrs with the real file-backed widget record.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "8e52fb239508",
+      "statement": "Restore appends a new internal widget revision for the restored prompt/source pair.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "00f3d288cefc",
+      "statement": "restore clears dead library/shared-component references",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "6a1d23cb943b",
+      "statement": "Restore is blocked if the selected snapshot's storageSchema differs from the current widget's schema.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "06a966061f25",
+      "statement": "restore is blocked when storage schemas differ",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "a2f38d39dc41",
+      "statement": "Restore rewrites the live widget file in place from the selected Git snapshot.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "e44a612fa4b6",
+      "statement": "Restore then records a new Git snapshot with reason restore.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "eb2192f5e274",
+      "statement": "Revisions are append-only snapshots of prompt/source state.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "134906dd72bc",
+      "statement": "save-to-library still writes saved, libraryItemId, and componentId",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "5982102ebee6",
+      "statement": "saved alone is not enough to identify library linkage.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "library"
+      ]
+    },
+    {
+      "id": "ebc0ce4579e3",
+      "statement": "Saving to library also appends an internal revision if it changes the persisted widget record.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "d8a1429aa6ef",
+      "statement": "Shows a unified diff for the selected revision.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c1dac8e33112",
+      "statement": "spec for legacy JSON widgets",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "53e437fc7401",
+      "statement": "Stable link to the library item that owns this widget, when archived.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "1bb1ee909578",
+      "statement": "Stable link to the shared component manifest for reusable widget templates.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "39b67d5f9636",
+      "statement": "Stable widget file identity.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "0c738745de0b",
+      "statement": "That fallback path records a Git snapshot with reason insert.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b5a1acae932b",
+      "statement": "That runtime placeholder carries:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "fe8d7addabfc",
+      "statement": "The current persisted widget prompt.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "a326f4feb7ec",
+      "statement": "The current TSX widget source used by the code-widget runtime.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "249229223ff5",
+      "statement": "The editor node is updated to match the rewritten widget file.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "d13ce0e449e2",
+      "statement": "The existing widget stays visible in the note.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "5e9bedb2f472",
+      "statement": "the generation prompt can include the current source and the edit instruction",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6e44653eaa76",
+      "statement": "The Git mirror stores normalized widget snapshots, not raw live widget files and not widget SQLite sidecars.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "00148282cb1e",
+      "statement": "The Git snapshot intentionally excludes:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "4d752205b434",
+      "statement": "The history panel only works for existing widget files.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "24716b899ad9",
+      "statement": "The inserted node gets a fresh editor id, but keeps the archived widget's storageId, file, path, libraryItemId, and componentId.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "c3499eb9a711",
+      "statement": "The json widget-history block is the internal checkpoint log.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "63463f83986d",
+      "statement": "The new source and storage schema are generated together.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "6675f72c9106",
+      "statement": "The normal archived-widget path now reuses the archived widget file, so repeated inserts share the same file-backed state and the same widget-sidecar SQLite database.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "e1105d025138",
+      "statement": "The optional json widget-storage block is the instance storage schema.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "8e74ff9e4744",
+      "statement": "the persisted prompt stays the canonical widget prompt stored on disk",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown",
+        "widgets"
+      ]
+    },
+    {
+      "id": "240f26f925e8",
+      "statement": "The resulting prompt/source pair is persisted and appended as a new revision.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "013f082d833c",
+      "statement": "The user submits an edit instruction.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "1c92b51dd5c6",
+      "statement": "The widget body gets an in-place build overlay.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "78892f0f77f8",
+      "statement": "The widget file is rewritten with:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "59434f6cb3bc",
+      "statement": "The widget file is the source of truth for the current widget prompt, runtime payload, saved state, and revision history.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "3310199fb5ba",
+      "statement": "The widget file remains the source of truth for live widget state even when Git history is enabled.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "c77a99a97db9",
+      "statement": "The widget file stays the canonical source of truth.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "ebfe0b5892c4",
+      "statement": "the widget instance's storageSchema",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "bf0c7f3135c6",
+      "statement": "The widget rebuilds in place.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "a5fa42c6ab90",
+      "statement": "The widget toolbar now includes a Git history action when widget Git history is enabled.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "c2917e6bacf1",
+      "statement": "This covers the desktop app widget flow implemented in:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "baeb8c956840",
+      "statement": "This document is the implementation reference for how Philo stores widgets, updates them, saves them to the library, and tracks revisions.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "e57f4b08cc82",
+      "statement": "This keeps Git diffs focused on material widget changes instead of checkpoint churn or local-only metadata.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "249b8b61ca69",
+      "statement": "This keeps note widgets and library state from drifting.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "9369a05777e5",
+      "statement": "toolbar archive button on an inline widget",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "a06d0d4fef3a",
+      "statement": "Unsaved widgets use file-scoped state and, when needed, a sibling SQLite sidecar.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "7bfb6d39fffc",
+      "statement": "Uses the same diff renderer as the AI diff preview UI.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "9e87d3ba7920",
+      "statement": "When a note is loaded, resolveWidgetEmbeds() reads the widget file and replaces the embed with a data-widget HTML placeholder for the editor runtime.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "f00063ba1bf7",
+      "statement": "When a note is saved, the widget node prefers writing an embed:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "e0a41c27b58d",
+      "statement": "When changing widget code, preserve these invariants:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "578cd2cb23e7",
+      "statement": "When non-empty, it powers the widget's sidecar SQLite database.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "b37760f9322c",
+      "statement": "When widget Git history is enabled, Philo also serializes a normalized snapshot of the widget into an app-owned Git mirror.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "9e246ee26b80",
+      "statement": "Whether this widget is currently linked to a library entry.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "583e94ea16ff",
+      "statement": "Widget Git history is controlled by settings.widgetGitHistoryEnabled and defaults to true.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "475c1c6f1e96",
+      "statement": "WidgetView builds a generation prompt from the saved widget prompt plus the current widget source.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "0175c0740252",
+      "statement": "WidgetView requests a widget edit session.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "6b286b4f0446",
+      "statement": "WidgetView turns that instruction into a generation prompt that includes:",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "79d07968f1f6",
+      "statement": "WidgetView.handleSave() archives the current code widget with storage metadata.",
+      "sourcePath": "docs/widget-persistence-and-lifecycle.md",
+      "sourceType": "docs",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "15696dbf3680",
+      "statement": "> Disclaimer: Philo is an experimental proof-of-concept app.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "fec9044a940f",
+      "statement": "⌘⇧B build a widget from the current selection",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "84fda6b8d2cc",
+      "statement": "Build widgets directly inside your notes.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "e89a4a341a65",
+      "statement": "daily notes should help you run what you thought, not just remember it",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "fde0e030c0f1",
+      "statement": "Generates disposable widgets inline for one-off tools, trackers, calculators, and experiments",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "30c6d0aebd42",
+      "statement": "Includes optional AI features for note chat, search, and dry-run edits inside the app",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "chat",
+        "search"
+      ]
+    },
+    {
+      "id": "79c0c8374d6d",
+      "statement": "Instead of writing something down and rebuilding the context later in another tool, you stay inside the note and keep moving.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets"
+      ]
+    },
+    {
+      "id": "3207bae257b9",
+      "statement": "Keep daily planning in one timeline.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes",
+        "timeline"
+      ]
+    },
+    {
+      "id": "8c2d949687d4",
+      "statement": "Keep everything as plain markdown on disk.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "e022bdb7e8df",
+      "statement": "Let unfinished and recurring work come back automatically.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "recurring"
+      ]
+    },
+    {
+      "id": "1d5acb7351b8",
+      "statement": "Many tools only need to exist for a day or a week.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "5fef0a19878d",
+      "statement": "Most journaling apps are good at capture and weak at execution.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "c6449696d748",
+      "statement": "Philo is built for the gap between capture and execution.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "b849b1bfb0c7",
+      "statement": "Philo is built to make daily notes lighter, not turn them into another subscription silo.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "b8d6c414cdcf",
+      "statement": "Philo is designed to collapse that gap.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "337aec5d1db0",
+      "statement": "Philo is licensed under the GNU General Public License v3.0 or later.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "2734433cb042",
+      "statement": "Philo is meant to sit beside your vault, not replace it.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "obsidian"
+      ]
+    },
+    {
+      "id": "1fc1734f4379",
+      "statement": "Philo is the IDE for your daily notes.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "daily-notes"
+      ]
+    },
+    {
+      "id": "3fcb8e96f6f7",
+      "statement": "Philo keeps tomorrow, today, and past notes close together so the page already knows what was in flight when you open it.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "timeline"
+      ]
+    },
+    {
+      "id": "0f6076bcdab8",
+      "statement": "Philo makes widgets cheap to create, easy to delete, and reusable only when they earn it.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "widgets",
+        "library"
+      ]
+    },
+    {
+      "id": "a3bb8dca7bc5",
+      "statement": "recurring work should reappear automatically",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "recurring"
+      ]
+    },
+    {
+      "id": "2318869656d6",
+      "statement": "small tools should be cheap to generate right where the note needs them",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "c8ae0469276e",
+      "statement": "Supports markdown-native content like images, wiki links, and Excalidraw embeds",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "markdown"
+      ]
+    },
+    {
+      "id": "90286430a85f",
+      "statement": "The plan is to integrate this daily-notes workflow into Char in the fastrepl/char repo over time.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    },
+    {
+      "id": "cf9b1e3dce3a",
+      "statement": "unfinished tasks should carry forward until they are done",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": [
+        "task-rollover"
+      ]
+    },
+    {
+      "id": "4c372f7bcaeb",
+      "statement": "Your notes stay as files you control.",
+      "sourcePath": "README.md",
+      "sourceType": "readme",
+      "verifiedAt": "2026-05-03",
+      "tags": []
+    }
+  ]
+}

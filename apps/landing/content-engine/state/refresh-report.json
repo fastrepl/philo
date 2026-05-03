@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-05-03T14:18:08.740Z",
+  "updated": [],
+  "unchanged": [
+    {
+      "filePath": "apps/landing/src/content/comparisons/philo-vs-heavy-project-management-tools.mdx"
+    },
+    {
+      "filePath": "apps/landing/src/content/glossary/widget-library.mdx"
+    },
+    {
+      "filePath": "apps/landing/src/content/guides/using-philo-with-an-obsidian-vault.mdx"
+    },
+    {
+      "filePath": "apps/landing/src/content/use-cases/use-philo-beside-an-obsidian-vault.mdx"
+    }
+  ],
+  "skipped": []
+}
