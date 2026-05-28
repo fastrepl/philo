@@ -31,9 +31,6 @@ hypr-audio-interface = { path = "crates/audio-interface", package = "audio-inter
 hypr-audio-utils = { path = "crates/audio-utils", package = "audio-utils" }
 hypr-buffer = { path = "crates/buffer", package = "buffer" }
 hypr-bundle = { path = "crates/bundle", package = "bundle" }
-hypr-cactus = { path = "crates/cactus", package = "cactus" }
-hypr-cactus-model = { path = "crates/cactus-model", package = "cactus-model" }
-hypr-cactus-sys = { path = "crates/cactus-sys", package = "cactus-sys" }
 hypr-db-core = { path = "crates/db-core", package = "db-core" }
 hypr-db-parser = { path = "crates/db-parser", package = "db-parser" }
 hypr-db-user = { path = "crates/db-user", package = "db-user" }
@@ -51,7 +48,6 @@ hypr-onnx = { path = "crates/onnx", package = "onnx" }
 hypr-tcc = { path = "crates/tcc", package = "tcc" }
 hypr-template-support = { path = "crates/template-support", package = "template-support" }
 hypr-tiptap = { path = "crates/tiptap", package = "tiptap" }
-hypr-transcribe-cactus = { path = "crates/transcribe-cactus", package = "transcribe-cactus" }
 hypr-vad = { path = "crates/vad", package = "vad" }
 hypr-vad-ext = { path = "crates/vad-ext", package = "vad-ext" }
 hypr-version = { path = "crates/version", package = "version" }
