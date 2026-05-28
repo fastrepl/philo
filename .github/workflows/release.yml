@@ -61,6 +61,10 @@ jobs:
         with:
           targets: ${{ matrix.rust_target }}
 
+      - name: Install Rust target
+        if: matrix.rust_target != ''
+        run: rustup target add ${{ matrix.rust_target }}
+
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
